@@ -1,4 +1,5 @@
 .venv/
+.agents/
 .env
 __pycache__/
 *.pyc

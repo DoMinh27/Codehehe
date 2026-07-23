@@ -428,6 +428,7 @@ docs/
 ├── 02-prd-v1.md                 Product Requirements V1
 ├── 03-gameplay-rules-v1.md      Gameplay Rules V1
 ├── 04-roadmap-v1.md             Roadmap 4 tuần
+├── 06-database-design.md        Database Design V1
 ├── 15-decision-log.md           Decision Log
-└── (System Design, Database Design, Interface Contract — viết tiếp sau charter này)
+└── (System Design, Interface Contract — viết tiếp sau charter này)
 ```

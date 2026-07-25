@@ -628,7 +628,74 @@ Thành công được đo bằng:
 
 ---
 
-## DEC-045 — AI Code Review sau V1
+## DEC-045 — Problem content snapshot V1
+
+**Trạng thái:** Approved
+
+**Bối cảnh:** Nếu Battle page đọc trực tiếp `Problem.statement`, admin sửa Problem giữa Match `PLAYING` có thể làm nội dung đề đổi ngay trong trận.
+
+**Quyết định:** Khi Start Match, `MatchProblem` snapshot:
+
+* `points`.
+* `title`.
+* `statement`.
+* `starter_code`.
+* `difficulty`.
+
+V1 không snapshot `TestCase`.
+
+**Lý do:** Snapshot nội dung hiển thị giúp Player không bị đổi đề giữa trận, nhưng không cần thêm bảng TestCase snapshot để giữ V1 đơn giản.
+
+**Hệ quả:**
+
+* Battle page đọc nội dung từ `MatchProblem`, không đọc trực tiếp từ `Problem`.
+* Judge vẫn đọc TestCase hiện tại từ `Problem`.
+* Admin không được sửa TestCase của Problem đang dùng trong Match `PLAYING`.
+
+**Xem xét lại khi:** Cần bảo vệ tuyệt đối lịch sử chấm hoặc cho phép admin sửa TestCase trong lúc nhiều trận đang chạy.
+
+---
+
+## DEC-046 — Match winner/draw invariant
+
+**Trạng thái:** Approved
+
+**Quyết định:** Match không được đồng thời có `winner != null` và `is_draw = true`.
+
+**Lý do:** Hai field này biểu diễn hai kết quả loại trừ nhau. Nếu không khóa, bug trong code có thể tạo trạng thái mâu thuẫn.
+
+**Hệ quả:**
+
+* Model `Match` cần `CheckConstraint`.
+* Test phải kiểm tra không tạo được Match vừa có winner vừa là draw.
+
+---
+
+## DEC-047 — First-solve finalize strategy
+
+**Trạng thái:** Approved
+
+**Bối cảnh:** First-solve dựa trên `received_at`, trong khi Judge0 có thể hoàn thành submission sai thứ tự.
+
+**Quyết định:** V1 dùng chiến lược:
+
+* Base score được cộng ngay khi một Player có Accepted đầu tiên cho bài đó.
+* First-solve bonus chỉ finalize khi không còn earlier pending submission cho cùng `MatchProblem`.
+* Nếu còn earlier pending submission, bonus tạm thời chưa cộng.
+* Khi earlier pending submission hoàn tất, `ScoringService` chạy lại bước finalize first-solve cho bài đó.
+
+**Lý do:** Player thấy base score nhanh, nhưng bonus vẫn đúng theo luật `received_at`.
+
+**Hệ quả:**
+
+* UI có thể có trạng thái score tăng base trước, bonus tăng sau.
+* Cần test Judge completion out-of-order.
+* `MatchProblem.first_solver` chỉ được set một lần.
+* `first_solve_bonus_awarded` chỉ được cộng một lần.
+
+---
+
+## DEC-048 — AI Code Review sau V1
 
 **Ngày:** 2026-07-24
 

@@ -625,3 +625,35 @@ Thành công được đo bằng:
 * Không self-host Judge0 trong những ngày đầu.
 * Không commit endpoint secret hoặc API key.
 * FakeJudgeService vẫn được dùng trong phát triển nội bộ khi external endpoint lỗi hoặc chưa sẵn sàng.
+
+---
+
+## DEC-045 — AI Code Review sau V1
+
+**Ngày:** 2026-07-24
+
+**Trạng thái:** Approved
+
+**Bối cảnh:** CodeHehe cần hỗ trợ người chơi học từ lời giải của mình nhưng không được làm ảnh hưởng đến tính công bằng và tính xác định của Coding Battle Core.
+
+**Quyết định:** Sau khi V1 hoàn thiện, hệ thống sẽ bổ sung AI Code Review. AI so sánh code người chơi với lời giải mẫu và nhận xét:
+
+* Cách tiếp cận.
+* Độ phức tạp thời gian và bộ nhớ.
+* Điểm tốt và điểm cần cải thiện.
+* Khả năng đọc, cách đặt tên và Python conventions.
+* Hướng tối ưu code.
+
+Tính năng chỉ được sử dụng sau khi trận đấu kết thúc.
+
+**Lý do:** AI Code Review tạo giá trị học tập và khác biệt sản phẩm mà không can thiệp vào Judge, Scoring hoặc kết quả trận đấu.
+
+**Hệ quả:**
+
+* Judge0 vẫn là nguồn quyết định verdict.
+* AI không tính điểm, chọn First-solver hoặc quyết định người thắng.
+* Không gửi hidden tests, secret hoặc API key cho AI.
+* Nhận xét AI chỉ mang tính tham khảo.
+* Kết quả nên có cấu trúc ổn định để frontend hiển thị.
+
+**Điều kiện xem xét lại:** Chỉ bắt đầu triển khai sau khi V1 đạt Gate 5 và luồng battle end-to-end ổn định.

@@ -644,3 +644,31 @@ Không cắt:
 * Result.
 
 ---
+
+## 8. Backlog sau V1 — AI Code Review
+
+Sau khi V1 đạt Gate 5, có thể triển khai flow:
+
+```text
+Trận kết thúc
+→ Player chọn Phân tích code
+→ hệ thống lấy đề bài, code Player và lời giải mẫu
+→ AI tạo nhận xét có cấu trúc
+→ frontend hiển thị kết quả phân tích
+```
+
+Phạm vi:
+
+* So sánh cách tiếp cận với lời giải mẫu.
+* Nhận xét độ phức tạp thời gian và bộ nhớ.
+* Nhận xét readability và Python conventions.
+* Đề xuất hướng cải thiện.
+
+Ràng buộc:
+
+* Không mở trong khi trận đang diễn ra.
+* Không gửi hidden tests cho AI.
+* Không dùng AI để quyết định verdict, score, First-solve hoặc winner.
+* Judge0 tiếp tục là nguồn quyết định đúng/sai.
+
+---

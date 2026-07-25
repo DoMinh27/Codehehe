@@ -1,0 +1,133 @@
+{
+  "version": 1,
+  "problems": [
+    {
+      "slug": "sum-two-numbers",
+      "title": "Tính tổng hai số",
+      "statement": "Đọc hai số nguyên a và b trên cùng một dòng. In ra tổng a + b.",
+      "difficulty": "EASY",
+      "points": 1,
+      "starter_code": "a, b = map(int, input().split())\n",
+      "order": 1,
+      "is_active": true,
+      "test_cases": [
+        {"input_data": "2 3", "expected_output": "5", "is_sample": true, "order": 1},
+        {"input_data": "-5 8", "expected_output": "3", "is_sample": false, "order": 2},
+        {"input_data": "0 0", "expected_output": "0", "is_sample": false, "order": 3},
+        {"input_data": "1000000 2000000", "expected_output": "3000000", "is_sample": false, "order": 4}
+      ]
+    },
+    {
+      "slug": "even-or-odd",
+      "title": "Số chẵn hay số lẻ",
+      "statement": "Đọc một số nguyên n. In CHAN nếu n là số chẵn, ngược lại in LE.",
+      "difficulty": "EASY",
+      "points": 1,
+      "starter_code": "n = int(input())\n",
+      "order": 2,
+      "is_active": true,
+      "test_cases": [
+        {"input_data": "4", "expected_output": "CHAN", "is_sample": true, "order": 1},
+        {"input_data": "-3", "expected_output": "LE", "is_sample": false, "order": 2},
+        {"input_data": "0", "expected_output": "CHAN", "is_sample": false, "order": 3},
+        {"input_data": "17", "expected_output": "LE", "is_sample": false, "order": 4}
+      ]
+    },
+    {
+      "slug": "maximum-of-three",
+      "title": "Số lớn nhất trong ba số",
+      "statement": "Đọc ba số nguyên trên cùng một dòng. In ra giá trị lớn nhất.",
+      "difficulty": "MEDIUM",
+      "points": 2,
+      "starter_code": "a, b, c = map(int, input().split())\n",
+      "order": 3,
+      "is_active": true,
+      "test_cases": [
+        {"input_data": "1 5 3", "expected_output": "5", "is_sample": true, "order": 1},
+        {"input_data": "-1 -5 -3", "expected_output": "-1", "is_sample": false, "order": 2},
+        {"input_data": "7 7 2", "expected_output": "7", "is_sample": false, "order": 3},
+        {"input_data": "0 0 0", "expected_output": "0", "is_sample": false, "order": 4}
+      ]
+    },
+    {
+      "slug": "count-vowels",
+      "title": "Đếm nguyên âm",
+      "statement": "Đọc một dòng văn bản. Đếm số ký tự nguyên âm a, e, i, o, u và không phân biệt chữ hoa, chữ thường.",
+      "difficulty": "MEDIUM",
+      "points": 2,
+      "starter_code": "text = input()\n",
+      "order": 4,
+      "is_active": true,
+      "test_cases": [
+        {"input_data": "Hello World", "expected_output": "3", "is_sample": true, "order": 1},
+        {"input_data": "AEIOU", "expected_output": "5", "is_sample": false, "order": 2},
+        {"input_data": "rhythm", "expected_output": "0", "is_sample": false, "order": 3},
+        {"input_data": "lap trinh python", "expected_output": "3", "is_sample": false, "order": 4}
+      ]
+    },
+    {
+      "slug": "palindrome-check",
+      "title": "Kiểm tra chuỗi đối xứng",
+      "statement": "Đọc một từ không chứa khoảng trắng. In YES nếu từ đó là palindrome khi không phân biệt chữ hoa, chữ thường; ngược lại in NO.",
+      "difficulty": "MEDIUM",
+      "points": 2,
+      "starter_code": "text = input().strip()\n",
+      "order": 5,
+      "is_active": true,
+      "test_cases": [
+        {"input_data": "Level", "expected_output": "YES", "is_sample": true, "order": 1},
+        {"input_data": "python", "expected_output": "NO", "is_sample": false, "order": 2},
+        {"input_data": "A", "expected_output": "YES", "is_sample": false, "order": 3},
+        {"input_data": "abba", "expected_output": "YES", "is_sample": false, "order": 4}
+      ]
+    },
+    {
+      "slug": "fibonacci-number",
+      "title": "Số Fibonacci thứ n",
+      "statement": "Đọc số nguyên n với 0 <= n <= 50. In số Fibonacci thứ n, với F(0) = 0 và F(1) = 1.",
+      "difficulty": "MEDIUM",
+      "points": 2,
+      "starter_code": "n = int(input())\n",
+      "order": 6,
+      "is_active": true,
+      "test_cases": [
+        {"input_data": "7", "expected_output": "13", "is_sample": true, "order": 1},
+        {"input_data": "0", "expected_output": "0", "is_sample": false, "order": 2},
+        {"input_data": "1", "expected_output": "1", "is_sample": false, "order": 3},
+        {"input_data": "10", "expected_output": "55", "is_sample": false, "order": 4}
+      ]
+    },
+    {
+      "slug": "primes-up-to-n",
+      "title": "Các số nguyên tố không vượt quá n",
+      "statement": "Đọc số nguyên n với n >= 2. In các số nguyên tố không vượt quá n theo thứ tự tăng dần, cách nhau bởi một dấu cách.",
+      "difficulty": "HARD",
+      "points": 3,
+      "starter_code": "n = int(input())\n",
+      "order": 7,
+      "is_active": true,
+      "test_cases": [
+        {"input_data": "10", "expected_output": "2 3 5 7", "is_sample": true, "order": 1},
+        {"input_data": "2", "expected_output": "2", "is_sample": false, "order": 2},
+        {"input_data": "20", "expected_output": "2 3 5 7 11 13 17 19", "is_sample": false, "order": 3},
+        {"input_data": "30", "expected_output": "2 3 5 7 11 13 17 19 23 29", "is_sample": false, "order": 4}
+      ]
+    },
+    {
+      "slug": "second-largest-distinct",
+      "title": "Số lớn thứ hai phân biệt",
+      "statement": "Dòng đầu chứa số nguyên n. Dòng thứ hai chứa n số nguyên và có ít nhất hai giá trị khác nhau. In ra giá trị lớn thứ hai phân biệt.",
+      "difficulty": "HARD",
+      "points": 3,
+      "starter_code": "n = int(input())\nnumbers = list(map(int, input().split()))\n",
+      "order": 8,
+      "is_active": true,
+      "test_cases": [
+        {"input_data": "5\n1 3 2 5 4", "expected_output": "4", "is_sample": true, "order": 1},
+        {"input_data": "4\n10 10 9 8", "expected_output": "9", "is_sample": false, "order": 2},
+        {"input_data": "3\n-1 -2 -3", "expected_output": "-2", "is_sample": false, "order": 3},
+        {"input_data": "6\n5 5 5 4 4 3", "expected_output": "4", "is_sample": false, "order": 4}
+      ]
+    }
+  ]
+}

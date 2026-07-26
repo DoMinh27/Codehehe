@@ -11,6 +11,7 @@
             <a href="{% url 'lobby' %}">CodeHehe</a>
 
             {% if user.is_authenticated %}
+                <a href="{% url 'problem-list' %}">Bài tập</a>
                 <span>Xin chào, {{ user.username }}</span>
                 <form method="post" action="{% url 'logout' %}">
                     {% csrf_token %}

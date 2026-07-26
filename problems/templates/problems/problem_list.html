@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Bài tập | CodeHehe{% endblock %}
+
+{% block content %}
+    <h1>Ngân hàng bài tập</h1>
+
+    {% if problems %}
+        <ol>
+            {% for problem in problems %}
+                <li>
+                    <a href="{% url 'problem-detail' problem.slug %}">
+                        {{ problem.title }}
+                    </a>
+                    — {{ problem.get_difficulty_display }} — {{ problem.points }} điểm
+                </li>
+            {% endfor %}
+        </ol>
+    {% else %}
+        <p>Hiện chưa có bài tập nào.</p>
+    {% endif %}
+{% endblock %}

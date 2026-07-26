@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}{{ problem.title }} | CodeHehe{% endblock %}
+
+{% block content %}
+    <p><a href="{% url 'problem-list' %}">← Quay lại danh sách bài</a></p>
+
+    <h1>{{ problem.title }}</h1>
+    <p>
+        Độ khó: {{ problem.get_difficulty_display }}
+        — Điểm: {{ problem.points }}
+    </p>
+
+    <section>
+        <h2>Đề bài</h2>
+        <div>{{ problem.statement|linebreaks }}</div>
+    </section>
+
+    <section>
+        <h2>Code khởi đầu</h2>
+        <textarea name="source_code" rows="12" cols="80" aria-label="Code khởi đầu">{{ problem.starter_code }}</textarea>
+    </section>
+
+    <section>
+        <h2>Ví dụ</h2>
+        {% if problem.sample_tests %}
+            {% for test_case in problem.sample_tests %}
+                <article>
+                    <h3>Ví dụ {{ forloop.counter }}</h3>
+                    <p>Input:</p>
+                    <pre>{{ test_case.input_data }}</pre>
+                    <p>Output:</p>
+                    <pre>{{ test_case.expected_output }}</pre>
+                </article>
+            {% endfor %}
+        {% else %}
+            <p>Bài tập này chưa có ví dụ.</p>
+        {% endif %}
+    </section>
+{% endblock %}

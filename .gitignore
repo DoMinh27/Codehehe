@@ -3,6 +3,9 @@
 .env
 __pycache__/
 *.pyc
+.ruff_cache/
+.coverage
+htmlcov/
 db.sqlite3
 media/
 staticfiles/

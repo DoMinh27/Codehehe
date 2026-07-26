@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Đăng nhập | CodeHehe{% endblock %}
+
+{% block content %}
+    <h1>Đăng nhập</h1>
+
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        {% if next %}
+            <input type="hidden" name="next" value="{{ next }}">
+        {% endif %}
+        <button type="submit">Đăng nhập</button>
+    </form>
+
+    <p>
+        <a href="{% url 'register' %}">Chưa có tài khoản? Đăng ký</a>
+    </p>
+{% endblock %}

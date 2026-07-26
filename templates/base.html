@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}CodeHehe{% endblock %}</title>
+</head>
+<body>
+    <header>
+        <nav>
+            <a href="{% url 'lobby' %}">CodeHehe</a>
+
+            {% if user.is_authenticated %}
+                <span>Xin chào, {{ user.username }}</span>
+                <form method="post" action="{% url 'logout' %}">
+                    {% csrf_token %}
+                    <button type="submit">Đăng xuất</button>
+                </form>
+            {% else %}
+                <a href="{% url 'login' %}">Đăng nhập</a>
+                <a href="{% url 'register' %}">Đăng ký</a>
+            {% endif %}
+        </nav>
+    </header>
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

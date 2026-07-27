@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Phòng {{ match.room_code }} | CodeHehe{% endblock %}
+
+{% block content %}
+    <h1>Waiting Room</h1>
+    <p>Mã phòng: <strong id="room-code">{{ match.room_code }}</strong></p>
+    <p>Trạng thái: <span id="room-status">{{ match.get_status_display }}</span></p>
+
+    <section aria-labelledby="players-heading">
+        <h2 id="players-heading">Người chơi</h2>
+        <ol id="player-list">
+            {% for player in players %}
+                <li>{{ player.user.username }}{% if player.is_host %} (Host){% endif %}</li>
+            {% endfor %}
+            {% if players|length < 2 %}
+                <li>Đang chờ người chơi thứ hai…</li>
+            {% endif %}
+        </ol>
+    </section>
+
+    {% if current_player.is_host %}
+        <button type="button" disabled title="Sẽ được kích hoạt ở Gate 3">
+            Bắt đầu trận
+        </button>
+    {% endif %}
+
+    <p id="poll-error" role="alert" hidden></p>
+
+    <script>
+        (() => {
+            const stateUrl = "{% url 'waiting-room-state' room_code=match.room_code %}";
+            const playerList = document.getElementById("player-list");
+            const status = document.getElementById("room-status");
+            const error = document.getElementById("poll-error");
+
+            async function refreshRoom() {
+                try {
+                    const response = await fetch(stateUrl, {
+                        headers: {"Accept": "application/json"},
+                    });
+                    if (!response.ok) {
+                        throw new Error("Không thể cập nhật phòng.");
+                    }
+                    const state = await response.json();
+                    status.textContent = state.status;
+                    playerList.replaceChildren();
+                    for (const player of state.players) {
+                        const item = document.createElement("li");
+                        item.textContent = player
+                            ? `${player.username}${player.is_host ? " (Host)" : ""}`
+                            : "Đang chờ người chơi thứ hai…";
+                        playerList.appendChild(item);
+                    }
+                    error.hidden = true;
+                } catch (pollError) {
+                    error.textContent = pollError.message;
+                    error.hidden = false;
+                }
+            }
+
+            window.setInterval(refreshRoom, 2000);
+        })();
+    </script>
+{% endblock %}

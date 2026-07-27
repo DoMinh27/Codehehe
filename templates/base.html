@@ -25,6 +25,13 @@
     </header>
 
     <main>
+        {% if messages %}
+            <section aria-label="Thông báo">
+                {% for message in messages %}
+                    <p role="alert">{{ message }}</p>
+                {% endfor %}
+            </section>
+        {% endif %}
         {% block content %}{% endblock %}
     </main>
 </body>

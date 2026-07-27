@@ -5,6 +5,33 @@
 {% block content %}
     <h1>Lobby</h1>
     <p>Xin chào {{ user.username }}.</p>
+
+    <section>
+        <h2>Tạo phòng</h2>
+        <form method="post" action="{% url 'room-create' %}">
+            {% csrf_token %}
+            <button type="submit">Tạo phòng mới</button>
+        </form>
+    </section>
+
+    <section>
+        <h2>Tham gia phòng</h2>
+        <form method="post" action="{% url 'room-join' %}">
+            {% csrf_token %}
+            <label for="room-code">Mã phòng</label>
+            <input
+                id="room-code"
+                name="room_code"
+                type="text"
+                minlength="6"
+                maxlength="6"
+                pattern="[A-Za-z0-9]{6}"
+                autocomplete="off"
+                required
+            >
+            <button type="submit">Tham gia</button>
+        </form>
+    </section>
+
     <p><a href="{% url 'problem-list' %}">Xem ngân hàng bài tập</a></p>
-    <p>Chức năng tạo và tham gia phòng sẽ được bổ sung ở giai đoạn Match.</p>
 {% endblock %}

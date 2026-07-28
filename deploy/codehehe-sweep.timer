@@ -1,0 +1,11 @@
+[Unit]
+Description=Run the CodeHehe match sweeper every 15 seconds
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=15s
+AccuracySec=1s
+Unit=codehehe-sweep.service
+
+[Install]
+WantedBy=timers.target

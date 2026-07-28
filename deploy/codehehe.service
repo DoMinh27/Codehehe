@@ -1,0 +1,25 @@
+[Unit]
+Description=CodeHehe Django application
+After=network.target docker.service
+Wants=docker.service
+
+[Service]
+Type=simple
+User=codehehe
+Group=codehehe
+WorkingDirectory=/opt/codehehe/app
+EnvironmentFile=/etc/codehehe/codehehe.env
+ExecStart=/opt/codehehe/venv/bin/gunicorn config.wsgi:application --bind 127.0.0.1:8000 --workers 2 --threads 2 --timeout 120 --access-logfile - --error-logfile -
+ExecReload=/bin/kill -s HUP $MAINPID
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+KillSignal=SIGQUIT
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/var/lib/codehehe /var/www/codehehe/static
+
+[Install]
+WantedBy=multi-user.target

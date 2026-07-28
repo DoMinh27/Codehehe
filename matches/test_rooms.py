@@ -4,10 +4,12 @@ from django.urls import reverse
 
 from .models import Match, MatchPlayer
 from .services.room import (
+    ActiveMatchExistsError,
     AlreadyJoinedError,
     CreateRoomService,
     InvalidRoomCodeError,
     JoinRoomService,
+    LeaveRoomService,
     RoomFullError,
     RoomNotFoundError,
     RoomNotWaitingError,
@@ -47,6 +49,22 @@ class RoomServiceTests(TestCase):
 
         self.assertEqual(match.room_code, "NEW456")
         self.assertEqual(MatchPlayer.objects.filter(match=match).count(), 1)
+
+    def test_user_cannot_create_or_join_a_second_active_match(self):
+        active_match = CreateRoomService(code_generator=lambda: "FIRST1").create(
+            user=self.host
+        )
+        other_match = CreateRoomService(code_generator=lambda: "OTHER1").create(
+            user=self.second
+        )
+
+        with self.assertRaises(ActiveMatchExistsError) as create_error:
+            CreateRoomService(code_generator=lambda: "SECOND").create(user=self.host)
+        with self.assertRaises(ActiveMatchExistsError) as join_error:
+            JoinRoomService().join(user=self.host, room_code=other_match.room_code)
+
+        self.assertEqual(create_error.exception.match, active_match)
+        self.assertEqual(join_error.exception.match, active_match)
 
     def test_join_normalizes_code_and_creates_non_host_player(self):
         match = CreateRoomService(code_generator=lambda: "JOIN01").create(user=self.host)
@@ -89,6 +107,19 @@ class RoomServiceTests(TestCase):
         self.assertEqual(match.players.count(), 2)
         self.assertFalse(MatchPlayer.objects.filter(match=match, user=self.third).exists())
 
+    def test_guest_can_leave_and_host_leave_cancels_room(self):
+        match = CreateRoomService(code_generator=lambda: "LEAVE1").create(user=self.host)
+        JoinRoomService().join(user=self.second, room_code=match.room_code)
+
+        LeaveRoomService().leave(user=self.second, room_code=match.room_code)
+        self.assertFalse(match.players.filter(user=self.second).exists())
+
+        JoinRoomService().join(user=self.second, room_code=match.room_code)
+        LeaveRoomService().leave(user=self.host, room_code=match.room_code)
+        match.refresh_from_db()
+        self.assertEqual(match.status, Match.Status.CANCELLED)
+        self.assertFalse(match.players.filter(is_active=True).exists())
+
 
 class RoomViewTests(TestCase):
     def setUp(self):
@@ -116,17 +147,16 @@ class RoomViewTests(TestCase):
                 self.assertEqual(response.status_code, 302)
                 self.assertIn(reverse("login"), response.url)
 
-    def test_create_room_redirects_host_to_waiting_room(self):
+    def test_create_room_resumes_existing_active_room(self):
         self.client.force_login(self.host)
 
         response = self.client.post(reverse("room-create"))
 
-        created_match = Match.objects.exclude(pk=self.match.pk).get(host=self.host)
         self.assertRedirects(
             response,
-            reverse("waiting-room", kwargs={"room_code": created_match.room_code}),
+            reverse("waiting-room", kwargs={"room_code": self.match.room_code}),
         )
-        self.assertTrue(created_match.players.get(user=self.host).is_host)
+        self.assertEqual(Match.objects.filter(host=self.host).count(), 1)
 
     def test_join_redirects_player_to_waiting_room(self):
         self.client.force_login(self.second)
@@ -177,7 +207,7 @@ class RoomViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "matches/waiting_room.html")
         self.assertContains(response, self.match.room_code)
-        self.assertContains(response, "window.setInterval(refreshRoom, 2000)")
+        self.assertContains(response, "window.setTimeout(")
         self.assertContains(response, "Bắt đầu trận")
         self.assertContains(response, "disabled")
 
@@ -204,8 +234,58 @@ class RoomViewTests(TestCase):
                     {"username": self.second.username, "is_host": False},
                 ],
                 "is_full": True,
+                "can_start": True,
+                "battle_url": None,
+                "lobby_url": None,
             },
         )
+
+    def test_lobby_resumes_waiting_then_playing_match(self):
+        self.client.force_login(self.host)
+
+        response = self.client.get(reverse("lobby"))
+        self.assertRedirects(
+            response,
+            reverse("waiting-room", kwargs={"room_code": self.match.room_code}),
+        )
+
+        self.match.status = Match.Status.PLAYING
+        self.match.save(update_fields=["status"])
+        response = self.client.get(reverse("lobby"))
+        self.assertRedirects(response, reverse("battle", args=[self.match.pk]))
+
+    def test_active_match_state_supports_global_resume(self):
+        self.client.force_login(self.host)
+        url = reverse("active-match-state")
+
+        waiting = self.client.get(url)
+        self.assertEqual(
+            waiting.json(),
+            {
+                "active": True,
+                "status": Match.Status.WAITING,
+                "url": reverse(
+                    "waiting-room",
+                    kwargs={"room_code": self.match.room_code},
+                ),
+            },
+        )
+
+        self.match.status = Match.Status.PLAYING
+        self.match.save(update_fields=["status"])
+        playing = self.client.get(url)
+        self.assertEqual(playing.json()["url"], reverse("battle", args=[self.match.pk]))
+
+    def test_leave_room_endpoint_requires_post_and_releases_guest(self):
+        JoinRoomService().join(user=self.second, room_code=self.match.room_code)
+        self.client.force_login(self.second)
+        url = reverse("room-leave", kwargs={"room_code": self.match.room_code})
+
+        self.assertEqual(self.client.get(url).status_code, 405)
+        response = self.client.post(url)
+
+        self.assertRedirects(response, reverse("lobby"))
+        self.assertFalse(self.match.players.filter(user=self.second).exists())
 
     def test_room_creation_keeps_csrf_protection(self):
         csrf_client = Client(enforce_csrf_checks=True)

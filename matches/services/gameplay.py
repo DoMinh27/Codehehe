@@ -1,0 +1,340 @@
+"""Match start and finish lifecycle services."""
+
+from dataclasses import dataclass, field
+
+from django.db import transaction
+from django.db.models import Count, Q
+from django.utils import timezone
+
+from matches.models import (
+    Match,
+    MatchPlayer,
+    MatchProblem,
+    PlayerProblemProgress,
+    Submission,
+)
+from problems.models import Problem
+
+from .scoring import ScoringService
+from .db import retry_transient_db_lock
+
+
+class MatchLifecycleError(Exception):
+    """Base class for expected match lifecycle failures."""
+
+
+class MatchNotFoundError(MatchLifecycleError):
+    """Raised when a requested match does not exist."""
+
+
+class MatchPermissionError(MatchLifecycleError):
+    """Raised when a non-host attempts a host-only action."""
+
+
+class MatchStateError(MatchLifecycleError):
+    """Raised when the match is not in the required state."""
+
+
+class MatchPlayerCountError(MatchLifecycleError):
+    """Raised when the match does not have exactly two players."""
+
+
+class InsufficientProblemsError(MatchLifecycleError):
+    """Raised when the problem bank cannot supply the V1 set."""
+
+
+class MatchNotReadyToFinishError(MatchLifecycleError):
+    """Raised when neither finish condition has been reached."""
+
+
+class MatchHasPendingSubmissionsError(MatchLifecycleError):
+    """Raised while an on-time submission is still being judged."""
+
+
+@dataclass
+class StartMatchService:
+    """Create a frozen four-problem battle and start its server timer."""
+
+    def start(self, *, user, match_id: int) -> Match:
+        return retry_transient_db_lock(
+            lambda: self._start_once(user=user, match_id=match_id)
+        )
+
+    @staticmethod
+    def _start_once(*, user, match_id: int) -> Match:
+        with transaction.atomic():
+            try:
+                match = Match.objects.select_for_update().get(pk=match_id)
+            except Match.DoesNotExist as error:
+                raise MatchNotFoundError("Không tìm thấy trận đấu.") from error
+
+            if match.host_id != user.id:
+                raise MatchPermissionError("Chỉ host được bắt đầu trận.")
+            if match.status != Match.Status.WAITING or match.started_at is not None:
+                raise MatchStateError("Trận đấu không còn ở trạng thái chờ.")
+
+            players = list(
+                MatchPlayer.objects.select_for_update()
+                .filter(match=match)
+                .order_by("joined_at", "id")
+            )
+            if len(players) != 2:
+                raise MatchPlayerCountError("Phòng cần đúng hai người để bắt đầu.")
+
+            eligible_problems = Problem.objects.annotate(
+                hidden_test_count=Count(
+                    "test_cases",
+                    filter=Q(test_cases__is_sample=False),
+                )
+            ).filter(is_active=True, hidden_test_count__gt=0)
+            easy_problems = list(
+                eligible_problems.filter(
+                    difficulty=Problem.Difficulty.EASY,
+                ).order_by("order", "id")[:2]
+            )
+            medium_problems = list(
+                eligible_problems.filter(
+                    difficulty=Problem.Difficulty.MEDIUM,
+                ).order_by("order", "id")[:2]
+            )
+            if len(easy_problems) != 2 or len(medium_problems) != 2:
+                raise InsufficientProblemsError(
+                    "Cần ít nhất 2 bài Easy và 2 bài Medium đang hoạt động."
+                )
+
+            match_problems = []
+            for order, problem in enumerate(
+                [*easy_problems, *medium_problems],
+                start=1,
+            ):
+                sample_tests = []
+                hidden_tests = []
+                for test_case in problem.test_cases.order_by("order", "id"):
+                    snapshot = {
+                        "input_data": test_case.input_data,
+                        "expected_output": test_case.expected_output,
+                    }
+                    if test_case.is_sample:
+                        sample_tests.append(snapshot)
+                    else:
+                        hidden_tests.append(snapshot)
+                match_problems.append(
+                    MatchProblem(
+                        match=match,
+                        problem=problem,
+                        order=order,
+                        points=problem.points,
+                        title_snapshot=problem.title,
+                        statement_snapshot=problem.statement,
+                        starter_code_snapshot=problem.starter_code,
+                        difficulty_snapshot=problem.difficulty,
+                        sample_tests_snapshot=sample_tests,
+                        hidden_tests_snapshot=hidden_tests,
+                    )
+                )
+            MatchProblem.objects.bulk_create(match_problems)
+            PlayerProblemProgress.objects.bulk_create(
+                [
+                    PlayerProblemProgress(
+                        match=match,
+                        player=player,
+                        match_problem=match_problem,
+                    )
+                    for player in players
+                    for match_problem in match_problems
+                ]
+            )
+
+            match.status = Match.Status.PLAYING
+            match.started_at = timezone.now()
+            match.save(update_fields=["status", "started_at", "updated_at"])
+            return match
+
+
+@dataclass
+class FinishMatchService:
+    """Idempotently finalize an eligible match and persist its result."""
+
+    scoring_service: ScoringService = field(default_factory=ScoringService)
+
+    def finalize(self, *, match_id: int, now=None) -> Match:
+        return retry_transient_db_lock(
+            lambda: self._finalize_once(match_id=match_id, now=now)
+        )
+
+    def _finalize_once(self, *, match_id: int, now=None) -> Match:
+        evaluation_time = now or timezone.now()
+        unprocessed_ids = list(
+            Submission.objects.filter(
+                match_id=match_id,
+                is_score_processed=False,
+            )
+            .exclude(verdict=Submission.Verdict.PENDING)
+            .values_list("id", flat=True)
+        )
+        for submission_id in unprocessed_ids:
+            self.scoring_service.process_submission(submission_id)
+
+        with transaction.atomic():
+            try:
+                match = Match.objects.select_for_update().get(pk=match_id)
+            except Match.DoesNotExist as error:
+                raise MatchNotFoundError("Không tìm thấy trận đấu.") from error
+
+            if match.status == Match.Status.FINISHED:
+                MatchPlayer.objects.filter(match=match).update(is_active=False)
+                return match
+            if match.status != Match.Status.PLAYING or match.ends_at is None:
+                raise MatchStateError("Trận đấu không ở trạng thái đang chơi.")
+
+            players = list(
+                MatchPlayer.objects.select_for_update()
+                .filter(match=match)
+                .order_by("id")
+            )
+            if len(players) != 2:
+                raise MatchPlayerCountError(
+                    "Trận đấu cần đúng hai người để kết thúc."
+                )
+            problem_count = MatchProblem.objects.filter(match=match).count()
+            solved_counts = {
+                row["player_id"]: row["count"]
+                for row in PlayerProblemProgress.objects.filter(
+                    match=match,
+                    is_solved=True,
+                )
+                .values("player_id")
+                .annotate(count=Count("id"))
+            }
+            both_solved_all = problem_count > 0 and all(
+                solved_counts.get(player.id, 0) == problem_count for player in players
+            )
+            deadline_reached = evaluation_time >= match.ends_at
+            if not deadline_reached and not both_solved_all:
+                raise MatchNotReadyToFinishError(
+                    "Trận đấu chưa đủ điều kiện kết thúc."
+                )
+
+            if Submission.objects.filter(
+                match=match,
+                verdict=Submission.Verdict.PENDING,
+                received_at__lte=match.ends_at,
+            ).exists():
+                raise MatchHasPendingSubmissionsError(
+                    "Đang chờ submission hợp lệ hoàn tất."
+                )
+
+            if Submission.objects.filter(
+                match=match,
+                is_score_processed=False,
+            ).exists():
+                raise MatchHasPendingSubmissionsError(
+                    "Đang hoàn tất tính điểm submission."
+                )
+
+            highest_score = max(player.score for player in players)
+            leaders = [player for player in players if player.score == highest_score]
+            match.status = Match.Status.FINISHED
+            match.ended_at = match.ends_at if deadline_reached else evaluation_time
+            match.finish_reason = (
+                Match.FinishReason.TIMEOUT
+                if deadline_reached
+                else Match.FinishReason.ALL_SOLVED
+            )
+            match.surrendered_by = None
+            if len(leaders) == 1:
+                match.winner_id = leaders[0].user_id
+                match.is_draw = False
+            else:
+                match.winner = None
+                match.is_draw = True
+            match.save(
+                update_fields=[
+                    "status",
+                    "ended_at",
+                    "finish_reason",
+                    "surrendered_by",
+                    "winner",
+                    "is_draw",
+                    "updated_at",
+                ]
+            )
+            MatchPlayer.objects.filter(match=match).update(is_active=False)
+            return match
+
+    def try_finalize(self, *, match_id: int, now=None) -> Match | None:
+        try:
+            return self.finalize(match_id=match_id, now=now)
+        except (
+            MatchHasPendingSubmissionsError,
+            MatchNotReadyToFinishError,
+            MatchPlayerCountError,
+            MatchStateError,
+        ):
+            return None
+
+
+@dataclass
+class SurrenderMatchService:
+    """Immediately finish a playing match in favor of the opponent."""
+
+    def surrender(self, *, user, match_id: int, now=None) -> Match:
+        return retry_transient_db_lock(
+            lambda: self._surrender_once(user=user, match_id=match_id, now=now)
+        )
+
+    @staticmethod
+    def _surrender_once(*, user, match_id: int, now=None) -> Match:
+        with transaction.atomic():
+            try:
+                match = Match.objects.select_for_update().get(pk=match_id)
+            except Match.DoesNotExist as error:
+                raise MatchNotFoundError("Không tìm thấy trận đấu.") from error
+
+            players = list(
+                MatchPlayer.objects.select_for_update()
+                .filter(match=match)
+                .order_by("id")
+            )
+            current_player = next(
+                (player for player in players if player.user_id == user.id),
+                None,
+            )
+            if current_player is None:
+                raise MatchPermissionError("Bạn không thuộc trận đấu này.")
+            if (
+                match.status == Match.Status.FINISHED
+                and match.finish_reason == Match.FinishReason.SURRENDER
+                and match.surrendered_by_id == user.id
+            ):
+                MatchPlayer.objects.filter(match=match).update(is_active=False)
+                return match
+            if match.status != Match.Status.PLAYING:
+                raise MatchStateError("Trận đấu không ở trạng thái đang chơi.")
+            if len(players) != 2:
+                raise MatchPlayerCountError(
+                    "Trận đấu cần đúng hai người để đầu hàng."
+                )
+
+            opponent = next(
+                player for player in players if player.pk != current_player.pk
+            )
+            match.status = Match.Status.FINISHED
+            match.ended_at = now or timezone.now()
+            match.finish_reason = Match.FinishReason.SURRENDER
+            match.surrendered_by_id = user.id
+            match.winner_id = opponent.user_id
+            match.is_draw = False
+            match.save(
+                update_fields=[
+                    "status",
+                    "ended_at",
+                    "finish_reason",
+                    "surrendered_by",
+                    "winner",
+                    "is_draw",
+                    "updated_at",
+                ]
+            )
+            MatchPlayer.objects.filter(match=match).update(is_active=False)
+            return match

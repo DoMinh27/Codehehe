@@ -3,11 +3,14 @@ from unittest.mock import patch
 from django.test import SimpleTestCase
 
 from .services.judge import (
+    FakeCodeRunner,
     FakeJudgeService,
     Judge0ConfigurationError,
     Judge0Service,
     JudgeResult,
     JudgeTestCase,
+    RunResult,
+    RunVerdict,
     Verdict,
 )
 
@@ -60,6 +63,21 @@ class FakeJudgeServiceTests(SimpleTestCase):
         self.assertEqual(judge.calls, [])
 
 
+class FakeCodeRunnerTests(SimpleTestCase):
+    def test_records_custom_input_without_executing_source(self):
+        runner = FakeCodeRunner(
+            result=RunResult(
+                verdict=RunVerdict.COMPLETED,
+                stdout="5\n",
+            )
+        )
+
+        result = runner.run(source_code="print(input())", input_data="5")
+
+        self.assertEqual(result.stdout, "5\n")
+        self.assertEqual(runner.calls, [("print(input())", "5")])
+
+
 class Judge0ServiceTests(SimpleTestCase):
     def setUp(self):
         self.test_cases = [
@@ -98,3 +116,42 @@ class Judge0ServiceTests(SimpleTestCase):
         self.assertEqual(result.verdict, Verdict.WRONG_ANSWER)
         self.assertEqual(result.passed_test_cases, 0)
         self.assertEqual(result.stdout, "4\n")
+
+    def test_run_omits_expected_output_and_returns_stdout(self):
+        runner = Judge0Service(base_url="https://judge.example")
+        response = {
+            "status": {"id": 3},
+            "stdout": "hello\n",
+        }
+
+        with patch.object(
+            runner,
+            "_request_submission",
+            return_value=response,
+        ) as request_submission:
+            result = runner.run(
+                source_code="print(input())",
+                input_data="hello",
+            )
+
+        self.assertEqual(result.verdict, RunVerdict.COMPLETED)
+        self.assertEqual(result.stdout, "hello\n")
+        request_submission.assert_called_once_with(
+            source_code="print(input())",
+            input_data="hello",
+        )
+
+    def test_run_returns_bounded_service_ready_diagnostic_fields(self):
+        runner = Judge0Service(base_url="https://judge.example")
+        response = {
+            "status": {"id": 6},
+            "stdout": "",
+            "compile_output": "SyntaxError",
+            "token": "must-not-be-returned",
+        }
+
+        with patch.object(runner, "_request_submission", return_value=response):
+            result = runner.run(source_code="bad code", input_data="")
+
+        self.assertEqual(result.verdict, RunVerdict.COMPILATION_ERROR)
+        self.assertEqual(result.diagnostic, "SyntaxError")

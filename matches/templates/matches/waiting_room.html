@@ -20,10 +20,20 @@
     </section>
 
     {% if current_player.is_host %}
-        <button type="button" disabled title="Sẽ được kích hoạt ở Gate 3">
-            Bắt đầu trận
-        </button>
+        <form method="post" action="{% url 'match-start' match_id=match.id %}">
+            {% csrf_token %}
+            <button id="start-match" type="submit" {% if players|length != 2 %}disabled{% endif %}>
+                Bắt đầu trận
+            </button>
+        </form>
     {% endif %}
+
+    <form method="post" action="{% url 'room-leave' room_code=match.room_code %}">
+        {% csrf_token %}
+        <button type="submit">
+            {% if current_player.is_host %}Hủy phòng{% else %}Rời phòng{% endif %}
+        </button>
+    </form>
 
     <p id="poll-error" role="alert" hidden></p>
 
@@ -33,6 +43,16 @@
             const playerList = document.getElementById("player-list");
             const status = document.getElementById("room-status");
             const error = document.getElementById("poll-error");
+            const startButton = document.getElementById("start-match");
+            let pollHandle = null;
+
+            function schedulePoll() {
+                window.clearTimeout(pollHandle);
+                pollHandle = window.setTimeout(
+                    refreshRoom,
+                    document.hidden ? 5000 : 2000,
+                );
+            }
 
             async function refreshRoom() {
                 try {
@@ -43,7 +63,18 @@
                         throw new Error("Không thể cập nhật phòng.");
                     }
                     const state = await response.json();
+                    if (state.battle_url) {
+                        window.location.assign(state.battle_url);
+                        return;
+                    }
+                    if (state.lobby_url) {
+                        window.location.assign(state.lobby_url);
+                        return;
+                    }
                     status.textContent = state.status;
+                    if (startButton) {
+                        startButton.disabled = !state.can_start;
+                    }
                     playerList.replaceChildren();
                     for (const player of state.players) {
                         const item = document.createElement("li");
@@ -56,10 +87,13 @@
                 } catch (pollError) {
                     error.textContent = pollError.message;
                     error.hidden = false;
+                } finally {
+                    schedulePoll();
                 }
             }
 
-            window.setInterval(refreshRoom, 2000);
+            refreshRoom();
+            document.addEventListener("visibilitychange", schedulePoll);
         })();
     </script>
 {% endblock %}

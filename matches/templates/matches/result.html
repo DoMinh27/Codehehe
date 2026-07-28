@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Kết quả {{ match.room_code }} | CodeHehe{% endblock %}
+
+{% block content %}
+    <h1>Kết quả trận {{ match.room_code }}</h1>
+
+    {% if match.is_draw %}
+        <h2>Hòa</h2>
+    {% else %}
+        <h2>Người thắng: {{ match.winner.username }}</h2>
+    {% endif %}
+
+    <p>Kết thúc: {{ match.ended_at }}</p>
+    {% if match.finish_reason %}
+        <p>Lý do: {{ match.get_finish_reason_display }}</p>
+    {% endif %}
+    {% if match.surrendered_by %}
+        <p>{{ match.surrendered_by.username }} đã đầu hàng.</p>
+    {% endif %}
+
+    <section>
+        <h2>Điểm số</h2>
+        <ol>
+            {% for result in player_results %}
+                <li>
+                    {{ result.player.user.username }}:
+                    {{ result.player.score }} điểm,
+                    {{ result.solved_count }}/4 bài
+                </li>
+            {% endfor %}
+        </ol>
+    </section>
+
+    <section>
+        <h2>First-solve</h2>
+        <ul>
+            {% for match_problem in match_problems %}
+                <li>
+                    {{ match_problem.title_snapshot }}:
+                    {% if match_problem.first_solver %}
+                        {{ match_problem.first_solver.user.username }}
+                    {% else %}
+                        Không có
+                    {% endif %}
+                </li>
+            {% endfor %}
+        </ul>
+    </section>
+
+    <p><a href="{% url 'lobby' %}">Về Lobby</a></p>
+{% endblock %}

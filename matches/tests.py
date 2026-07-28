@@ -209,6 +209,18 @@ class SubmissionServiceTests(TestCase):
             title_snapshot=self.problem.title,
             statement_snapshot=self.problem.statement,
             difficulty_snapshot=self.problem.difficulty,
+            sample_tests_snapshot=[
+                {
+                    "input_data": "visible-input",
+                    "expected_output": "visible-output",
+                }
+            ],
+            hidden_tests_snapshot=[
+                {
+                    "input_data": "hidden-input",
+                    "expected_output": "hidden-output",
+                }
+            ],
         )
         self.problem.test_cases.create(
             input_data="visible-input", expected_output="visible-output", is_sample=True

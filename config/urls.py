@@ -18,11 +18,12 @@ from django.contrib import admin
 from django.urls import include, path
 
 from accounts.views import lobby
-from config.views import health
+from config.views import health, readiness
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path("health/", health, name="health"),
+    path("health/ready/", readiness, name="readiness"),
     path("accounts/", include("accounts.urls")),
     path("matches/", include("matches.urls")),
     path("problems/", include("problems.urls")),

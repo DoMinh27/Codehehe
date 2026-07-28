@@ -1,10 +1,18 @@
 import json
 import os
 from dataclasses import dataclass, field, replace
-from enum import StrEnum
+from enum import Enum
 from typing import Any, Protocol, Sequence
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+
+
+try:
+    from enum import StrEnum
+except ImportError:  # Python 3.10 on Ubuntu 22.04.
+    class StrEnum(str, Enum):
+        def __str__(self):
+            return self.value
 
 
 class Verdict(StrEnum):

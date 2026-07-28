@@ -19,6 +19,9 @@ from problems.services.judge import (
     Verdict,
 )
 
+from .gameplay import FinishMatchService
+from .scoring import ScoringService
+
 logger = logging.getLogger(__name__)
 
 
@@ -57,6 +60,8 @@ class SubmissionService:
     """Validate, persist, and judge a source-code submission."""
 
     judge_service: JudgeService
+    scoring_service: ScoringService | None = None
+    finish_service: FinishMatchService | None = None
 
     def submit(
         self,
@@ -93,12 +98,20 @@ class SubmissionService:
             )
         except (Judge0ConfigurationError, Judge0UnavailableError):
             logger.exception("Judge is unavailable for submission %s", submission.pk)
-            return self._complete_internal_error(submission)
+            completed_submission = self._complete_internal_error(submission)
         except Exception:
             logger.exception("Unexpected judge failure for submission %s", submission.pk)
-            return self._complete_internal_error(submission)
+            completed_submission = self._complete_internal_error(submission)
+        else:
+            completed_submission = self._complete_submission(submission, result)
 
-        return self._complete_submission(submission, result)
+        if self.scoring_service is not None:
+            completed_submission = self.scoring_service.process_submission(
+                completed_submission.pk
+            )
+        if self.finish_service is not None:
+            self.finish_service.try_finalize(match_id=completed_submission.match_id)
+        return completed_submission
 
     def _create_pending_submission(
         self,

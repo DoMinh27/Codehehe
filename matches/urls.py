@@ -11,6 +11,11 @@ urlpatterns = [
         views.waiting_room_state,
         name="waiting-room-state",
     ),
+    path("<int:match_id>/start/", views.start_match, name="match-start"),
+    path("<int:match_id>/battle/", views.battle, name="battle"),
+    path("<int:match_id>/state/", views.match_state, name="match-state"),
+    path("<int:match_id>/finalize/", views.finalize_match, name="match-finalize"),
+    path("<int:match_id>/result/", views.match_result, name="match-result"),
     path(
         "<int:match_id>/problems/<int:match_problem_id>/submissions/",
         views.submit_submission,

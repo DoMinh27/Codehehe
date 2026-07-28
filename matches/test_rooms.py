@@ -204,6 +204,8 @@ class RoomViewTests(TestCase):
                     {"username": self.second.username, "is_host": False},
                 ],
                 "is_full": True,
+                "can_start": True,
+                "battle_url": None,
             },
         )
 

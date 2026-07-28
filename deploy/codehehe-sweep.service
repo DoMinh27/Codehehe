@@ -4,7 +4,7 @@ After=codehehe.service
 
 [Service]
 Type=oneshot
-Group=www-data
+Group=codehehe
 User=codehehe
 WorkingDirectory=/opt/codehehe/app
 EnvironmentFile=/etc/codehehe/codehehe.env

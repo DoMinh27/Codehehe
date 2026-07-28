@@ -4,6 +4,23 @@ from django.conf import settings
 from django.db import models
 
 
+class Skill(models.Model):
+    code = models.CharField(max_length=40, unique=True)
+    name = models.CharField(max_length=100)
+    description = models.TextField()
+    energy_cost = models.PositiveSmallIntegerField()
+    duration_seconds = models.PositiveIntegerField(null=True, blank=True)
+    is_active = models.BooleanField(default=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["id"]
+
+    def __str__(self):
+        return self.name
+
+
 class Match(models.Model):
     class Status(models.TextChoices):
         WAITING = "WAITING", "Waiting"
@@ -30,7 +47,7 @@ class Match(models.Model):
     )
     started_at = models.DateTimeField(null=True, blank=True)
     ended_at = models.DateTimeField(null=True, blank=True)
-    duration_seconds = models.PositiveIntegerField(default=900)
+    duration_seconds = models.PositiveIntegerField(default=300)
     winner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
@@ -94,6 +111,41 @@ class Match(models.Model):
         return f"Match {self.room_code}"
 
 
+class MatchSkill(models.Model):
+    match = models.ForeignKey(
+        Match,
+        on_delete=models.CASCADE,
+        related_name="match_skills",
+    )
+    skill = models.ForeignKey(
+        Skill,
+        on_delete=models.PROTECT,
+        related_name="match_snapshots",
+    )
+    code_snapshot = models.CharField(max_length=40)
+    name_snapshot = models.CharField(max_length=100)
+    description_snapshot = models.TextField()
+    energy_cost_snapshot = models.PositiveSmallIntegerField()
+    duration_seconds_snapshot = models.PositiveIntegerField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["match", "skill"],
+                name="matchskill_match_skill_unique",
+            ),
+            models.UniqueConstraint(
+                fields=["match", "code_snapshot"],
+                name="matchskill_match_code_unique",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.match.room_code} - {self.name_snapshot}"
+
+
 class MatchPlayer(models.Model):
     match = models.ForeignKey(
         Match,
@@ -106,6 +158,8 @@ class MatchPlayer(models.Model):
         related_name="match_players",
     )
     score = models.PositiveIntegerField(default=0)
+    energy = models.PositiveSmallIntegerField(default=0)
+    time_penalty_seconds = models.PositiveIntegerField(default=0)
     joined_at = models.DateTimeField(auto_now_add=True)
     is_host = models.BooleanField(default=False)
     slot = models.PositiveSmallIntegerField(null=True, blank=True)
@@ -131,10 +185,119 @@ class MatchPlayer(models.Model):
                 condition=models.Q(slot__in=[1, 2]) | models.Q(slot__isnull=True),
                 name="matchplayer_slot_1_or_2",
             ),
+            models.CheckConstraint(
+                condition=models.Q(energy__gte=0, energy__lte=3),
+                name="matchplayer_energy_0_to_3",
+            ),
         ]
+
+    @property
+    def personal_ends_at(self):
+        if self.match.started_at is None or self.match.ends_at is None:
+            return None
+        penalized_end = self.match.ends_at - timedelta(
+            seconds=self.time_penalty_seconds
+        )
+        return max(self.match.started_at, penalized_end)
 
     def __str__(self):
         return f"{self.user.username} in {self.match.room_code}"
+
+
+class MatchPlayerSkill(models.Model):
+    player = models.ForeignKey(
+        MatchPlayer,
+        on_delete=models.CASCADE,
+        related_name="skill_inventory",
+    )
+    match_skill = models.ForeignKey(
+        MatchSkill,
+        on_delete=models.CASCADE,
+        related_name="player_inventory",
+    )
+    quantity = models.PositiveIntegerField(default=0)
+    used_count = models.PositiveIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["match_skill_id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["player", "match_skill"],
+                name="player_matchskill_unique",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.player} - {self.match_skill.code_snapshot}"
+
+
+class SkillUse(models.Model):
+    match = models.ForeignKey(
+        Match,
+        on_delete=models.CASCADE,
+        related_name="skill_uses",
+    )
+    source_player = models.ForeignKey(
+        MatchPlayer,
+        on_delete=models.CASCADE,
+        related_name="skill_uses",
+    )
+    target_player = models.ForeignKey(
+        MatchPlayer,
+        on_delete=models.CASCADE,
+        related_name="skill_hits",
+    )
+    match_skill = models.ForeignKey(
+        MatchSkill,
+        on_delete=models.PROTECT,
+        related_name="uses",
+    )
+    energy_spent = models.PositiveSmallIntegerField()
+    idempotency_key = models.CharField(max_length=64)
+    used_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-used_at", "-id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["source_player", "idempotency_key"],
+                name="skilluse_player_idem_unique",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["match", "used_at"],
+                name="skilluse_match_used_idx",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.source_player} used {self.match_skill.code_snapshot}"
+
+
+class SkillEffect(models.Model):
+    skill_use = models.OneToOneField(
+        SkillUse,
+        on_delete=models.CASCADE,
+        related_name="effect",
+    )
+    started_at = models.DateTimeField()
+    expires_at = models.DateTimeField(db_index=True)
+    cancelled_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["expires_at", "id"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(expires_at__gt=models.F("started_at")),
+                name="skilleffect_expires_after_start",
+            ),
+        ]
+
+    def __str__(self):
+        # Django creates the ``<relation>_id`` attribute dynamically.
+        return f"Effect for skill use #{self.skill_use_id}"  # pyright: ignore[reportAttributeAccessIssue]
 
 
 class MatchProblem(models.Model):
@@ -283,6 +446,15 @@ class PlayerProblemProgress(models.Model):
     solved_at = models.DateTimeField(null=True, blank=True)
     base_points_awarded = models.PositiveIntegerField(default=0)
     first_solve_bonus_awarded = models.PositiveIntegerField(default=0)
+    reward_processed = models.BooleanField(default=False)
+    energy_awarded = models.PositiveSmallIntegerField(default=0)
+    skill_awarded = models.ForeignKey(
+        MatchSkill,
+        on_delete=models.SET_NULL,
+        related_name="awarded_progress",
+        null=True,
+        blank=True,
+    )
     accepted_submission = models.ForeignKey(
         Submission,
         on_delete=models.SET_NULL,
@@ -301,6 +473,10 @@ class PlayerProblemProgress(models.Model):
             models.CheckConstraint(
                 condition=models.Q(first_solve_bonus_awarded__in=[0, 1]),
                 name="progress_first_bonus_0_or_1",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(energy_awarded__in=[0, 1]),
+                name="progress_energy_award_0_or_1",
             ),
         ]
         indexes = [

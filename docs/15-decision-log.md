@@ -724,3 +724,29 @@ Tính năng chỉ được sử dụng sau khi trận đấu kết thúc.
 * Kết quả nên có cấu trúc ổn định để frontend hiển thị.
 
 **Điều kiện xem xét lại:** Chỉ bắt đầu triển khai sau khi V1 đạt Gate 5 và luồng battle end-to-end ổn định.
+
+---
+
+## DEC-049 — V2 Energy và Skill Battle
+
+**Ngày:** 2026-07-28
+
+**Trạng thái:** Approved
+
+**Quyết định:**
+
+* First solve cấp `+1 Energy`, tối đa 3, và một Skill charge ngẫu nhiên đều.
+* V2 có ba Skill: đảo editor 30 giây, làm mờ đề 30 giây và trừ 60 giây cá nhân.
+* Chi phí lần lượt là 1, 1 và 2 Energy.
+* Skill config được snapshot theo Match; backend quyết định reward, inventory,
+  target, thời hạn và idempotency.
+* CodeMirror 6 chỉ thay đổi trải nghiệm editor; Skill không sửa source code thật.
+* Time Drain tạo deadline cá nhân nhưng không vô hiệu Submission đã được nhận hợp
+  lệ trước đó.
+
+**Hệ quả:**
+
+* `MatchPlayer`, `PlayerProblemProgress` và lifecycle được mở rộng cho Energy và
+  personal deadline.
+* Match State chỉ công khai inventory/Energy của người gọi.
+* Hint, Defense và Minigame tiếp tục để ở các phiên bản sau.

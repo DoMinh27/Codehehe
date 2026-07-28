@@ -20,6 +20,11 @@ urlpatterns = [
     path("<int:match_id>/start/", views.start_match, name="match-start"),
     path("<int:match_id>/battle/", views.battle, name="battle"),
     path("<int:match_id>/state/", views.match_state, name="match-state"),
+    path(
+        "<int:match_id>/skills/<str:skill_code>/use/",
+        views.use_skill,
+        name="skill-use",
+    ),
     path("<int:match_id>/finalize/", views.finalize_match, name="match-finalize"),
     path("<int:match_id>/surrender/", views.surrender_match, name="match-surrender"),
     path("<int:match_id>/result/", views.match_result, name="match-result"),

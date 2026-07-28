@@ -15,12 +15,15 @@ from .models import (
     Match,
     MatchPlayer,
     MatchProblem,
+    MatchSkill,
     PlayerProblemProgress,
+    Skill,
     Submission,
 )
 from .services.gameplay import (
     FinishMatchService,
     InsufficientProblemsError,
+    InsufficientSkillsError,
     MatchHasPendingSubmissionsError,
     MatchNotReadyToFinishError,
     MatchPermissionError,
@@ -84,6 +87,7 @@ class StartMatchServiceTests(TestCase):
         self.assertIsNotNone(match.started_at)
         self.assertEqual(match.match_problems.count(), 4)
         self.assertEqual(match.problem_progress.count(), 8)
+        self.assertEqual(match.match_skills.count(), 3)
         self.assertEqual(
             list(match.match_problems.values_list("difficulty_snapshot", flat=True)),
             ["EASY", "EASY", "MEDIUM", "MEDIUM"],
@@ -127,6 +131,18 @@ class StartMatchServiceTests(TestCase):
         self.assertEqual(self.match.status, Match.Status.WAITING)
         self.assertIsNone(self.match.started_at)
         self.assertFalse(MatchProblem.objects.filter(match=self.match).exists())
+
+    def test_incomplete_skill_catalog_rolls_back(self):
+        Skill.objects.filter(code="MIRROR_CODE").update(is_active=False)
+
+        with self.assertRaises(InsufficientSkillsError):
+            StartMatchService().start(user=self.host, match_id=self.match.pk)
+
+        self.match.refresh_from_db()
+        self.assertEqual(self.match.status, Match.Status.WAITING)
+        self.assertIsNone(self.match.started_at)
+        self.assertFalse(MatchProblem.objects.filter(match=self.match).exists())
+        self.assertFalse(MatchSkill.objects.filter(match=self.match).exists())
 
 
 class StartMatchViewTests(TestCase):
@@ -629,7 +645,7 @@ class MatchLifecycleViewTests(LifecycleFixtureMixin, TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(first_queries), len(second_queries))
-        self.assertLessEqual(len(first_queries), 6)
+        self.assertLessEqual(len(first_queries), 8)
         payload = response.json()
         self.assertEqual(payload["status"], Match.Status.PLAYING)
         self.assertEqual(len(payload["first_solvers"]), 4)

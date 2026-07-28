@@ -1,11 +1,13 @@
 import json
 import math
+from datetime import timedelta
 
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
-from django.db.models import Count
+from django.db.models import Count, Max, Q
+from django.db.models.functions import Coalesce
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -14,10 +16,19 @@ from django.views.decorators.http import require_POST
 
 from problems.services.judge import Judge0ConfigurationError, Judge0Service
 
-from .models import Match, MatchPlayer, MatchProblem, PlayerProblemProgress
+from .models import (
+    Match,
+    MatchPlayer,
+    MatchProblem,
+    MatchSkill,
+    PlayerProblemProgress,
+    SkillEffect,
+    SkillUse,
+)
 from .services.gameplay import (
     FinishMatchService,
     InsufficientProblemsError,
+    InsufficientSkillsError,
     MatchHasPendingSubmissionsError,
     MatchNotFoundError,
     MatchNotReadyToFinishError,
@@ -26,6 +37,13 @@ from .services.gameplay import (
     MatchStateError,
     StartMatchService,
     SurrenderMatchService,
+)
+from .skills.service import (
+    InvalidSkillUseError,
+    SkillService,
+    SkillUseConflictError,
+    SkillUseNotFoundError,
+    SkillUsePermissionError,
 )
 from .services.room import (
     AlreadyJoinedError,
@@ -233,6 +251,7 @@ def start_match(request, match_id):
         MatchPlayerCountError,
         MatchStateError,
         InsufficientProblemsError,
+        InsufficientSkillsError,
     ) as error:
         messages.error(request, str(error))
         match = get_object_or_404(Match, pk=match_id)
@@ -272,6 +291,35 @@ def battle(request, match_id):
             "match_problems": match_problems,
             "current_player": current_player,
             "opponent": opponent,
+            "battle_config": {
+                "matchId": match.pk,
+                "userId": request.user.pk,
+                "currentPlayerId": current_player.pk,
+                "opponentPlayerId": opponent.pk if opponent else None,
+                "stateUrl": reverse(
+                    "match-state",
+                    kwargs={"match_id": match.pk},
+                ),
+                "finalizeUrl": reverse(
+                    "match-finalize",
+                    kwargs={"match_id": match.pk},
+                ),
+                "surrenderUrl": reverse(
+                    "match-surrender",
+                    kwargs={"match_id": match.pk},
+                ),
+                "resultUrl": reverse(
+                    "match-result",
+                    kwargs={"match_id": match.pk},
+                ),
+                "skillUseUrlTemplate": reverse(
+                    "skill-use",
+                    kwargs={
+                        "match_id": match.pk,
+                        "skill_code": "__skill__",
+                    },
+                ),
+            },
         },
     )
 
@@ -295,47 +343,132 @@ def match_state(request, match_id):
         None,
     )
 
-    solved_progress = list(
-        PlayerProblemProgress.objects.filter(match=match, is_solved=True).values(
+    progress_rows = list(
+        PlayerProblemProgress.objects.filter(match=match).values(
             "player_id",
             "match_problem_id",
+            "is_solved",
+            "match_problem__first_solver_id",
         )
     )
-    match_problems = list(
-        MatchProblem.objects.filter(match=match)
-        .select_related("first_solver")
-        .order_by("order", "id")
+    match_skills = list(
+        MatchSkill.objects.filter(match=match)
+        .annotate(
+            current_quantity=Coalesce(
+                Max(
+                    "player_inventory__quantity",
+                    filter=Q(player_inventory__player=current_player),
+                ),
+                0,
+            )
+        )
+        .order_by("id")
     )
     now = timezone.now()
-    remaining_seconds = (
-        max(0, math.ceil((match.ends_at - now).total_seconds()))
-        if match.ends_at is not None and match.status == Match.Status.PLAYING
-        else 0
+    active_effects = list(
+        SkillEffect.objects.filter(
+            skill_use__match=match,
+            skill_use__target_player=current_player,
+            cancelled_at__isnull=True,
+            expires_at__gt=now,
+        )
+        .select_related(
+            "skill_use__match_skill",
+            "skill_use__source_player__user",
+        )
+        .order_by("expires_at", "id")
     )
+    recent_skill_uses = list(
+        SkillUse.objects.filter(match=match)
+        .select_related(
+            "match_skill",
+            "source_player__user",
+            "target_player__user",
+        )
+        .order_by("-used_at", "-id")[:10]
+    )
+
+    def remaining_seconds(player):
+        deadline = None
+        if (
+            player is not None
+            and match.started_at is not None
+            and match.ends_at is not None
+        ):
+            deadline = max(
+                match.started_at,
+                match.ends_at
+                - timedelta(seconds=player.time_penalty_seconds),
+            )
+        return (
+            max(0, math.ceil((deadline - now).total_seconds()))
+            if deadline is not None and match.status == Match.Status.PLAYING
+            else 0
+        )
 
     def solved_ids(player):
         return [
             row["match_problem_id"]
-            for row in solved_progress
-            if row["player_id"] == player.id
+            for row in progress_rows
+            if row["player_id"] == player.id and row["is_solved"]
         ]
 
     return JsonResponse(
         {
             "status": match.status,
             "server_time": now.isoformat(),
-            "remaining_seconds": remaining_seconds,
+            "remaining_seconds": remaining_seconds(current_player),
+            "opponent_remaining_seconds": remaining_seconds(opponent),
+            "my_timed_out": remaining_seconds(current_player) == 0,
+            "opponent_timed_out": remaining_seconds(opponent) == 0,
             "my_score": current_player.score,
             "opponent_score": opponent.score if opponent else 0,
+            "my_energy": current_player.energy,
+            "my_skills": [
+                {
+                    "code": match_skill.code_snapshot,
+                    "name": match_skill.name_snapshot,
+                    "description": match_skill.description_snapshot,
+                    "energy_cost": match_skill.energy_cost_snapshot,
+                    "duration_seconds": match_skill.duration_seconds_snapshot,
+                    "quantity": match_skill.current_quantity,
+                }
+                for match_skill in match_skills
+            ],
+            "active_effects": [
+                {
+                    "id": effect.id,
+                    "skill_use_id": effect.skill_use_id,
+                    "code": effect.skill_use.match_skill.code_snapshot,
+                    "source_player_id": effect.skill_use.source_player_id,
+                    "source_username": (
+                        effect.skill_use.source_player.user.username
+                    ),
+                    "started_at": effect.started_at.isoformat(),
+                    "expires_at": effect.expires_at.isoformat(),
+                }
+                for effect in active_effects
+            ],
+            "recent_skill_uses": [
+                {
+                    "id": skill_use.id,
+                    "code": skill_use.match_skill.code_snapshot,
+                    "name": skill_use.match_skill.name_snapshot,
+                    "source_player_id": skill_use.source_player_id,
+                    "source_username": skill_use.source_player.user.username,
+                    "target_player_id": skill_use.target_player_id,
+                    "target_username": skill_use.target_player.user.username,
+                    "used_at": skill_use.used_at.isoformat(),
+                }
+                for skill_use in reversed(recent_skill_uses)
+            ],
             "my_solved_problem_ids": solved_ids(current_player),
             "opponent_solved_problem_ids": solved_ids(opponent) if opponent else [],
             "first_solvers": {
-                str(match_problem.id): (
-                    match_problem.first_solver_id
-                    if match_problem.first_solver_id
-                    else None
+                str(row["match_problem_id"]): (
+                    row["match_problem__first_solver_id"]
                 )
-                for match_problem in match_problems
+                for row in progress_rows
             },
             "winner_id": match.winner_id,
             "is_draw": match.is_draw,
@@ -343,6 +476,82 @@ def match_state(request, match_id):
             "surrendered_by_id": match.surrendered_by_id,
             "result_url": reverse("match-result", kwargs={"match_id": match.pk}),
         }
+    )
+
+
+@login_required
+@require_POST
+def use_skill(request, match_id, skill_code):
+    try:
+        payload = json.loads(request.body)
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return JsonResponse(
+            {"error": "Request body must be valid JSON."},
+            status=400,
+        )
+    if not isinstance(payload, dict):
+        return JsonResponse(
+            {"error": "Request body must be a JSON object."},
+            status=400,
+        )
+
+    try:
+        result = SkillService().use(
+            user=request.user,
+            match_id=match_id,
+            skill_code=skill_code,
+            target_player_id=payload.get("target_player_id"),
+            idempotency_key=payload.get("idempotency_key"),
+        )
+    except InvalidSkillUseError as error:
+        return JsonResponse({"error": str(error)}, status=400)
+    except SkillUsePermissionError as error:
+        return JsonResponse({"error": str(error)}, status=403)
+    except SkillUseNotFoundError as error:
+        return JsonResponse({"error": str(error)}, status=404)
+    except SkillUseConflictError as error:
+        return JsonResponse({"error": str(error)}, status=409)
+
+    skill_use = result.skill_use
+    effect = SkillEffect.objects.filter(skill_use=skill_use).first()
+    source = MatchPlayer.objects.select_related("match").get(
+        pk=skill_use.source_player_id
+    )
+    target = MatchPlayer.objects.select_related("match").get(
+        pk=skill_use.target_player_id
+    )
+    now = timezone.now()
+
+    def remaining_seconds(player):
+        deadline = player.personal_ends_at
+        return (
+            max(0, math.ceil((deadline - now).total_seconds()))
+            if deadline is not None
+            else 0
+        )
+
+    FinishMatchService().try_finalize(match_id=match_id, now=now)
+    return JsonResponse(
+        {
+            "id": skill_use.id,
+            "code": skill_use.match_skill.code_snapshot,
+            "target_player_id": skill_use.target_player_id,
+            "energy_spent": skill_use.energy_spent,
+            "used_at": skill_use.used_at.isoformat(),
+            "effect": (
+                {
+                    "id": effect.id,
+                    "started_at": effect.started_at.isoformat(),
+                    "expires_at": effect.expires_at.isoformat(),
+                }
+                if effect is not None
+                else None
+            ),
+            "my_energy": source.energy,
+            "remaining_seconds": remaining_seconds(source),
+            "opponent_remaining_seconds": remaining_seconds(target),
+        },
+        status=201 if result.created else 200,
     )
 
 

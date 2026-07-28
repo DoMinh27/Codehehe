@@ -185,8 +185,9 @@ class SubmissionService:
 
             if match.status != Match.Status.PLAYING:
                 raise SubmissionConflictError("match is not playing")
-            if match.ends_at is None or timezone.now() > match.ends_at:
-                raise SubmissionConflictError("match has ended")
+            player_deadline = player.personal_ends_at
+            if player_deadline is None or timezone.now() > player_deadline:
+                raise SubmissionConflictError("your personal time has ended")
 
             if idempotency_key is not None:
                 existing = Submission.objects.filter(

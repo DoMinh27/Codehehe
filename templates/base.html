@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}CodeHehe{% endblock %}</title>
+    {% block extra_head %}{% endblock %}
 </head>
 <body>
     <header>
@@ -83,5 +84,6 @@
             })();
         </script>
     {% endif %}
+    {% block extra_scripts %}{% endblock %}
 </body>
 </html>

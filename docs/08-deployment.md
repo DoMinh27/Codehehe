@@ -33,7 +33,7 @@ https://learn.microsoft.com/azure/virtual-network/ip-services/public-ip-addresse
 
 ```bash
 sudo apt update
-sudo apt install -y python3-venv nginx certbot python3-certbot-nginx sqlite3
+sudo apt install -y python3-venv nginx certbot python3-certbot-nginx sqlite3 nodejs npm
 
 sudo adduser --system --group --home /opt/codehehe codehehe
 sudo usermod -a -G codehehe azureuser
@@ -105,6 +105,8 @@ sudo systemctl daemon-reload
 
 ```bash
 cd /opt/codehehe/app
+npm ci
+npm run build
 sudo -u codehehe /opt/codehehe/venv/bin/python manage.py migrate
 sudo -u codehehe /opt/codehehe/venv/bin/python manage.py collectstatic --noinput
 sudo -u codehehe /opt/codehehe/venv/bin/python manage.py seed_problems
@@ -173,6 +175,8 @@ cd /opt/codehehe/app
 git fetch origin
 git checkout <RELEASE_COMMIT>
 /opt/codehehe/venv/bin/pip install -r requirements-prod.txt
+npm ci
+npm run build
 sudo -u codehehe /opt/codehehe/venv/bin/python manage.py migrate
 sudo -u codehehe /opt/codehehe/venv/bin/python manage.py collectstatic --noinput
 sudo -u codehehe /opt/codehehe/venv/bin/python manage.py check

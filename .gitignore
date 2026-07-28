@@ -7,3 +7,7 @@ db.sqlite3
 media/
 staticfiles/
 HANDOFF.md
+AGENTS.md
+connet_judge.txt
+node_modules/
+matches/static/matches/dist/

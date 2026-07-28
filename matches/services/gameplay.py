@@ -205,6 +205,12 @@ class FinishMatchService:
             leaders = [player for player in players if player.score == highest_score]
             match.status = Match.Status.FINISHED
             match.ended_at = evaluation_time
+            match.finish_reason = (
+                Match.FinishReason.TIMEOUT
+                if deadline_reached
+                else Match.FinishReason.ALL_SOLVED
+            )
+            match.surrendered_by = None
             if len(leaders) == 1:
                 match.winner_id = leaders[0].user_id
                 match.is_draw = False
@@ -215,6 +221,8 @@ class FinishMatchService:
                 update_fields=[
                     "status",
                     "ended_at",
+                    "finish_reason",
+                    "surrendered_by",
                     "winner",
                     "is_draw",
                     "updated_at",
@@ -232,3 +240,61 @@ class FinishMatchService:
             MatchStateError,
         ):
             return None
+
+
+@dataclass
+class SurrenderMatchService:
+    """Immediately finish a playing match in favor of the opponent."""
+
+    def surrender(self, *, user, match_id: int, now=None) -> Match:
+        with transaction.atomic():
+            try:
+                match = Match.objects.select_for_update().get(pk=match_id)
+            except Match.DoesNotExist as error:
+                raise MatchNotFoundError("Không tìm thấy trận đấu.") from error
+
+            players = list(
+                MatchPlayer.objects.select_for_update()
+                .filter(match=match)
+                .order_by("id")
+            )
+            current_player = next(
+                (player for player in players if player.user_id == user.id),
+                None,
+            )
+            if current_player is None:
+                raise MatchPermissionError("Bạn không thuộc trận đấu này.")
+            if (
+                match.status == Match.Status.FINISHED
+                and match.finish_reason == Match.FinishReason.SURRENDER
+                and match.surrendered_by_id == user.id
+            ):
+                return match
+            if match.status != Match.Status.PLAYING:
+                raise MatchStateError("Trận đấu không ở trạng thái đang chơi.")
+            if len(players) != 2:
+                raise MatchPlayerCountError(
+                    "Trận đấu cần đúng hai người để đầu hàng."
+                )
+
+            opponent = next(
+                player for player in players if player.pk != current_player.pk
+            )
+            match.status = Match.Status.FINISHED
+            match.ended_at = now or timezone.now()
+            match.finish_reason = Match.FinishReason.SURRENDER
+            match.surrendered_by_id = user.id
+            match.winner_id = opponent.user_id
+            match.is_draw = False
+            match.save(
+                update_fields=[
+                    "status",
+                    "ended_at",
+                    "finish_reason",
+                    "surrendered_by",
+                    "winner",
+                    "is_draw",
+                    "updated_at",
+                ]
+            )
+            return match

@@ -25,6 +25,7 @@ from .services.gameplay import (
     MatchPlayerCountError,
     MatchStateError,
     StartMatchService,
+    SurrenderMatchService,
 )
 from .services.room import (
     AlreadyJoinedError,
@@ -38,6 +39,15 @@ from .services.room import (
     normalize_room_code,
 )
 from .services.scoring import ScoringService
+from .services.run import (
+    CodeRunConflictError,
+    CodeRunNotFoundError,
+    CodeRunPermissionError,
+    CodeRunService,
+    CodeRunUnavailableError,
+    InvalidCodeRunError,
+    UnavailableCodeRunner,
+)
 from .services.submission import (
     InvalidSubmissionError,
     SubmissionConflictError,
@@ -270,6 +280,8 @@ def match_state(request, match_id):
             },
             "winner_id": match.winner_id,
             "is_draw": match.is_draw,
+            "finish_reason": match.finish_reason,
+            "surrendered_by_id": match.surrendered_by_id,
             "result_url": reverse("match-result", kwargs={"match_id": match.pk}),
         }
     )
@@ -290,6 +302,28 @@ def finalize_match(request, match_id):
         )
     except MatchNotReadyToFinishError as error:
         return JsonResponse({"error": str(error)}, status=409)
+    except (MatchPlayerCountError, MatchStateError) as error:
+        return JsonResponse({"error": str(error)}, status=409)
+    return JsonResponse(
+        {
+            "status": match.status,
+            "result_url": reverse("match-result", kwargs={"match_id": match.pk}),
+        }
+    )
+
+
+@login_required
+@require_POST
+def surrender_match(request, match_id):
+    try:
+        match = SurrenderMatchService().surrender(
+            user=request.user,
+            match_id=match_id,
+        )
+    except MatchNotFoundError:
+        return JsonResponse({"error": "Không tìm thấy trận đấu."}, status=404)
+    except MatchPermissionError as error:
+        return JsonResponse({"error": str(error)}, status=403)
     except (MatchPlayerCountError, MatchStateError) as error:
         return JsonResponse({"error": str(error)}, status=409)
     return JsonResponse(
@@ -345,6 +379,55 @@ def match_result(request, match_id):
             ],
             "match_problems": match_problems,
         },
+    )
+
+
+@login_required
+@require_POST
+def run_code(request, match_id, match_problem_id):
+    try:
+        payload = json.loads(request.body)
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return JsonResponse({"error": "Request body must be valid JSON."}, status=400)
+    if not isinstance(payload, dict):
+        return JsonResponse({"error": "Request body must be a JSON object."}, status=400)
+
+    try:
+        runner = Judge0Service.from_environment()
+    except Judge0ConfigurationError as error:
+        runner = UnavailableCodeRunner(error)
+
+    try:
+        result = CodeRunService(runner).run(
+            user=request.user,
+            match_id=match_id,
+            match_problem_id=match_problem_id,
+            source_code=payload.get("source_code"),
+            input_data=payload.get("input_data", ""),
+        )
+    except InvalidCodeRunError as error:
+        return JsonResponse({"error": str(error)}, status=400)
+    except CodeRunPermissionError as error:
+        return JsonResponse({"error": str(error)}, status=403)
+    except CodeRunNotFoundError as error:
+        return JsonResponse({"error": str(error)}, status=404)
+    except CodeRunConflictError as error:
+        return JsonResponse({"error": str(error)}, status=409)
+    except CodeRunUnavailableError as error:
+        return JsonResponse({"error": str(error)}, status=503)
+
+    messages = {
+        "COMPLETED": "Program completed.",
+        "COMPILATION_ERROR": "Compilation error.",
+        "RUNTIME_ERROR": "Runtime error.",
+        "TIME_LIMIT_EXCEEDED": "Time limit exceeded.",
+    }
+    return JsonResponse(
+        {
+            "verdict": result.verdict,
+            "stdout": result.stdout,
+            "message": result.diagnostic or messages[result.verdict],
+        }
     )
 
 

@@ -526,6 +526,10 @@ class FinishMatchServiceTests(LifecycleFixtureMixin, TestCase):
         self.assertEqual(finished_again.status, Match.Status.FINISHED)
         self.assertEqual(finished_again.winner, self.host)
         self.assertFalse(finished_again.is_draw)
+        self.assertEqual(
+            finished_again.finish_reason,
+            Match.FinishReason.TIMEOUT,
+        )
         self.assertEqual(finished_again.ended_at, ended_at)
 
     def test_equal_scores_finish_as_draw(self):
@@ -542,6 +546,10 @@ class FinishMatchServiceTests(LifecycleFixtureMixin, TestCase):
         finished = self.service.finalize(match_id=self.match.pk)
 
         self.assertEqual(finished.status, Match.Status.FINISHED)
+        self.assertEqual(
+            finished.finish_reason,
+            Match.FinishReason.ALL_SOLVED,
+        )
         self.assertLess(finished.ended_at, self.match.ends_at)
 
     def test_unprocessed_terminal_submission_is_scored_before_finish(self):

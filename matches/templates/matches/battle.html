@@ -15,6 +15,15 @@
             {{ opponent.user.username }}:
             <strong id="opponent-score">{{ opponent.score }}</strong> điểm
         </p>
+        <form
+            id="surrender-form"
+            method="post"
+            action="{% url 'match-surrender' match_id=match.id %}"
+        >
+            {% csrf_token %}
+            <button type="submit">Đầu hàng</button>
+            <span id="surrender-result" role="status"></span>
+        </form>
     </section>
 
     <nav aria-label="Danh sách bài">
@@ -75,6 +84,23 @@
                 <button type="submit">Nộp bài</button>
                 <p class="submission-result" role="status"></p>
             </form>
+
+            <form
+                class="run-form"
+                data-run-url="{% url 'code-run' match_id=match.id match_problem_id=match_problem.id %}"
+            >
+                {% csrf_token %}
+                <label for="input-{{ match_problem.id }}">Custom Input</label>
+                <textarea
+                    id="input-{{ match_problem.id }}"
+                    name="input_data"
+                    rows="5"
+                    cols="90"
+                ></textarea>
+                <button type="submit">Chạy thử</button>
+                <p class="run-verdict" role="status"></p>
+                <pre class="run-output" aria-label="Kết quả chạy thử"></pre>
+            </form>
         </article>
     {% endfor %}
 
@@ -83,6 +109,7 @@
             const timer = document.getElementById("match-timer");
             const stateUrl = "{% url 'match-state' match_id=match.id %}";
             const finalizeUrl = "{% url 'match-finalize' match_id=match.id %}";
+            const surrenderUrl = "{% url 'match-surrender' match_id=match.id %}";
             const resultUrl = "{% url 'match-result' match_id=match.id %}";
             const currentPlayerId = {{ current_player.id }};
             const opponentPlayerId = {{ opponent.id }};
@@ -222,6 +249,76 @@
                     }
                 });
             }
+
+            for (const form of document.querySelectorAll(".run-form")) {
+                form.addEventListener("submit", async (event) => {
+                    event.preventDefault();
+                    const problem = form.closest(".battle-problem");
+                    const button = form.querySelector("button[type='submit']");
+                    const verdict = form.querySelector(".run-verdict");
+                    const output = form.querySelector(".run-output");
+                    const sourceCode = problem.querySelector(
+                        "[name='source_code']"
+                    ).value;
+                    const inputData = form.querySelector("[name='input_data']").value;
+                    const formCsrfToken = form.querySelector(
+                        "[name='csrfmiddlewaretoken']"
+                    ).value;
+                    button.disabled = true;
+                    verdict.textContent = "Đang chạy…";
+                    output.textContent = "";
+
+                    try {
+                        const response = await fetch(form.dataset.runUrl, {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "X-CSRFToken": formCsrfToken,
+                            },
+                            body: JSON.stringify({
+                                source_code: sourceCode,
+                                input_data: inputData,
+                            }),
+                        });
+                        const payload = await response.json();
+                        if (!response.ok) {
+                            throw new Error(payload.error || "Không thể chạy code.");
+                        }
+                        verdict.textContent = `${payload.verdict}: ${payload.message}`;
+                        output.textContent = payload.stdout || "(Không có output)";
+                    } catch (runError) {
+                        verdict.textContent = runError.message;
+                    } finally {
+                        button.disabled = false;
+                    }
+                });
+            }
+
+            const surrenderForm = document.getElementById("surrender-form");
+            surrenderForm.addEventListener("submit", async (event) => {
+                event.preventDefault();
+                if (!window.confirm("Bạn chắc chắn muốn đầu hàng?")) {
+                    return;
+                }
+                const button = surrenderForm.querySelector("button[type='submit']");
+                const result = document.getElementById("surrender-result");
+                button.disabled = true;
+                result.textContent = "Đang kết thúc trận…";
+                try {
+                    const response = await fetch(surrenderUrl, {
+                        method: "POST",
+                        headers: {"X-CSRFToken": csrfToken},
+                    });
+                    const payload = await response.json();
+                    if (!response.ok) {
+                        throw new Error(payload.error || "Không thể đầu hàng.");
+                    }
+                    window.location.assign(payload.result_url || resultUrl);
+                } catch (surrenderError) {
+                    result.textContent = surrenderError.message;
+                    button.disabled = false;
+                }
+            });
 
             renderTimer();
             window.setInterval(renderTimer, 1000);

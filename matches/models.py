@@ -11,6 +11,11 @@ class Match(models.Model):
         FINISHED = "FINISHED", "Finished"
         CANCELLED = "CANCELLED", "Cancelled"
 
+    class FinishReason(models.TextChoices):
+        TIMEOUT = "TIMEOUT", "Hết giờ"
+        ALL_SOLVED = "ALL_SOLVED", "Cả hai đã giải hết bài"
+        SURRENDER = "SURRENDER", "Đầu hàng"
+
     room_code = models.CharField(max_length=6, unique=True)
     host = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -34,6 +39,19 @@ class Match(models.Model):
         blank=True,
     )
     is_draw = models.BooleanField(default=False)
+    finish_reason = models.CharField(
+        max_length=20,
+        choices=FinishReason.choices,
+        null=True,
+        blank=True,
+    )
+    surrendered_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="surrendered_matches",
+        null=True,
+        blank=True,
+    )
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -49,6 +67,20 @@ class Match(models.Model):
                     models.Q(winner__isnull=False) & models.Q(is_draw=True)
                 ),
                 name="match_winner_or_draw_not_both",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    ~models.Q(finish_reason="SURRENDER")
+                    | models.Q(surrendered_by__isnull=False)
+                ),
+                name="match_surrender_has_player",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(surrendered_by__isnull=True)
+                    | models.Q(finish_reason="SURRENDER")
+                ),
+                name="match_surrender_player_reason",
             ),
         ]
 

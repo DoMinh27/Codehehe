@@ -12,6 +12,12 @@
     {% endif %}
 
     <p>Kết thúc: {{ match.ended_at }}</p>
+    {% if match.finish_reason %}
+        <p>Lý do: {{ match.get_finish_reason_display }}</p>
+    {% endif %}
+    {% if match.surrendered_by %}
+        <p>{{ match.surrendered_by.username }} đã đầu hàng.</p>
+    {% endif %}
 
     <section>
         <h2>Điểm số</h2>

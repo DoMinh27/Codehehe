@@ -16,6 +16,13 @@ class Verdict(StrEnum):
     JUDGE_ERROR = "JUDGE_ERROR"
 
 
+class RunVerdict(StrEnum):
+    COMPLETED = "COMPLETED"
+    COMPILATION_ERROR = "COMPILATION_ERROR"
+    RUNTIME_ERROR = "RUNTIME_ERROR"
+    TIME_LIMIT_EXCEEDED = "TIME_LIMIT_EXCEEDED"
+
+
 class Judge0ConfigurationError(RuntimeError):
     """Raised when the external Judge0 endpoint has not been configured."""
 
@@ -46,6 +53,13 @@ class JudgeResult:
         return self.verdict is Verdict.ACCEPTED
 
 
+@dataclass(frozen=True)
+class RunResult:
+    verdict: RunVerdict
+    stdout: str = ""
+    diagnostic: str = ""
+
+
 class JudgeService(Protocol):
     """Contract shared by the fake judge and the future Judge0 adapter."""
 
@@ -56,6 +70,13 @@ class JudgeService(Protocol):
         test_cases: Sequence[JudgeTestCase],
     ) -> JudgeResult:
         """Run source code against backend-only test cases."""
+
+
+class CodeRunner(Protocol):
+    """Run Python once with player-provided standard input."""
+
+    def run(self, *, source_code: str, input_data: str) -> RunResult:
+        """Return output without comparing it to an expected value."""
 
 
 @dataclass
@@ -93,6 +114,22 @@ class FakeJudgeService:
             passed_test_cases=passed_test_cases,
             total_test_cases=total_test_cases,
         )
+
+
+@dataclass
+class FakeCodeRunner:
+    """Deterministic custom-input runner for service and view tests."""
+
+    result: RunResult = field(
+        default_factory=lambda: RunResult(verdict=RunVerdict.COMPLETED)
+    )
+    calls: list[tuple[str, str]] = field(default_factory=list)
+
+    def run(self, *, source_code: str, input_data: str) -> RunResult:
+        if not source_code.strip():
+            raise ValueError("source_code must not be empty")
+        self.calls.append((source_code, input_data))
+        return self.result
 
 
 @dataclass
@@ -148,15 +185,64 @@ class Judge0Service:
             total_test_cases=len(test_cases),
         )
 
+    def run(self, *, source_code: str, input_data: str) -> RunResult:
+        if not source_code.strip():
+            raise ValueError("source_code must not be empty")
+
+        response = self._request_submission(
+            source_code=source_code,
+            input_data=input_data,
+        )
+        status = response.get("status")
+        status_id = status.get("id") if isinstance(status, dict) else None
+        verdict = {
+            3: RunVerdict.COMPLETED,
+            5: RunVerdict.TIME_LIMIT_EXCEEDED,
+            6: RunVerdict.COMPILATION_ERROR,
+            7: RunVerdict.RUNTIME_ERROR,
+            8: RunVerdict.RUNTIME_ERROR,
+            9: RunVerdict.RUNTIME_ERROR,
+            10: RunVerdict.RUNTIME_ERROR,
+            11: RunVerdict.RUNTIME_ERROR,
+            12: RunVerdict.RUNTIME_ERROR,
+        }.get(status_id)
+        if verdict is None:
+            raise Judge0UnavailableError("Judge0 returned an unknown run status")
+
+        diagnostic = (
+            response.get("compile_output")
+            or response.get("stderr")
+            or response.get("message")
+            or ""
+        )
+        return RunResult(
+            verdict=verdict,
+            stdout=str(response.get("stdout") or ""),
+            diagnostic=str(diagnostic),
+        )
+
     def _submit(self, source_code: str, test_case: JudgeTestCase) -> dict[str, Any]:
-        payload = json.dumps(
-            {
-                "source_code": source_code,
-                "language_id": self.language_id,
-                "stdin": test_case.input_data,
-                "expected_output": test_case.expected_output,
-            }
-        ).encode()
+        return self._request_submission(
+            source_code=source_code,
+            input_data=test_case.input_data,
+            expected_output=test_case.expected_output,
+        )
+
+    def _request_submission(
+        self,
+        *,
+        source_code: str,
+        input_data: str,
+        expected_output: str | None = None,
+    ) -> dict[str, Any]:
+        payload_data = {
+            "source_code": source_code,
+            "language_id": self.language_id,
+            "stdin": input_data,
+        }
+        if expected_output is not None:
+            payload_data["expected_output"] = expected_output
+        payload = json.dumps(payload_data).encode()
         headers = {"Content-Type": "application/json"}
         if self.api_key:
             headers["X-Auth-Token"] = self.api_key

@@ -4,6 +4,7 @@ from django.db import transaction
 from django.db.models import Q, Sum
 
 from matches.models import (
+    Match,
     MatchPlayer,
     MatchProblem,
     PlayerProblemProgress,
@@ -23,13 +24,24 @@ class ScoringService:
     """Apply base points and safely finalize first-solve."""
 
     def process_submission(self, submission_id: int) -> Submission:
+        submission_reference = Submission.objects.only("match_id").get(
+            pk=submission_id
+        )
         with transaction.atomic():
+            match = Match.objects.select_for_update().get(
+                pk=submission_reference.match_id
+            )
             submission = (
                 Submission.objects.select_for_update()
                 .select_related("player", "match_problem")
                 .get(pk=submission_id)
             )
             if submission.verdict == Submission.Verdict.PENDING:
+                return submission
+            if match.status != Match.Status.PLAYING:
+                if not submission.is_score_processed:
+                    submission.is_score_processed = True
+                    submission.save(update_fields=["is_score_processed"])
                 return submission
 
             match_problem = MatchProblem.objects.select_for_update().get(

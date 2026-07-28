@@ -1,0 +1,11 @@
+[Unit]
+Description=CodeHehe stale submission and match sweeper
+After=codehehe.service
+
+[Service]
+Type=oneshot
+Group=www-data
+User=codehehe
+WorkingDirectory=/opt/codehehe/app
+EnvironmentFile=/etc/codehehe/codehehe.env
+ExecStart=/opt/codehehe/venv/bin/python manage.py sweep_matches

@@ -11,7 +11,6 @@
             <a href="{% url 'lobby' %}">CodeHehe</a>
 
             {% if user.is_authenticated %}
-                <a href="{% url 'problem-list' %}">Bài tập</a>
                 <span>Xin chào, {{ user.username }}</span>
                 <form method="post" action="{% url 'logout' %}">
                     {% csrf_token %}
@@ -34,5 +33,55 @@
         {% endif %}
         {% block content %}{% endblock %}
     </main>
+    {% if user.is_authenticated %}
+        <script>
+            (() => {
+                const activeStateUrl = "{% url 'active-match-state' %}";
+                let activePollHandle = null;
+                let activePollInFlight = false;
+
+                async function pollActiveMatch() {
+                    if (activePollInFlight) {
+                        scheduleActivePoll();
+                        return;
+                    }
+                    activePollInFlight = true;
+                    try {
+                        const response = await fetch(activeStateUrl, {
+                            headers: {"Accept": "application/json"},
+                        });
+                        if (!response.ok) {
+                            return;
+                        }
+                        const state = await response.json();
+                        if (
+                            state.active
+                            && state.url
+                            && window.location.pathname !== state.url
+                        ) {
+                            window.location.assign(state.url);
+                            return;
+                        }
+                    } catch (pollError) {
+                        // A later poll will retry without disrupting the current page.
+                    } finally {
+                        activePollInFlight = false;
+                        scheduleActivePoll();
+                    }
+                }
+
+                function scheduleActivePoll() {
+                    window.clearTimeout(activePollHandle);
+                    activePollHandle = window.setTimeout(
+                        pollActiveMatch,
+                        document.hidden ? 10000 : 3000,
+                    );
+                }
+
+                scheduleActivePoll();
+                document.addEventListener("visibilitychange", scheduleActivePoll);
+            })();
+        </script>
+    {% endif %}
 </body>
 </html>

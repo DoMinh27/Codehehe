@@ -3,15 +3,15 @@ import math
 
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.conf import settings
 from django.core.exceptions import PermissionDenied
-from django.db.models import Count, Prefetch
+from django.db.models import Count
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from problems.models import TestCase
 from problems.services.judge import Judge0ConfigurationError, Judge0Service
 
 from .models import Match, MatchPlayer, MatchProblem, PlayerProblemProgress
@@ -29,15 +29,20 @@ from .services.gameplay import (
 )
 from .services.room import (
     AlreadyJoinedError,
+    ActiveMatchExistsError,
     CreateRoomService,
     InvalidRoomCodeError,
     JoinRoomService,
+    LeaveRoomService,
     RoomCodeGenerationError,
     RoomFullError,
     RoomNotFoundError,
     RoomNotWaitingError,
+    RoomLeaveError,
+    get_active_match_player,
     normalize_room_code,
 )
+from .services.rate_limit import is_rate_limited
 from .services.scoring import ScoringService
 from .services.run import (
     CodeRunConflictError,
@@ -54,8 +59,37 @@ from .services.submission import (
     SubmissionNotFoundError,
     SubmissionPermissionError,
     SubmissionService,
+    PendingSubmissionRecoveryService,
     UnavailableJudgeService,
 )
+
+
+def _active_match_redirect(match):
+    if match.status == Match.Status.WAITING:
+        return redirect("waiting-room", room_code=match.room_code)
+    if match.status == Match.Status.PLAYING:
+        return redirect("battle", match_id=match.pk)
+    return redirect("match-result", match_id=match.pk)
+
+
+@login_required
+def active_match_state(request):
+    active_player = get_active_match_player(user=request.user)
+    if active_player is None:
+        return JsonResponse({"active": False, "status": None, "url": None})
+    match = active_player.match
+    target = (
+        reverse("waiting-room", kwargs={"room_code": match.room_code})
+        if match.status == Match.Status.WAITING
+        else reverse("battle", kwargs={"match_id": match.pk})
+    )
+    return JsonResponse(
+        {
+            "active": True,
+            "status": match.status,
+            "url": target,
+        }
+    )
 
 
 @login_required
@@ -63,6 +97,9 @@ from .services.submission import (
 def create_room(request):
     try:
         match = CreateRoomService().create(user=request.user)
+    except ActiveMatchExistsError as error:
+        messages.info(request, str(error))
+        return _active_match_redirect(error.match)
     except RoomCodeGenerationError as error:
         messages.error(request, str(error))
         return redirect("lobby")
@@ -77,6 +114,9 @@ def join_room(request):
             user=request.user,
             room_code=request.POST.get("room_code", ""),
         )
+    except ActiveMatchExistsError as error:
+        messages.info(request, str(error))
+        return _active_match_redirect(error.match)
     except (
         InvalidRoomCodeError,
         RoomNotFoundError,
@@ -111,6 +151,13 @@ def _room_players(match):
 @login_required
 def waiting_room(request, room_code):
     match = _get_room_for_member(user=request.user, room_code=room_code)
+    if match.status == Match.Status.PLAYING:
+        return redirect("battle", match_id=match.pk)
+    if match.status == Match.Status.FINISHED:
+        return redirect("match-result", match_id=match.pk)
+    if match.status == Match.Status.CANCELLED:
+        messages.info(request, "Phòng đã bị hủy.")
+        return redirect("lobby")
     players = _room_players(match)
     current_player = next(player for player in players if player.user_id == request.user.id)
     return render(
@@ -148,8 +195,29 @@ def waiting_room_state(request, room_code):
                 if match.status in {Match.Status.PLAYING, Match.Status.FINISHED}
                 else None
             ),
+            "lobby_url": (
+                reverse("lobby")
+                if match.status == Match.Status.CANCELLED
+                else None
+            ),
         }
     )
+
+
+@login_required
+@require_POST
+def leave_room(request, room_code):
+    try:
+        match = LeaveRoomService().leave(user=request.user, room_code=room_code)
+    except RoomNotFoundError:
+        return JsonResponse({"error": "Không tìm thấy phòng."}, status=404)
+    except RoomLeaveError as error:
+        return JsonResponse({"error": str(error)}, status=409)
+    if match.status == Match.Status.CANCELLED:
+        messages.info(request, "Phòng đã được hủy.")
+    else:
+        messages.info(request, "Bạn đã rời phòng.")
+    return redirect("lobby")
 
 
 @login_required
@@ -191,16 +259,7 @@ def battle(request, match_id):
     if match.status == Match.Status.FINISHED:
         return redirect("match-result", match_id=match.pk)
 
-    sample_tests = TestCase.objects.filter(is_sample=True).order_by("order", "id")
-    match_problems = list(
-        match.match_problems.select_related("problem").prefetch_related(
-            Prefetch(
-                "problem__test_cases",
-                queryset=sample_tests,
-                to_attr="battle_sample_tests",
-            )
-        )
-    )
+    match_problems = list(match.match_problems.order_by("order", "id"))
     opponent = next(
         (player for player in players if player.pk != current_player.pk),
         None,
@@ -293,6 +352,9 @@ def finalize_match(request, match_id):
     match = get_object_or_404(Match, pk=match_id)
     if not MatchPlayer.objects.filter(match=match, user=request.user).exists():
         raise PermissionDenied
+    PendingSubmissionRecoveryService(
+        scoring_service=ScoringService(),
+    ).recover(match_id=match_id)
     try:
         match = FinishMatchService().finalize(match_id=match_id)
     except MatchHasPendingSubmissionsError as error:
@@ -385,6 +447,16 @@ def match_result(request, match_id):
 @login_required
 @require_POST
 def run_code(request, match_id, match_problem_id):
+    if is_rate_limited(
+        scope="run",
+        identity=f"{request.user.pk}:{match_id}",
+        limit=settings.MATCH_RUN_RATE_LIMIT,
+        window_seconds=settings.MATCH_RATE_LIMIT_WINDOW_SECONDS,
+    ):
+        return JsonResponse(
+            {"error": "Bạn chạy thử quá nhanh. Vui lòng chờ một chút."},
+            status=429,
+        )
     try:
         payload = json.loads(request.body)
     except (UnicodeDecodeError, json.JSONDecodeError):
@@ -434,6 +506,16 @@ def run_code(request, match_id, match_problem_id):
 @login_required
 @require_POST
 def submit_submission(request, match_id, match_problem_id):
+    if is_rate_limited(
+        scope="submit",
+        identity=f"{request.user.pk}:{match_id}",
+        limit=settings.MATCH_SUBMIT_RATE_LIMIT,
+        window_seconds=settings.MATCH_RATE_LIMIT_WINDOW_SECONDS,
+    ):
+        return JsonResponse(
+            {"error": "Bạn nộp bài quá nhanh. Vui lòng chờ một chút."},
+            status=429,
+        )
     try:
         payload = json.loads(request.body)
     except (UnicodeDecodeError, json.JSONDecodeError):
@@ -457,6 +539,7 @@ def submit_submission(request, match_id, match_problem_id):
             match_id=match_id,
             match_problem_id=match_problem_id,
             source_code=payload.get("source_code"),
+            idempotency_key=payload.get("idempotency_key"),
         )
     except InvalidSubmissionError:
         return JsonResponse({"error": "source_code must not be empty."}, status=400)
@@ -472,8 +555,15 @@ def submit_submission(request, match_id, match_problem_id):
             "id": submission.pk,
             "verdict": submission.verdict,
             "received_at": submission.received_at.isoformat(),
-            "completed_at": submission.completed_at.isoformat(),
-            "message": submission.judge_message,
+            "completed_at": (
+                submission.completed_at.isoformat()
+                if submission.completed_at is not None
+                else None
+            ),
+            "message": (
+                submission.judge_message
+                or "Submission is still being judged."
+            ),
         },
         status=201,
     )

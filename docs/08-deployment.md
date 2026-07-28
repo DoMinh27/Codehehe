@@ -69,6 +69,11 @@ DJANGO_SECURE_COOKIES=False
 DJANGO_HSTS_SECONDS=0
 DJANGO_HSTS_PRELOAD=False
 DJANGO_LOG_LEVEL=INFO
+MATCH_PENDING_SUBMISSION_TIMEOUT_SECONDS=120
+MATCH_SUBMIT_RATE_LIMIT=30
+MATCH_RUN_RATE_LIMIT=60
+MATCH_RATE_LIMIT_WINDOW_SECONDS=60
+READINESS_CHECK_JUDGE0=True
 JUDGE0_BASE_URL=http://127.0.0.1:2358
 JUDGE0_API_KEY=
 ```
@@ -85,6 +90,8 @@ Install the tracked service and Nginx templates:
 
 ```bash
 sudo cp /opt/codehehe/app/deploy/codehehe.service /etc/systemd/system/codehehe.service
+sudo cp /opt/codehehe/app/deploy/codehehe-sweep.service /etc/systemd/system/codehehe-sweep.service
+sudo cp /opt/codehehe/app/deploy/codehehe-sweep.timer /etc/systemd/system/codehehe-sweep.timer
 sed "s/CODEHEHE_FQDN/<CODEHEHE_FQDN>/g" \
   /opt/codehehe/app/deploy/nginx-codehehe.conf \
   | sudo tee /etc/nginx/sites-available/codehehe >/dev/null
@@ -107,6 +114,7 @@ sudo -u codehehe /opt/codehehe/venv/bin/python manage.py check --deploy
 sudo -u codehehe /opt/codehehe/venv/bin/python manage.py judge0_spike
 
 sudo systemctl enable --now codehehe
+sudo systemctl enable --now codehehe-sweep.timer
 sudo systemctl enable --now nginx
 curl --fail http://127.0.0.1:8000/health/
 curl --fail http://127.0.0.1:8000/health/ready/
@@ -130,6 +138,7 @@ DJANGO_HSTS_PRELOAD=False
 
 ```bash
 sudo systemctl restart codehehe
+sudo systemctl restart codehehe-sweep.timer
 curl --fail https://<CODEHEHE_FQDN>/health/
 curl --fail https://<CODEHEHE_FQDN>/health/ready/
 ```
@@ -197,6 +206,7 @@ sudo systemctl start codehehe
 
 ```bash
 sudo systemctl status codehehe --no-pager
+sudo systemctl status codehehe-sweep.timer --no-pager
 sudo journalctl -u codehehe -n 100 --no-pager
 sudo nginx -t
 sudo certbot certificates

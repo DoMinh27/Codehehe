@@ -108,12 +108,28 @@ class MatchPlayer(models.Model):
     score = models.PositiveIntegerField(default=0)
     joined_at = models.DateTimeField(auto_now_add=True)
     is_host = models.BooleanField(default=False)
+    slot = models.PositiveSmallIntegerField(null=True, blank=True)
+    is_active = models.BooleanField(default=False, db_index=True)
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
                 fields=["match", "user"],
                 name="matchplayer_match_user_unique",
+            ),
+            models.UniqueConstraint(
+                fields=["match", "slot"],
+                condition=models.Q(slot__isnull=False),
+                name="matchplayer_match_slot_unique",
+            ),
+            models.UniqueConstraint(
+                fields=["user"],
+                condition=models.Q(is_active=True),
+                name="matchplayer_one_active_per_user",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(slot__in=[1, 2]) | models.Q(slot__isnull=True),
+                name="matchplayer_slot_1_or_2",
             ),
         ]
 
@@ -138,6 +154,8 @@ class MatchProblem(models.Model):
     statement_snapshot = models.TextField()
     starter_code_snapshot = models.TextField(blank=True)
     difficulty_snapshot = models.CharField(max_length=20)
+    sample_tests_snapshot = models.JSONField(default=list)
+    hidden_tests_snapshot = models.JSONField(default=list)
     first_solver = models.ForeignKey(
         MatchPlayer,
         on_delete=models.SET_NULL,
@@ -222,9 +240,17 @@ class Submission(models.Model):
     memory_kb = models.PositiveIntegerField(null=True, blank=True)
     judge_message = models.TextField(blank=True)
     is_score_processed = models.BooleanField(default=False, db_index=True)
+    idempotency_key = models.CharField(max_length=64, null=True, blank=True)
 
     class Meta:
         ordering = ["-received_at", "-id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["player", "match_problem", "idempotency_key"],
+                condition=models.Q(idempotency_key__isnull=False),
+                name="submission_player_problem_idem_unique",
+            ),
+        ]
         indexes = [
             models.Index(fields=["match", "player"], name="submission_match_player_idx"),
             models.Index(

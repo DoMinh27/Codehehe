@@ -48,7 +48,7 @@ class StartMatchServiceTests(TestCase):
         MatchPlayer.objects.create(match=self.match, user=self.host, is_host=True)
         MatchPlayer.objects.create(match=self.match, user=self.opponent)
         for index in range(2):
-            Problem.objects.create(
+            easy_problem = Problem.objects.create(
                 slug=f"easy-{index}",
                 title=f"Easy {index}",
                 statement=f"Easy statement {index}",
@@ -57,7 +57,12 @@ class StartMatchServiceTests(TestCase):
                 starter_code=f"# easy {index}",
                 order=index + 1,
             )
-            Problem.objects.create(
+            easy_problem.test_cases.create(
+                input_data=str(index),
+                expected_output=str(index),
+                is_sample=False,
+            )
+            medium_problem = Problem.objects.create(
                 slug=f"medium-{index}",
                 title=f"Medium {index}",
                 statement=f"Medium statement {index}",
@@ -65,6 +70,11 @@ class StartMatchServiceTests(TestCase):
                 points=2,
                 starter_code=f"# medium {index}",
                 order=index + 1,
+            )
+            medium_problem.test_cases.create(
+                input_data=str(index),
+                expected_output=str(index),
+                is_sample=False,
             )
 
     def test_start_creates_frozen_problems_progress_and_timer(self):
@@ -194,6 +204,18 @@ class BattleViewTests(TestCase):
                 statement_snapshot=f"Frozen statement {index}",
                 starter_code_snapshot=problem.starter_code,
                 difficulty_snapshot=problem.difficulty,
+                sample_tests_snapshot=[
+                    {
+                        "input_data": f"sample-input-{index}",
+                        "expected_output": f"sample-output-{index}",
+                    }
+                ],
+                hidden_tests_snapshot=[
+                    {
+                        "input_data": f"secret-input-{index}",
+                        "expected_output": f"secret-output-{index}",
+                    }
+                ],
             )
 
     def test_battle_uses_snapshots_samples_and_submission_routes(self):
@@ -269,6 +291,9 @@ class ScoringServiceTests(TestCase):
             title_snapshot=self.problem.title,
             statement_snapshot=self.problem.statement,
             difficulty_snapshot=self.problem.difficulty,
+            hidden_tests_snapshot=[
+                {"input_data": "hidden", "expected_output": "output"}
+            ],
         )
         for player in (self.host_player, self.opponent_player):
             PlayerProblemProgress.objects.create(
@@ -460,6 +485,18 @@ class LifecycleFixtureMixin:
                 statement_snapshot=problem.statement,
                 starter_code_snapshot="# Python",
                 difficulty_snapshot=problem.difficulty,
+                sample_tests_snapshot=[
+                    {
+                        "input_data": f"sample-{index}",
+                        "expected_output": f"sample-output-{index}",
+                    }
+                ],
+                hidden_tests_snapshot=[
+                    {
+                        "input_data": f"hidden-{index}",
+                        "expected_output": f"hidden-output-{index}",
+                    }
+                ],
             )
             self.match_problems.append(match_problem)
             for player in (self.host_player, self.opponent_player):

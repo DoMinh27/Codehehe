@@ -1,4 +1,4 @@
-"""Room creation and joining rules."""
+"""Room creation, joining, active-membership, and leaving rules."""
 
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -8,6 +8,8 @@ import string
 from django.db import IntegrityError, transaction
 
 from matches.models import Match, MatchPlayer
+
+from .db import retry_transient_db_lock
 
 ROOM_CODE_ALPHABET = string.ascii_uppercase + string.digits
 ROOM_CODE_LENGTH = 6
@@ -41,6 +43,18 @@ class RoomCodeGenerationError(RoomError):
     """Raised when a unique room code cannot be generated."""
 
 
+class ActiveMatchExistsError(RoomError):
+    """Raised when a player already has a waiting or playing match."""
+
+    def __init__(self, match: Match):
+        self.match = match
+        super().__init__("Bạn đang có một phòng hoặc trận đấu chưa kết thúc.")
+
+
+class RoomLeaveError(RoomError):
+    """Raised when a player cannot leave the requested waiting room."""
+
+
 def generate_room_code() -> str:
     return "".join(secrets.choice(ROOM_CODE_ALPHABET) for _ in range(ROOM_CODE_LENGTH))
 
@@ -58,42 +72,95 @@ def normalize_room_code(room_code: str) -> str:
     return normalized
 
 
+def get_active_match_player(*, user) -> MatchPlayer | None:
+    return (
+        MatchPlayer.objects.select_related("match")
+        .filter(
+            user=user,
+            is_active=True,
+            match__status__in=[Match.Status.WAITING, Match.Status.PLAYING],
+        )
+        .order_by("-match__started_at", "-match__created_at", "-id")
+        .first()
+    )
+
+
 @dataclass
 class CreateRoomService:
     code_generator: Callable[[], str] = generate_room_code
     max_attempts: int = 10
 
     def create(self, *, user) -> Match:
+        active_player = get_active_match_player(user=user)
+        if active_player is not None:
+            raise ActiveMatchExistsError(active_player.match)
+
         for _ in range(self.max_attempts):
             room_code = normalize_room_code(self.code_generator())
             try:
-                with transaction.atomic():
-                    match = Match.objects.create(
-                        room_code=room_code,
-                        host=user,
-                        status=Match.Status.WAITING,
-                    )
-                    MatchPlayer.objects.create(
-                        match=match,
-                        user=user,
-                        is_host=True,
-                    )
-                return match
+                return retry_transient_db_lock(
+                    lambda: self._create_once(user=user, room_code=room_code)
+                )
             except IntegrityError:
+                active_player = get_active_match_player(user=user)
+                if active_player is not None:
+                    raise ActiveMatchExistsError(active_player.match) from None
                 if Match.objects.filter(room_code=room_code).exists():
                     continue
                 raise
 
         raise RoomCodeGenerationError("Không thể tạo mã phòng. Vui lòng thử lại.")
 
+    @staticmethod
+    def _create_once(*, user, room_code: str) -> Match:
+        with transaction.atomic():
+            match = Match.objects.create(
+                room_code=room_code,
+                host=user,
+                status=Match.Status.WAITING,
+            )
+            MatchPlayer.objects.create(
+                match=match,
+                user=user,
+                is_host=True,
+                slot=1,
+                is_active=True,
+            )
+            return match
+
 
 class JoinRoomService:
     def join(self, *, user, room_code: str) -> MatchPlayer:
         normalized_code = normalize_room_code(room_code)
+        active_player = get_active_match_player(user=user)
+        if active_player is not None:
+            if active_player.match.room_code == normalized_code:
+                raise AlreadyJoinedError("Bạn đã tham gia phòng này.")
+            raise ActiveMatchExistsError(active_player.match)
 
+        try:
+            return retry_transient_db_lock(
+                lambda: self._join_once(user=user, room_code=normalized_code)
+            )
+        except IntegrityError:
+            active_player = get_active_match_player(user=user)
+            if active_player is not None:
+                if active_player.match.room_code == normalized_code:
+                    raise AlreadyJoinedError("Bạn đã tham gia phòng này.") from None
+                raise ActiveMatchExistsError(active_player.match) from None
+            try:
+                match = Match.objects.get(room_code=normalized_code)
+            except Match.DoesNotExist as error:
+                raise RoomNotFoundError("Không tìm thấy phòng.") from error
+            if match.players.filter(slot=2).exists():
+                raise RoomFullError("Phòng đã đầy.") from None
+            raise
+
+    @staticmethod
+    def _join_once(*, user, room_code: str) -> MatchPlayer:
         with transaction.atomic():
             try:
-                match = Match.objects.select_for_update().get(room_code=normalized_code)
+                match = Match.objects.select_for_update().get(room_code=room_code)
             except Match.DoesNotExist as error:
                 raise RoomNotFoundError("Không tìm thấy phòng.") from error
 
@@ -101,11 +168,48 @@ class JoinRoomService:
                 raise RoomNotWaitingError("Phòng không còn ở trạng thái chờ.")
             if MatchPlayer.objects.filter(match=match, user=user).exists():
                 raise AlreadyJoinedError("Bạn đã tham gia phòng này.")
-            if MatchPlayer.objects.filter(match=match).count() >= 2:
+            if MatchPlayer.objects.filter(match=match, slot=2).exists():
                 raise RoomFullError("Phòng đã đầy.")
 
             return MatchPlayer.objects.create(
                 match=match,
                 user=user,
                 is_host=False,
+                slot=2,
+                is_active=True,
             )
+
+
+class LeaveRoomService:
+    """Leave a waiting room; a host leaving cancels it for everyone."""
+
+    def leave(self, *, user, room_code: str) -> Match:
+        normalized_code = normalize_room_code(room_code)
+        return retry_transient_db_lock(
+            lambda: self._leave_once(user=user, room_code=normalized_code)
+        )
+
+    @staticmethod
+    def _leave_once(*, user, room_code: str) -> Match:
+        with transaction.atomic():
+            try:
+                match = Match.objects.select_for_update().get(room_code=room_code)
+            except Match.DoesNotExist as error:
+                raise RoomNotFoundError("Không tìm thấy phòng.") from error
+            try:
+                player = MatchPlayer.objects.select_for_update().get(
+                    match=match,
+                    user=user,
+                )
+            except MatchPlayer.DoesNotExist as error:
+                raise RoomLeaveError("Bạn không thuộc phòng này.") from error
+            if match.status != Match.Status.WAITING:
+                raise RoomLeaveError("Chỉ có thể rời phòng trước khi trận bắt đầu.")
+
+            if player.is_host:
+                match.status = Match.Status.CANCELLED
+                match.save(update_fields=["status", "updated_at"])
+                MatchPlayer.objects.filter(match=match).update(is_active=False)
+            else:
+                player.delete()
+            return match

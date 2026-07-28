@@ -3,7 +3,7 @@
 from dataclasses import dataclass, field
 
 from django.db import transaction
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.utils import timezone
 
 from matches.models import (
@@ -16,6 +16,7 @@ from matches.models import (
 from problems.models import Problem
 
 from .scoring import ScoringService
+from .db import retry_transient_db_lock
 
 
 class MatchLifecycleError(Exception):
@@ -55,6 +56,12 @@ class StartMatchService:
     """Create a frozen four-problem battle and start its server timer."""
 
     def start(self, *, user, match_id: int) -> Match:
+        return retry_transient_db_lock(
+            lambda: self._start_once(user=user, match_id=match_id)
+        )
+
+    @staticmethod
+    def _start_once(*, user, match_id: int) -> Match:
         with transaction.atomic():
             try:
                 match = Match.objects.select_for_update().get(pk=match_id)
@@ -74,15 +81,19 @@ class StartMatchService:
             if len(players) != 2:
                 raise MatchPlayerCountError("Phòng cần đúng hai người để bắt đầu.")
 
+            eligible_problems = Problem.objects.annotate(
+                hidden_test_count=Count(
+                    "test_cases",
+                    filter=Q(test_cases__is_sample=False),
+                )
+            ).filter(is_active=True, hidden_test_count__gt=0)
             easy_problems = list(
-                Problem.objects.filter(
-                    is_active=True,
+                eligible_problems.filter(
                     difficulty=Problem.Difficulty.EASY,
                 ).order_by("order", "id")[:2]
             )
             medium_problems = list(
-                Problem.objects.filter(
-                    is_active=True,
+                eligible_problems.filter(
                     difficulty=Problem.Difficulty.MEDIUM,
                 ).order_by("order", "id")[:2]
             )
@@ -91,22 +102,36 @@ class StartMatchService:
                     "Cần ít nhất 2 bài Easy và 2 bài Medium đang hoạt động."
                 )
 
-            match_problems = [
-                MatchProblem(
-                    match=match,
-                    problem=problem,
-                    order=order,
-                    points=problem.points,
-                    title_snapshot=problem.title,
-                    statement_snapshot=problem.statement,
-                    starter_code_snapshot=problem.starter_code,
-                    difficulty_snapshot=problem.difficulty,
+            match_problems = []
+            for order, problem in enumerate(
+                [*easy_problems, *medium_problems],
+                start=1,
+            ):
+                sample_tests = []
+                hidden_tests = []
+                for test_case in problem.test_cases.order_by("order", "id"):
+                    snapshot = {
+                        "input_data": test_case.input_data,
+                        "expected_output": test_case.expected_output,
+                    }
+                    if test_case.is_sample:
+                        sample_tests.append(snapshot)
+                    else:
+                        hidden_tests.append(snapshot)
+                match_problems.append(
+                    MatchProblem(
+                        match=match,
+                        problem=problem,
+                        order=order,
+                        points=problem.points,
+                        title_snapshot=problem.title,
+                        statement_snapshot=problem.statement,
+                        starter_code_snapshot=problem.starter_code,
+                        difficulty_snapshot=problem.difficulty,
+                        sample_tests_snapshot=sample_tests,
+                        hidden_tests_snapshot=hidden_tests,
+                    )
                 )
-                for order, problem in enumerate(
-                    [*easy_problems, *medium_problems],
-                    start=1,
-                )
-            ]
             MatchProblem.objects.bulk_create(match_problems)
             PlayerProblemProgress.objects.bulk_create(
                 [
@@ -133,6 +158,11 @@ class FinishMatchService:
     scoring_service: ScoringService = field(default_factory=ScoringService)
 
     def finalize(self, *, match_id: int, now=None) -> Match:
+        return retry_transient_db_lock(
+            lambda: self._finalize_once(match_id=match_id, now=now)
+        )
+
+    def _finalize_once(self, *, match_id: int, now=None) -> Match:
         evaluation_time = now or timezone.now()
         unprocessed_ids = list(
             Submission.objects.filter(
@@ -152,6 +182,7 @@ class FinishMatchService:
                 raise MatchNotFoundError("Không tìm thấy trận đấu.") from error
 
             if match.status == Match.Status.FINISHED:
+                MatchPlayer.objects.filter(match=match).update(is_active=False)
                 return match
             if match.status != Match.Status.PLAYING or match.ends_at is None:
                 raise MatchStateError("Trận đấu không ở trạng thái đang chơi.")
@@ -204,7 +235,7 @@ class FinishMatchService:
             highest_score = max(player.score for player in players)
             leaders = [player for player in players if player.score == highest_score]
             match.status = Match.Status.FINISHED
-            match.ended_at = evaluation_time
+            match.ended_at = match.ends_at if deadline_reached else evaluation_time
             match.finish_reason = (
                 Match.FinishReason.TIMEOUT
                 if deadline_reached
@@ -228,6 +259,7 @@ class FinishMatchService:
                     "updated_at",
                 ]
             )
+            MatchPlayer.objects.filter(match=match).update(is_active=False)
             return match
 
     def try_finalize(self, *, match_id: int, now=None) -> Match | None:
@@ -247,6 +279,12 @@ class SurrenderMatchService:
     """Immediately finish a playing match in favor of the opponent."""
 
     def surrender(self, *, user, match_id: int, now=None) -> Match:
+        return retry_transient_db_lock(
+            lambda: self._surrender_once(user=user, match_id=match_id, now=now)
+        )
+
+    @staticmethod
+    def _surrender_once(*, user, match_id: int, now=None) -> Match:
         with transaction.atomic():
             try:
                 match = Match.objects.select_for_update().get(pk=match_id)
@@ -269,6 +307,7 @@ class SurrenderMatchService:
                 and match.finish_reason == Match.FinishReason.SURRENDER
                 and match.surrendered_by_id == user.id
             ):
+                MatchPlayer.objects.filter(match=match).update(is_active=False)
                 return match
             if match.status != Match.Status.PLAYING:
                 raise MatchStateError("Trận đấu không ở trạng thái đang chơi.")
@@ -297,4 +336,5 @@ class SurrenderMatchService:
                     "updated_at",
                 ]
             )
+            MatchPlayer.objects.filter(match=match).update(is_active=False)
             return match

@@ -24,8 +24,16 @@ class MatchAdmin(admin.ModelAdmin):
 
 @admin.register(MatchPlayer)
 class MatchPlayerAdmin(admin.ModelAdmin):
-    list_display = ("match", "user", "score", "is_host", "joined_at")
-    list_filter = ("is_host",)
+    list_display = (
+        "match",
+        "user",
+        "slot",
+        "score",
+        "is_host",
+        "is_active",
+        "joined_at",
+    )
+    list_filter = ("is_host", "is_active")
     search_fields = ("match__room_code", "user__username")
 
 

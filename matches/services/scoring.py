@@ -11,6 +11,8 @@ from matches.models import (
     Submission,
 )
 
+from .db import retry_transient_db_lock
+
 
 class ScoringError(Exception):
     """Base class for scoring failures."""
@@ -24,6 +26,11 @@ class ScoringService:
     """Apply base points and safely finalize first-solve."""
 
     def process_submission(self, submission_id: int) -> Submission:
+        return retry_transient_db_lock(
+            lambda: self._process_submission_once(submission_id)
+        )
+
+    def _process_submission_once(self, submission_id: int) -> Submission:
         submission_reference = Submission.objects.only("match_id").get(
             pk=submission_id
         )

@@ -166,6 +166,8 @@ class Judge0Service:
             raise ValueError("source_code must not be empty")
 
         test_cases = tuple(test_cases)
+        if not test_cases:
+            raise ValueError("at least one hidden test case is required")
         for passed_count, test_case in enumerate(test_cases):
             response = self._submit(source_code, test_case)
             verdict = self._verdict_from_response(response)
@@ -220,6 +222,22 @@ class Judge0Service:
             stdout=str(response.get("stdout") or ""),
             diagnostic=str(diagnostic),
         )
+
+    def healthcheck(self) -> None:
+        headers = {}
+        if self.api_key:
+            headers["X-Auth-Token"] = self.api_key
+        request = Request(
+            f"{self.base_url.rstrip('/')}/system_info",
+            headers=headers,
+            method="GET",
+        )
+        try:
+            with urlopen(request, timeout=min(self.timeout_seconds, 5)) as response:  # nosec B310
+                if response.status >= 400:
+                    raise Judge0UnavailableError("Judge0 health check failed")
+        except (HTTPError, URLError, TimeoutError) as error:
+            raise Judge0UnavailableError("Judge0 health check failed") from error
 
     def _submit(self, source_code: str, test_case: JudgeTestCase) -> dict[str, Any]:
         return self._request_submission(

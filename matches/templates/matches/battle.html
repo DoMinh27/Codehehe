@@ -58,7 +58,7 @@
 
             <section>
                 <h3>Ví dụ</h3>
-                {% for test_case in match_problem.problem.battle_sample_tests %}
+                {% for test_case in match_problem.sample_tests_snapshot %}
                     <p>Input:</p>
                     <pre>{{ test_case.input_data }}</pre>
                     <p>Output:</p>
@@ -90,12 +90,13 @@
                 data-run-url="{% url 'code-run' match_id=match.id match_problem_id=match_problem.id %}"
             >
                 {% csrf_token %}
-                <label for="input-{{ match_problem.id }}">Custom Input</label>
+                <label for="input-{{ match_problem.id }}">Dữ liệu nhập (stdin)</label>
                 <textarea
                     id="input-{{ match_problem.id }}"
                     name="input_data"
                     rows="5"
                     cols="90"
+                    placeholder="Ví dụ: 2 3&#10;Chỉ nhập dữ liệu, không dán code Python vào đây."
                 ></textarea>
                 <button type="submit">Chạy thử</button>
                 <p class="run-verdict" role="status"></p>
@@ -119,6 +120,7 @@
             let remainingSeconds = null;
             let lastStateAt = Date.now();
             let finalizeInFlight = false;
+            let stateInFlight = false;
             let pollHandle = null;
 
             function renderTimer() {
@@ -177,6 +179,11 @@
             }
 
             async function refreshState() {
+                if (stateInFlight) {
+                    schedulePoll();
+                    return;
+                }
+                stateInFlight = true;
                 try {
                     const response = await fetch(stateUrl, {
                         headers: {"Accept": "application/json"},
@@ -197,6 +204,7 @@
                     updateProgress(payload);
                     renderTimer();
                 } finally {
+                    stateInFlight = false;
                     schedulePoll();
                 }
             }
@@ -218,12 +226,22 @@
             }
 
             for (const form of document.querySelectorAll(".submission-form")) {
+                const sourceInput = form.querySelector("[name='source_code']");
+                sourceInput.addEventListener("input", () => {
+                    delete form.dataset.idempotencyKey;
+                });
                 form.addEventListener("submit", async (event) => {
                     event.preventDefault();
                     const button = form.querySelector("button[type='submit']");
                     const result = form.querySelector(".submission-result");
-                    const sourceCode = form.querySelector("[name='source_code']").value;
+                    const sourceCode = sourceInput.value;
                     const csrfToken = form.querySelector("[name='csrfmiddlewaretoken']").value;
+                    const idempotencyKey = form.dataset.idempotencyKey || (
+                        window.crypto && window.crypto.randomUUID
+                            ? window.crypto.randomUUID()
+                            : `${Date.now()}-${Math.random()}`
+                    );
+                    form.dataset.idempotencyKey = idempotencyKey;
                     button.disabled = true;
                     result.textContent = "Đang chấm…";
 
@@ -234,14 +252,22 @@
                                 "Content-Type": "application/json",
                                 "X-CSRFToken": csrfToken,
                             },
-                            body: JSON.stringify({source_code: sourceCode}),
+                            body: JSON.stringify({
+                                source_code: sourceCode,
+                                idempotency_key: idempotencyKey,
+                            }),
                         });
                         const payload = await response.json();
                         if (!response.ok) {
                             throw new Error(payload.error || "Không thể nộp bài.");
                         }
                         result.textContent = `${payload.verdict}: ${payload.message}`;
-                        await refreshState();
+                        if (payload.verdict !== "PENDING") {
+                            delete form.dataset.idempotencyKey;
+                        }
+                        refreshState().catch(() => {
+                            // Verdict is already rendered; regular polling will recover.
+                        });
                     } catch (submitError) {
                         result.textContent = submitError.message;
                     } finally {

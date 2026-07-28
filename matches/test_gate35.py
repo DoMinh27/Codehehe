@@ -436,7 +436,7 @@ class Gate35ViewTests(Gate35FixtureMixin, TestCase):
         response = self.client.get(reverse("battle", args=[self.match.pk]))
 
         self.assertContains(response, "Chạy thử")
-        self.assertContains(response, "Custom Input")
+        self.assertContains(response, "Dữ liệu nhập (stdin)")
         self.assertContains(response, "Đầu hàng")
         self.assertContains(
             response,

@@ -17,7 +17,7 @@ from matches.models import (
     Skill,
     Submission,
 )
-from matches.skills.definitions import REQUIRED_SKILL_CODES
+from matches.rules import rules_for_match
 from problems.models import Problem
 
 from .scoring import ScoringService
@@ -84,6 +84,7 @@ class StartMatchService:
                 raise MatchPermissionError("Chỉ host được bắt đầu trận.")
             if match.status != Match.Status.WAITING or match.started_at is not None:
                 raise MatchStateError("Trận đấu không còn ở trạng thái chờ.")
+            rules = rules_for_match(match)
 
             players = list(
                 MatchPlayer.objects.select_for_update()
@@ -97,10 +98,10 @@ class StartMatchService:
                 skill.code: skill
                 for skill in Skill.objects.filter(
                     is_active=True,
-                    code__in=REQUIRED_SKILL_CODES,
+                    code__in=rules.required_skill_codes,
                 )
             }
-            if set(active_skills) != set(REQUIRED_SKILL_CODES):
+            if set(active_skills) != set(rules.required_skill_codes):
                 raise InsufficientSkillsError(
                     "Cấu hình Skill Battle chưa đầy đủ."
                 )
@@ -111,37 +112,26 @@ class StartMatchService:
                     filter=Q(test_cases__is_sample=False),
                 )
             ).filter(is_active=True, hidden_test_count__gt=0)
-            easy_candidates = list(
-                eligible_problems.filter(
-                    difficulty=Problem.Difficulty.EASY,
-                ).order_by("order", "id")
-            )
-            medium_candidates = list(
-                eligible_problems.filter(
-                    difficulty=Problem.Difficulty.MEDIUM,
-                ).order_by("order", "id")
-            )
-            hard_candidates = list(
-                eligible_problems.filter(
-                    difficulty=Problem.Difficulty.HARD,
-                ).order_by("order", "id")
-            )
-            if (
-                len(easy_candidates) < 2
-                or len(medium_candidates) < 1
-                or len(hard_candidates) < 1
-            ):
-                raise InsufficientProblemsError(
-                    "Cần ít nhất 2 bài Easy, 1 bài Medium và 1 bài Hard "
-                    "đang hoạt động."
+            selected_problems = []
+            for difficulty, required_count in rules.problem_counts.items():
+                if required_count == 0:
+                    continue
+                candidates = list(
+                    eligible_problems.filter(
+                        difficulty=difficulty,
+                    ).order_by("order", "id")
                 )
-            easy_problems = self.problem_selector(easy_candidates, 2)
-            medium_problems = self.problem_selector(medium_candidates, 1)
-            hard_problems = self.problem_selector(hard_candidates, 1)
+                if len(candidates) < required_count:
+                    raise InsufficientProblemsError(
+                        "Ngân hàng bài tập không đủ cho ruleset của trận."
+                    )
+                selected_problems.extend(
+                    self.problem_selector(candidates, required_count)
+                )
 
             match_problems = []
             for order, problem in enumerate(
-                [*easy_problems, *medium_problems, *hard_problems],
+                selected_problems,
                 start=1,
             ):
                 sample_tests = []
@@ -183,7 +173,7 @@ class StartMatchService:
                             active_skills[code].duration_seconds
                         ),
                     )
-                    for code in REQUIRED_SKILL_CODES
+                    for code in rules.required_skill_codes
                 ]
             )
             PlayerProblemProgress.objects.bulk_create(

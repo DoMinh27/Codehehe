@@ -4,8 +4,9 @@ from datetime import timedelta
 from secrets import choice
 
 from matches.models import MatchPlayer, SkillEffect, SkillUse, TypingChallenge
+from matches.rules import MatchRules
 
-from .definitions import SKILL_REGISTRY, TYPING_PROMPTS
+from .definitions import SKILL_REGISTRY
 
 
 class SkillHandlerConfigurationError(Exception):
@@ -16,6 +17,7 @@ def apply_skill_effect(
     *,
     skill_use: SkillUse,
     target_player: MatchPlayer,
+    rules: MatchRules,
     now,
     prompt_selector=choice,
 ) -> SkillEffect | None:
@@ -24,7 +26,7 @@ def apply_skill_effect(
         raise SkillHandlerConfigurationError("Skill handler is not registered.")
 
     if definition.effect_kind == "TIME_PENALTY":
-        target_player.time_penalty_seconds += definition.time_penalty_seconds
+        target_player.time_penalty_seconds += rules.time_drain_seconds
         target_player.save(update_fields=["time_penalty_seconds"])
         return None
 
@@ -38,7 +40,7 @@ def apply_skill_effect(
         if definition.effect_kind == "TYPING_CHALLENGE":
             TypingChallenge.objects.create(
                 effect=effect,
-                prompt=prompt_selector(TYPING_PROMPTS),
+                prompt=prompt_selector(rules.typing_prompts),
                 started_at=effect.started_at,
                 expires_at=effect.expires_at,
             )

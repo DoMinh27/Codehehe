@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -189,6 +190,11 @@ LOGOUT_REDIRECT_URL = "login"
 MATCH_PENDING_SUBMISSION_TIMEOUT_SECONDS = int(
     os.getenv("MATCH_PENDING_SUBMISSION_TIMEOUT_SECONDS", "120")
 )
+MATCH_DURATION_SECONDS = int(os.getenv("MATCH_DURATION_SECONDS", "300"))
+if MATCH_DURATION_SECONDS <= 0:
+    raise ImproperlyConfigured(
+        "MATCH_DURATION_SECONDS must be greater than zero."
+    )
 MATCH_SUBMIT_RATE_LIMIT = int(os.getenv("MATCH_SUBMIT_RATE_LIMIT", "30"))
 MATCH_RUN_RATE_LIMIT = int(os.getenv("MATCH_RUN_RATE_LIMIT", "60"))
 MATCH_RATE_LIMIT_WINDOW_SECONDS = int(

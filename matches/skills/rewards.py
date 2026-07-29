@@ -10,6 +10,7 @@ from matches.models import (
     MatchSkill,
     PlayerProblemProgress,
 )
+from matches.rules import rules_for_match
 
 
 class RewardConfigurationError(Exception):
@@ -43,9 +44,13 @@ class RewardService:
             return
 
         selected_skill = self.selector(match_skills)
-        energy_awarded = int(player.energy < 3)
+        rules = rules_for_match(progress.match)
+        energy_awarded = min(
+            rules.energy_per_first_solve,
+            max(0, rules.max_energy - player.energy),
+        )
         if energy_awarded:
-            player.energy += 1
+            player.energy += energy_awarded
             player.save(update_fields=["energy"])
 
         inventory, _ = MatchPlayerSkill.objects.select_for_update().get_or_create(

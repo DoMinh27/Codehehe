@@ -27,10 +27,23 @@ class MatchProblemInline(admin.TabularInline):
 
 @admin.register(Match)
 class MatchAdmin(admin.ModelAdmin):
-    list_display = ("room_code", "host", "status", "is_draw", "winner", "created_at")
+    list_display = (
+        "room_code",
+        "host",
+        "status",
+        "ruleset_version",
+        "is_draw",
+        "winner",
+        "created_at",
+    )
     list_filter = ("status", "is_draw")
     search_fields = ("room_code", "host__username", "winner__username")
-    readonly_fields = ("created_at", "updated_at")
+    readonly_fields = (
+        "ruleset_version",
+        "rules_snapshot",
+        "created_at",
+        "updated_at",
+    )
     inlines = (MatchPlayerInline, MatchProblemInline)
 
 

@@ -3,6 +3,8 @@ from datetime import timedelta
 from django.conf import settings
 from django.db import models
 
+from .rules import CURRENT_RULESET_VERSION, default_v3_rules_snapshot
+
 
 class Skill(models.Model):
     code = models.CharField(max_length=40, unique=True)
@@ -48,6 +50,11 @@ class Match(models.Model):
     started_at = models.DateTimeField(null=True, blank=True)
     ended_at = models.DateTimeField(null=True, blank=True)
     duration_seconds = models.PositiveIntegerField(default=300)
+    ruleset_version = models.CharField(
+        max_length=20,
+        default=CURRENT_RULESET_VERSION,
+    )
+    rules_snapshot = models.JSONField(default=default_v3_rules_snapshot)
     winner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,

@@ -131,8 +131,9 @@ HARD
 
 ### Ghi chú V1
 
-* V1 chọn 4 bài active theo cấu hình và `order`.
-* Mặc định match gồm 2 Easy + 2 Medium.
+* Khi Start Match, hệ thống chọn ngẫu nhiên 2 Easy + 1 Medium + 1 Hard trong các bài
+  active có hidden test, rồi snapshot bộ đề cho cả trận.
+* Mặc định match gồm 2 Easy + 1 Medium + 1 Hard.
 * Không hard-delete Problem đã từng dùng trong Match.
 * Khi start match, điểm, title, statement, starter code và difficulty được snapshot sang `MatchProblem`.
 * V1 không snapshot TestCase. Admin không được sửa TestCase của Problem đang dùng trong Match `PLAYING`.
@@ -453,7 +454,7 @@ Create MatchPlayer(match, user, is_host=False)
 Validate requester là host
 Validate Match.status = WAITING
 Validate đúng 2 MatchPlayer
-Select 2 Easy + 2 Medium active Problems
+Select 2 Easy + 1 Medium + 1 Hard active Problems
 Create 4 MatchProblem với points/title/statement/starter_code/difficulty snapshot
 Create PlayerProblemProgress cho 2 player x 4 problem
 Update Match.status = PLAYING

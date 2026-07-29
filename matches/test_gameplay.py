@@ -79,6 +79,20 @@ class StartMatchServiceTests(TestCase):
                 expected_output=str(index),
                 is_sample=False,
             )
+            hard_problem = Problem.objects.create(
+                slug=f"hard-{index}",
+                title=f"Hard {index}",
+                statement=f"Hard statement {index}",
+                difficulty=Problem.Difficulty.HARD,
+                points=3,
+                starter_code=f"# hard {index}",
+                order=index + 1,
+            )
+            hard_problem.test_cases.create(
+                input_data=str(index),
+                expected_output=str(index),
+                is_sample=False,
+            )
 
     def test_start_creates_frozen_problems_progress_and_timer(self):
         match = StartMatchService().start(user=self.host, match_id=self.match.pk)
@@ -87,10 +101,10 @@ class StartMatchServiceTests(TestCase):
         self.assertIsNotNone(match.started_at)
         self.assertEqual(match.match_problems.count(), 4)
         self.assertEqual(match.problem_progress.count(), 8)
-        self.assertEqual(match.match_skills.count(), 3)
+        self.assertEqual(match.match_skills.count(), 4)
         self.assertEqual(
             list(match.match_problems.values_list("difficulty_snapshot", flat=True)),
-            ["EASY", "EASY", "MEDIUM", "MEDIUM"],
+            ["EASY", "EASY", "MEDIUM", "HARD"],
         )
 
         problem = Problem.objects.get(slug="easy-0")
@@ -99,6 +113,40 @@ class StartMatchServiceTests(TestCase):
         self.assertEqual(
             MatchProblem.objects.get(match=match, problem=problem).title_snapshot,
             "Easy 0",
+        )
+
+    def test_start_selects_two_problems_from_each_difficulty(self):
+        for index in range(2, 5):
+            for difficulty in (
+                Problem.Difficulty.EASY,
+                Problem.Difficulty.MEDIUM,
+            ):
+                problem = Problem.objects.create(
+                    slug=f"{difficulty.lower()}-{index}",
+                    title=f"{difficulty.title()} {index}",
+                    statement=f"{difficulty.title()} statement {index}",
+                    difficulty=difficulty,
+                    points=1,
+                    order=index + 1,
+                )
+                problem.test_cases.create(
+                    input_data=str(index),
+                    expected_output=str(index),
+                    is_sample=False,
+                )
+
+        service = StartMatchService(
+            problem_selector=lambda candidates, count: candidates[-count:]
+        )
+        match = service.start(user=self.host, match_id=self.match.pk)
+
+        self.assertEqual(
+            list(match.match_problems.values_list("problem__slug", flat=True)),
+            ["easy-3", "easy-4", "medium-4", "hard-1"],
+        )
+        self.assertEqual(
+            match.match_problems.values("problem_id").distinct().count(),
+            4,
         )
 
     def test_only_host_can_start(self):
@@ -123,6 +171,17 @@ class StartMatchServiceTests(TestCase):
 
     def test_insufficient_problem_set_rolls_back(self):
         Problem.objects.filter(difficulty=Problem.Difficulty.MEDIUM).delete()
+
+        with self.assertRaises(InsufficientProblemsError):
+            StartMatchService().start(user=self.host, match_id=self.match.pk)
+
+        self.match.refresh_from_db()
+        self.assertEqual(self.match.status, Match.Status.WAITING)
+        self.assertIsNone(self.match.started_at)
+        self.assertFalse(MatchProblem.objects.filter(match=self.match).exists())
+
+    def test_missing_hard_problem_rolls_back(self):
+        Problem.objects.filter(difficulty=Problem.Difficulty.HARD).delete()
 
         with self.assertRaises(InsufficientProblemsError):
             StartMatchService().start(user=self.host, match_id=self.match.pk)
@@ -524,7 +583,8 @@ class LifecycleFixtureMixin:
 
     def expire_match(self):
         Match.objects.filter(pk=self.match.pk).update(
-            started_at=timezone.now() - timedelta(seconds=901)
+            started_at=timezone.now()
+            - timedelta(seconds=self.match.duration_seconds + 1)
         )
         self.match.refresh_from_db()
 

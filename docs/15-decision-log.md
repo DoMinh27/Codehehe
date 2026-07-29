@@ -240,7 +240,8 @@ Mỗi quyết định mới phải ghi:
 
 * 4 bài mỗi trận.
 * 2 Easy.
-* 2 Medium.
+* 1 Medium.
+* 1 Hard.
 * 15 phút.
 
 **Lý do:** Đủ tạo nhiều lần cạnh tranh First-solve nhưng vẫn phù hợp demo và người mới.
@@ -736,8 +737,8 @@ Tính năng chỉ được sử dụng sau khi trận đấu kết thúc.
 **Quyết định:**
 
 * First solve cấp `+1 Energy`, tối đa 3, và một Skill charge ngẫu nhiên đều.
-* V2 có ba Skill: đảo editor 30 giây, làm mờ đề 30 giây và trừ 60 giây cá nhân.
-* Chi phí lần lượt là 1, 1 và 2 Energy.
+* V2 có ba Skill: đảo editor 35 giây, làm mờ đề 35 giây và trừ 60 giây cá nhân.
+* Chi phí hiện tại đều là 1 Energy.
 * Skill config được snapshot theo Match; backend quyết định reward, inventory,
   target, thời hạn và idempotency.
 * CodeMirror 6 chỉ thay đổi trải nghiệm editor; Skill không sửa source code thật.
@@ -750,3 +751,32 @@ Tính năng chỉ được sử dụng sau khi trận đấu kết thúc.
   personal deadline.
 * Match State chỉ công khai inventory/Energy của người gọi.
 * Hint, Defense và Minigame tiếp tục để ở các phiên bản sau.
+
+---
+
+## DEC-050 — Random problem selection
+
+**Ngày:** 2026-07-29
+
+**Trạng thái:** Approved
+
+**Quyết định:** Khi Start Match, server chọn ngẫu nhiên không lặp 2 bài Easy,
+1 bài Medium và 1 bài Hard từ các bài active có hidden test.
+
+**Hệ quả:** Hai người trong cùng trận vẫn nhận chung một bộ đề đã snapshot,
+nhưng các trận khác nhau không luôn lặp lại bốn bài có `order` thấp nhất.
+
+---
+
+## DEC-051 — Typing Challenge
+
+**Ngày:** 2026-07-29
+
+**Trạng thái:** Approved
+
+**Quyết định:** `TYPING_CHALLENGE` là Skill/minigame tấn công giá 1 Energy,
+khóa Run, Submit và Skill của mục tiêu tối đa 20 giây. Mục tiêu được mở khóa
+ngay khi gõ chính xác prompt tiếng Anh ASCII do server chọn.
+
+**Hệ quả:** Typing dùng chung SkillEffect lifecycle, không stack cùng loại,
+không khóa CodeMirror và không tạo thêm time penalty khi hết hạn.

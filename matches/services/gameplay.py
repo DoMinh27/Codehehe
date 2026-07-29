@@ -1,6 +1,8 @@
 """Match start and finish lifecycle services."""
 
 from dataclasses import dataclass, field
+from random import SystemRandom
+from typing import Callable
 
 from django.db import transaction
 from django.db.models import Count, Q
@@ -62,13 +64,16 @@ class MatchHasPendingSubmissionsError(MatchLifecycleError):
 class StartMatchService:
     """Create a frozen four-problem battle and start its server timer."""
 
+    problem_selector: Callable[[list[Problem], int], list[Problem]] = field(
+        default_factory=lambda: SystemRandom().sample
+    )
+
     def start(self, *, user, match_id: int) -> Match:
         return retry_transient_db_lock(
             lambda: self._start_once(user=user, match_id=match_id)
         )
 
-    @staticmethod
-    def _start_once(*, user, match_id: int) -> Match:
+    def _start_once(self, *, user, match_id: int) -> Match:
         with transaction.atomic():
             try:
                 match = Match.objects.select_for_update().get(pk=match_id)
@@ -106,24 +111,37 @@ class StartMatchService:
                     filter=Q(test_cases__is_sample=False),
                 )
             ).filter(is_active=True, hidden_test_count__gt=0)
-            easy_problems = list(
+            easy_candidates = list(
                 eligible_problems.filter(
                     difficulty=Problem.Difficulty.EASY,
-                ).order_by("order", "id")[:2]
+                ).order_by("order", "id")
             )
-            medium_problems = list(
+            medium_candidates = list(
                 eligible_problems.filter(
                     difficulty=Problem.Difficulty.MEDIUM,
-                ).order_by("order", "id")[:2]
+                ).order_by("order", "id")
             )
-            if len(easy_problems) != 2 or len(medium_problems) != 2:
+            hard_candidates = list(
+                eligible_problems.filter(
+                    difficulty=Problem.Difficulty.HARD,
+                ).order_by("order", "id")
+            )
+            if (
+                len(easy_candidates) < 2
+                or len(medium_candidates) < 1
+                or len(hard_candidates) < 1
+            ):
                 raise InsufficientProblemsError(
-                    "Cần ít nhất 2 bài Easy và 2 bài Medium đang hoạt động."
+                    "Cần ít nhất 2 bài Easy, 1 bài Medium và 1 bài Hard "
+                    "đang hoạt động."
                 )
+            easy_problems = self.problem_selector(easy_candidates, 2)
+            medium_problems = self.problem_selector(medium_candidates, 1)
+            hard_problems = self.problem_selector(hard_candidates, 1)
 
             match_problems = []
             for order, problem in enumerate(
-                [*easy_problems, *medium_problems],
+                [*easy_problems, *medium_problems, *hard_problems],
                 start=1,
             ):
                 sample_tests = []

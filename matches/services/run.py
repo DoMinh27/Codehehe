@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from django.utils import timezone
 
 from matches.models import Match, MatchPlayer, MatchProblem
+from matches.skills.typing import has_active_typing_challenge
 from problems.services.judge import (
     CodeRunner,
     Judge0ConfigurationError,
@@ -135,6 +136,10 @@ class CodeRunService:
         player_deadline = player.personal_ends_at
         if player_deadline is None or timezone.now() > player_deadline:
             raise CodeRunConflictError("Your personal time has ended.")
+        if has_active_typing_challenge(player_id=player.id):
+            raise CodeRunConflictError(
+                "Complete the Typing challenge before running code."
+            )
 
     @staticmethod
     def _safe_text(value: str, limit: int) -> str:

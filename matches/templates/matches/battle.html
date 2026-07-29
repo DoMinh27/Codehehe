@@ -44,6 +44,35 @@
         <div id="skill-list" class="skill-list"></div>
     </section>
 
+    <section
+        id="typing-challenge"
+        class="typing-challenge"
+        aria-label="Thử thách gõ chữ"
+        hidden
+    >
+        <h2>Typing Challenge</h2>
+        <p>
+            Gõ chính xác câu dưới đây để mở lại Run, Submit và Skill.
+            Còn <strong id="typing-countdown">0</strong> giây.
+        </p>
+        <code id="typing-prompt" class="typing-prompt"></code>
+        <form id="typing-form">
+            {% csrf_token %}
+            <label for="typing-input">Câu trả lời</label>
+            <input
+                id="typing-input"
+                name="typed_text"
+                type="text"
+                maxlength="100"
+                autocomplete="off"
+                autocapitalize="none"
+                spellcheck="false"
+            >
+            <button type="submit">Hoàn thành</button>
+            <p id="typing-result" role="status"></p>
+        </form>
+    </section>
+
     <nav class="problem-tabs" aria-label="Danh sách bài">
         {% for match_problem in match_problems %}
             <button

@@ -4,7 +4,7 @@
     {
       "slug": "sum-two-numbers",
       "title": "Tính tổng hai số",
-      "statement": "Đọc hai số nguyên a và b trên cùng một dòng. In ra tổng a + b.",
+      "statement": "Đọc hai số nguyên a và b trên cùng một dòng (-10^9 <= a, b <= 10^9). In ra tổng a + b.",
       "difficulty": "EASY",
       "points": 1,
       "starter_code": "a, b = map(int, input().split())\n",
@@ -14,13 +14,16 @@
         {"input_data": "2 3", "expected_output": "5", "is_sample": true, "order": 1},
         {"input_data": "-5 8", "expected_output": "3", "is_sample": false, "order": 2},
         {"input_data": "0 0", "expected_output": "0", "is_sample": false, "order": 3},
-        {"input_data": "1000000 2000000", "expected_output": "3000000", "is_sample": false, "order": 4}
+        {"input_data": "1000000 2000000", "expected_output": "3000000", "is_sample": false, "order": 4},
+        {"input_data": "-1000000000 -1000000000", "expected_output": "-2000000000", "is_sample": false, "order": 5},
+        {"input_data": "1000000000 -1000000000", "expected_output": "0", "is_sample": false, "order": 6},
+        {"input_data": "-999999999 1000000000", "expected_output": "1", "is_sample": false, "order": 7}
       ]
     },
     {
       "slug": "even-or-odd",
       "title": "Số chẵn hay số lẻ",
-      "statement": "Đọc một số nguyên n. In CHAN nếu n là số chẵn, ngược lại in LE.",
+      "statement": "Đọc một số nguyên n (-10^9 <= n <= 10^9). In CHAN nếu n là số chẵn, ngược lại in LE.",
       "difficulty": "EASY",
       "points": 1,
       "starter_code": "n = int(input())\n",
@@ -30,55 +33,86 @@
         {"input_data": "4", "expected_output": "CHAN", "is_sample": true, "order": 1},
         {"input_data": "-3", "expected_output": "LE", "is_sample": false, "order": 2},
         {"input_data": "0", "expected_output": "CHAN", "is_sample": false, "order": 3},
-        {"input_data": "17", "expected_output": "LE", "is_sample": false, "order": 4}
+        {"input_data": "17", "expected_output": "LE", "is_sample": false, "order": 4},
+        {"input_data": "-1000000000", "expected_output": "CHAN", "is_sample": false, "order": 5},
+        {"input_data": "999999999", "expected_output": "LE", "is_sample": false, "order": 6},
+        {"input_data": "1000000000", "expected_output": "CHAN", "is_sample": false, "order": 7}
+      ]
+    },
+    {
+      "slug": "multiply-two-numbers",
+      "title": "Tính tích hai số",
+      "statement": "Đọc hai số nguyên a và b trên cùng một dòng (-10^9 <= a, b <= 10^9). In ra tích a * b.",
+      "difficulty": "EASY",
+      "points": 1,
+      "starter_code": "a, b = map(int, input().split())\n",
+      "order": 3,
+      "is_active": true,
+      "test_cases": [
+        {"input_data": "2 3", "expected_output": "6", "is_sample": true, "order": 1},
+        {"input_data": "-5 8", "expected_output": "-40", "is_sample": false, "order": 2},
+        {"input_data": "0 999999999", "expected_output": "0", "is_sample": false, "order": 3},
+        {"input_data": "-7 -6", "expected_output": "42", "is_sample": false, "order": 4},
+        {"input_data": "1000000000 1000000000", "expected_output": "1000000000000000000", "is_sample": false, "order": 5},
+        {"input_data": "-1000000000 1000000000", "expected_output": "-1000000000000000000", "is_sample": false, "order": 6},
+        {"input_data": "1 -1", "expected_output": "-1", "is_sample": false, "order": 7}
       ]
     },
     {
       "slug": "maximum-of-three",
       "title": "Số lớn nhất trong ba số",
-      "statement": "Đọc ba số nguyên trên cùng một dòng. In ra giá trị lớn nhất.",
+      "statement": "Đọc ba số nguyên a, b và c trên cùng một dòng (-10^9 <= a, b, c <= 10^9). In ra giá trị lớn nhất.",
       "difficulty": "MEDIUM",
       "points": 2,
       "starter_code": "a, b, c = map(int, input().split())\n",
-      "order": 3,
+      "order": 4,
       "is_active": true,
       "test_cases": [
         {"input_data": "1 5 3", "expected_output": "5", "is_sample": true, "order": 1},
         {"input_data": "-1 -5 -3", "expected_output": "-1", "is_sample": false, "order": 2},
         {"input_data": "7 7 2", "expected_output": "7", "is_sample": false, "order": 3},
-        {"input_data": "0 0 0", "expected_output": "0", "is_sample": false, "order": 4}
+        {"input_data": "0 0 0", "expected_output": "0", "is_sample": false, "order": 4},
+        {"input_data": "-1000000000 0 1000000000", "expected_output": "1000000000", "is_sample": false, "order": 5},
+        {"input_data": "1000000000 1000000000 999999999", "expected_output": "1000000000", "is_sample": false, "order": 6},
+        {"input_data": "-999999998 -999999999 -1000000000", "expected_output": "-999999998", "is_sample": false, "order": 7}
       ]
     },
     {
       "slug": "count-vowels",
       "title": "Đếm nguyên âm",
-      "statement": "Đọc một dòng văn bản. Đếm số ký tự nguyên âm a, e, i, o, u và không phân biệt chữ hoa, chữ thường.",
+      "statement": "Đọc một dòng văn bản gồm từ 1 đến 10000 chữ cái tiếng Anh và khoảng trắng. Đếm các ký tự a, e, i, o, u, không phân biệt chữ hoa và chữ thường.",
       "difficulty": "MEDIUM",
       "points": 2,
       "starter_code": "text = input()\n",
-      "order": 4,
+      "order": 5,
       "is_active": true,
       "test_cases": [
         {"input_data": "Hello World", "expected_output": "3", "is_sample": true, "order": 1},
         {"input_data": "AEIOU", "expected_output": "5", "is_sample": false, "order": 2},
         {"input_data": "rhythm", "expected_output": "0", "is_sample": false, "order": 3},
-        {"input_data": "lap trinh python", "expected_output": "3", "is_sample": false, "order": 4}
+        {"input_data": "lap trinh python", "expected_output": "3", "is_sample": false, "order": 4},
+        {"input_data": "AaEeIiOoUu", "expected_output": "10", "is_sample": false, "order": 5},
+        {"input_data": "CodeHeHe", "expected_output": "4", "is_sample": false, "order": 6},
+        {"input_data": "a e i o u", "expected_output": "5", "is_sample": false, "order": 7}
       ]
     },
     {
       "slug": "palindrome-check",
       "title": "Kiểm tra chuỗi đối xứng",
-      "statement": "Đọc một từ không chứa khoảng trắng. In YES nếu từ đó là palindrome khi không phân biệt chữ hoa, chữ thường; ngược lại in NO.",
+      "statement": "Đọc một từ gồm từ 1 đến 10000 chữ cái hoặc chữ số, không chứa khoảng trắng. In YES nếu từ đó là palindrome khi không phân biệt chữ hoa và chữ thường; ngược lại in NO.",
       "difficulty": "MEDIUM",
       "points": 2,
       "starter_code": "text = input().strip()\n",
-      "order": 5,
+      "order": 6,
       "is_active": true,
       "test_cases": [
         {"input_data": "Level", "expected_output": "YES", "is_sample": true, "order": 1},
         {"input_data": "python", "expected_output": "NO", "is_sample": false, "order": 2},
         {"input_data": "A", "expected_output": "YES", "is_sample": false, "order": 3},
-        {"input_data": "abba", "expected_output": "YES", "is_sample": false, "order": 4}
+        {"input_data": "abba", "expected_output": "YES", "is_sample": false, "order": 4},
+        {"input_data": "RaceCar", "expected_output": "YES", "is_sample": false, "order": 5},
+        {"input_data": "AbCa", "expected_output": "NO", "is_sample": false, "order": 6},
+        {"input_data": "aBcCBa", "expected_output": "YES", "is_sample": false, "order": 7}
       ]
     },
     {
@@ -88,45 +122,73 @@
       "difficulty": "MEDIUM",
       "points": 2,
       "starter_code": "n = int(input())\n",
-      "order": 6,
+      "order": 7,
       "is_active": true,
       "test_cases": [
         {"input_data": "7", "expected_output": "13", "is_sample": true, "order": 1},
         {"input_data": "0", "expected_output": "0", "is_sample": false, "order": 2},
         {"input_data": "1", "expected_output": "1", "is_sample": false, "order": 3},
-        {"input_data": "10", "expected_output": "55", "is_sample": false, "order": 4}
+        {"input_data": "2", "expected_output": "1", "is_sample": false, "order": 4},
+        {"input_data": "10", "expected_output": "55", "is_sample": false, "order": 5},
+        {"input_data": "25", "expected_output": "75025", "is_sample": false, "order": 6},
+        {"input_data": "50", "expected_output": "12586269025", "is_sample": false, "order": 7}
       ]
     },
     {
       "slug": "primes-up-to-n",
       "title": "Các số nguyên tố không vượt quá n",
-      "statement": "Đọc số nguyên n với n >= 2. In các số nguyên tố không vượt quá n theo thứ tự tăng dần, cách nhau bởi một dấu cách.",
+      "statement": "Đọc số nguyên n với 2 <= n <= 10000. In các số nguyên tố không vượt quá n theo thứ tự tăng dần, cách nhau bởi một dấu cách.",
       "difficulty": "HARD",
       "points": 3,
       "starter_code": "n = int(input())\n",
-      "order": 7,
+      "order": 8,
       "is_active": true,
       "test_cases": [
         {"input_data": "10", "expected_output": "2 3 5 7", "is_sample": true, "order": 1},
         {"input_data": "2", "expected_output": "2", "is_sample": false, "order": 2},
-        {"input_data": "20", "expected_output": "2 3 5 7 11 13 17 19", "is_sample": false, "order": 3},
-        {"input_data": "30", "expected_output": "2 3 5 7 11 13 17 19 23 29", "is_sample": false, "order": 4}
+        {"input_data": "3", "expected_output": "2 3", "is_sample": false, "order": 3},
+        {"input_data": "20", "expected_output": "2 3 5 7 11 13 17 19", "is_sample": false, "order": 4},
+        {"input_data": "30", "expected_output": "2 3 5 7 11 13 17 19 23 29", "is_sample": false, "order": 5},
+        {"input_data": "49", "expected_output": "2 3 5 7 11 13 17 19 23 29 31 37 41 43 47", "is_sample": false, "order": 6},
+        {"input_data": "97", "expected_output": "2 3 5 7 11 13 17 19 23 29 31 37 41 43 47 53 59 61 67 71 73 79 83 89 97", "is_sample": false, "order": 7}
       ]
     },
     {
       "slug": "second-largest-distinct",
       "title": "Số lớn thứ hai phân biệt",
-      "statement": "Dòng đầu chứa số nguyên n. Dòng thứ hai chứa n số nguyên và có ít nhất hai giá trị khác nhau. In ra giá trị lớn thứ hai phân biệt.",
+      "statement": "Dòng đầu chứa số nguyên n (2 <= n <= 100000). Dòng thứ hai chứa đúng n số nguyên trong đoạn [-10^9, 10^9] và có ít nhất hai giá trị khác nhau. In giá trị lớn thứ hai phân biệt.",
       "difficulty": "HARD",
       "points": 3,
       "starter_code": "n = int(input())\nnumbers = list(map(int, input().split()))\n",
-      "order": 8,
+      "order": 9,
       "is_active": true,
       "test_cases": [
         {"input_data": "5\n1 3 2 5 4", "expected_output": "4", "is_sample": true, "order": 1},
         {"input_data": "4\n10 10 9 8", "expected_output": "9", "is_sample": false, "order": 2},
         {"input_data": "3\n-1 -2 -3", "expected_output": "-2", "is_sample": false, "order": 3},
-        {"input_data": "6\n5 5 5 4 4 3", "expected_output": "4", "is_sample": false, "order": 4}
+        {"input_data": "6\n5 5 5 4 4 3", "expected_output": "4", "is_sample": false, "order": 4},
+        {"input_data": "2\n1 2", "expected_output": "1", "is_sample": false, "order": 5},
+        {"input_data": "5\n-5 -5 -10 -20 -10", "expected_output": "-10", "is_sample": false, "order": 6},
+        {"input_data": "7\n1 2 3 4 5 6 7", "expected_output": "6", "is_sample": false, "order": 7}
+      ]
+    },
+    {
+      "slug": "star-triangle",
+      "title": "Tam giác dấu sao",
+      "statement": "Đọc số nguyên n với 1 <= n <= 100. In một tam giác vuông trái gồm n dòng; dòng thứ i chứa đúng i dấu * liên tiếp.",
+      "difficulty": "HARD",
+      "points": 3,
+      "starter_code": "n = int(input())\n",
+      "order": 10,
+      "is_active": true,
+      "test_cases": [
+        {"input_data": "4", "expected_output": "*\n**\n***\n****", "is_sample": true, "order": 1},
+        {"input_data": "1", "expected_output": "*", "is_sample": false, "order": 2},
+        {"input_data": "2", "expected_output": "*\n**", "is_sample": false, "order": 3},
+        {"input_data": "3", "expected_output": "*\n**\n***", "is_sample": false, "order": 4},
+        {"input_data": "5", "expected_output": "*\n**\n***\n****\n*****", "is_sample": false, "order": 5},
+        {"input_data": "10", "expected_output": "*\n**\n***\n****\n*****\n******\n*******\n********\n*********\n**********", "is_sample": false, "order": 6},
+        {"input_data": "20", "expected_output": "*\n**\n***\n****\n*****\n******\n*******\n********\n*********\n**********\n***********\n************\n*************\n**************\n***************\n****************\n*****************\n******************\n*******************\n********************", "is_sample": false, "order": 7}
       ]
     }
   ]

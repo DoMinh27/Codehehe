@@ -300,6 +300,40 @@ class SkillEffect(models.Model):
         return f"Effect for skill use #{self.skill_use_id}"  # pyright: ignore[reportAttributeAccessIssue]
 
 
+class TypingChallenge(models.Model):
+    effect = models.OneToOneField(
+        SkillEffect,
+        on_delete=models.CASCADE,
+        related_name="typing_challenge",
+    )
+    prompt = models.CharField(max_length=100)
+    started_at = models.DateTimeField()
+    expires_at = models.DateTimeField(db_index=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["expires_at", "id"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(expires_at__gt=models.F("started_at")),
+                name="typingchallenge_expires_after_start",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(completed_at__isnull=True)
+                    | (
+                        models.Q(completed_at__gte=models.F("started_at"))
+                        & models.Q(completed_at__lte=models.F("expires_at"))
+                    )
+                ),
+                name="typingchallenge_completion_in_window",
+            ),
+        ]
+
+    def __str__(self):
+        return f"Typing challenge #{self.pk}"
+
+
 class MatchProblem(models.Model):
     match = models.ForeignKey(
         Match,

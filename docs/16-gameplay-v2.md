@@ -18,9 +18,9 @@ pressure but never modify or delete an opponent's source code.
 
 | Code | Cost | Effect |
 |---|---:|---|
-| `MIRROR_CODE` | 1 | Render every opponent editor right-to-left for 30 seconds. |
-| `BLUR_STATEMENT` | 1 | Blur every opponent statement and sample for 30 seconds. |
-| `TIME_DRAIN_60` | 2 | Subtract 60 seconds from the opponent's personal clock. |
+| `MIRROR_CODE` | 1 | Render every opponent editor right-to-left for 35 seconds. |
+| `BLUR_STATEMENT` | 1 | Blur every opponent statement and sample for 35 seconds. |
+| `TIME_DRAIN_60` | 1 | Subtract 60 seconds from the opponent's personal clock. |
 
 Mirror and Blur cannot be stacked with another active effect of the same code.
 They can coexist with each other. Time Drain is instantaneous and can stack when
@@ -56,4 +56,5 @@ Submissions have completed. Score determines the winner; equal score is a draw.
 ## Deferred
 
 Hint is not included in V2. Cleanse, Reflect, and Shield belong to V2.5.
-Minigames belong to V3.
+Typing Challenge is implemented as the first V3 minigame-backed Skill. Other
+minigames remain deferred.

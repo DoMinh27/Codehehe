@@ -1,8 +1,11 @@
 """Transactional Skill use validation and application."""
 
 from dataclasses import dataclass
+from secrets import choice
+from typing import Callable, Sequence
 
 from django.db import transaction
+from django.db.models import Count, Q
 from django.utils import timezone
 
 from matches.models import (
@@ -10,6 +13,7 @@ from matches.models import (
     MatchPlayer,
     MatchPlayerSkill,
     MatchSkill,
+    PlayerProblemProgress,
     SkillEffect,
     SkillUse,
 )
@@ -17,6 +21,7 @@ from matches.services.db import retry_transient_db_lock
 
 from .definitions import SKILL_REGISTRY
 from .handlers import SkillHandlerConfigurationError, apply_skill_effect
+from .typing import has_active_typing_challenge
 
 
 MAX_IDEMPOTENCY_KEY_LENGTH = 64
@@ -50,6 +55,8 @@ class SkillUseResult:
 
 @dataclass
 class SkillService:
+    prompt_selector: Callable[[Sequence[str]], str] = choice
+
     def use(
         self,
         *,
@@ -92,8 +99,8 @@ class SkillService:
             raise InvalidSkillUseError("idempotency_key is invalid.")
         return skill_code, idempotency_key
 
-    @staticmethod
     def _use_once(
+        self,
         *,
         user,
         match_id,
@@ -156,6 +163,13 @@ class SkillService:
             source_deadline = source.personal_ends_at
             if source_deadline is None or evaluation_time > source_deadline:
                 raise SkillUseConflictError("Your personal time has ended.")
+            if has_active_typing_challenge(
+                player_id=source.id,
+                now=evaluation_time,
+            ):
+                raise SkillUseConflictError(
+                    "Complete the Typing challenge before using a Skill."
+                )
 
             try:
                 match_skill = MatchSkill.objects.get(
@@ -183,7 +197,10 @@ class SkillService:
                 raise SkillUseConflictError("Not enough Energy.")
 
             definition = SKILL_REGISTRY[skill_code]
-            if definition.effect_kind == "TIMED" and SkillEffect.objects.filter(
+            if definition.effect_kind in {
+                "TIMED",
+                "TYPING_CHALLENGE",
+            } and SkillEffect.objects.filter(
                 skill_use__match=match,
                 skill_use__target_player=target,
                 skill_use__match_skill__code_snapshot=skill_code,
@@ -191,6 +208,26 @@ class SkillService:
                 expires_at__gt=evaluation_time,
             ).exists():
                 raise SkillUseConflictError("This effect is already active.")
+            if definition.effect_kind == "TYPING_CHALLENGE":
+                target_deadline = target.personal_ends_at
+                if target_deadline is None or evaluation_time >= target_deadline:
+                    raise SkillUseConflictError(
+                        "The opponent has already finished."
+                    )
+                progress_summary = PlayerProblemProgress.objects.filter(
+                    match=match,
+                    player=target,
+                ).aggregate(
+                    total=Count("id"),
+                    solved=Count("id", filter=Q(is_solved=True)),
+                )
+                if (
+                    progress_summary["total"] > 0
+                    and progress_summary["solved"] == progress_summary["total"]
+                ):
+                    raise SkillUseConflictError(
+                        "The opponent has already finished."
+                    )
 
             skill_use = SkillUse.objects.create(
                 match=match,
@@ -212,6 +249,7 @@ class SkillService:
                     skill_use=skill_use,
                     target_player=target,
                     now=evaluation_time,
+                    prompt_selector=self.prompt_selector,
                 )
             except SkillHandlerConfigurationError as error:
                 raise SkillUseConflictError(

@@ -121,7 +121,11 @@ class SnapshotAndIdempotencyTests(TestCase):
             is_active=True,
         )
         self.valid_problems = []
-        for difficulty in (Problem.Difficulty.EASY, Problem.Difficulty.MEDIUM):
+        for difficulty in (
+            Problem.Difficulty.EASY,
+            Problem.Difficulty.MEDIUM,
+            Problem.Difficulty.HARD,
+        ):
             invalid = Problem.objects.create(
                 slug=f"invalid-{difficulty.lower()}",
                 title="Invalid",

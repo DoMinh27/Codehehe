@@ -19,6 +19,7 @@ export function createEditors({textareas, storage, identity}) {
         }
 
         const mirrorCompartment = new Compartment();
+        const editableCompartment = new Compartment();
         const mount = document.createElement("div");
         mount.className = "code-editor";
         textarea.insertAdjacentElement("afterend", mount);
@@ -33,6 +34,7 @@ export function createEditors({textareas, storage, identity}) {
                         python(),
                         keymap.of([indentWithTab]),
                         mirrorCompartment.of([]),
+                        editableCompartment.of([]),
                         EditorView.updateListener.of((update) => {
                             if (!update.docChanged) {
                                 return;
@@ -48,7 +50,13 @@ export function createEditors({textareas, storage, identity}) {
                 }),
             });
             textarea.hidden = true;
-            entries.push({view, mirrorCompartment});
+            entries.push({
+                view,
+                mirrorCompartment,
+                editableCompartment,
+                textarea,
+                mount,
+            });
         } catch {
             mount.remove();
             textarea.hidden = false;
@@ -73,6 +81,20 @@ export function createEditors({textareas, storage, identity}) {
                             : [],
                     ),
                 });
+            }
+        },
+        setEditable(editable) {
+            for (const entry of entries) {
+                entry.textarea.readOnly = !editable;
+                entry.mount.dataset.editorLocked = String(!editable);
+                entry.view.dispatch({
+                    effects: entry.editableCompartment.reconfigure(
+                        editable ? [] : [EditorView.editable.of(false)],
+                    ),
+                });
+            }
+            for (const textarea of textareas) {
+                textarea.readOnly = !editable;
             }
         },
         destroy() {

@@ -27,6 +27,29 @@
     margin-top: 0.5rem;
 }
 
+.typing-challenge {
+    background: #fff7ed;
+    border: 2px solid #9a3412;
+    border-radius: 0.5rem;
+    margin-block: 1rem;
+    padding: 1rem;
+    position: sticky;
+    top: 0.75rem;
+    z-index: 10;
+    box-shadow: 0 0.5rem 1rem rgb(0 0 0 / 20%);
+}
+
+.typing-prompt {
+    display: block;
+    font-size: 1.1rem;
+    margin-block: 0.75rem;
+    user-select: none;
+}
+
+#typing-input {
+    min-width: min(100%, 28rem);
+}
+
 .problem-tabs {
     display: flex;
     flex-wrap: wrap;

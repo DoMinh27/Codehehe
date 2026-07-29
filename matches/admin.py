@@ -11,6 +11,7 @@ from .models import (
     SkillEffect,
     SkillUse,
     Submission,
+    TypingChallenge,
 )
 
 
@@ -133,6 +134,29 @@ class SkillUseAdmin(admin.ModelAdmin):
 class SkillEffectAdmin(admin.ModelAdmin):
     list_display = ("skill_use", "started_at", "expires_at", "cancelled_at")
     readonly_fields = ("skill_use", "started_at", "expires_at")
+
+
+@admin.register(TypingChallenge)
+class TypingChallengeAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "effect",
+        "started_at",
+        "expires_at",
+        "completed_at",
+    )
+    search_fields = (
+        "effect__skill_use__source_player__user__username",
+        "effect__skill_use__target_player__user__username",
+        "prompt",
+    )
+    readonly_fields = (
+        "effect",
+        "prompt",
+        "started_at",
+        "expires_at",
+        "completed_at",
+    )
 
 
 @admin.register(MatchProblem)

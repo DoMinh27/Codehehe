@@ -44,9 +44,9 @@ User = get_user_model()
 
 
 SKILL_DATA = {
-    MIRROR_CODE: ("Đảo chiều code", 1, 30),
-    BLUR_STATEMENT: ("Làm mờ đề", 1, 30),
-    TIME_DRAIN_60: ("Trừ thời gian", 2, None),
+    MIRROR_CODE: ("Đảo chiều code", 1, 35),
+    BLUR_STATEMENT: ("Làm mờ đề", 1, 35),
+    TIME_DRAIN_60: ("Trừ thời gian", 1, None),
 }
 
 
@@ -233,7 +233,7 @@ class SkillServiceTests(V2FixtureMixin, TestCase):
         self.assertFalse(replay.created)
         self.assertEqual(first.skill_use.pk, replay.skill_use.pk)
         effect = SkillEffect.objects.get(skill_use=first.skill_use)
-        self.assertEqual(effect.expires_at, now + timedelta(seconds=30))
+        self.assertEqual(effect.expires_at, now + timedelta(seconds=35))
         self.host_player.refresh_from_db()
         inventory.refresh_from_db()
         self.assertEqual(self.host_player.energy, 2)
@@ -276,7 +276,7 @@ class SkillServiceTests(V2FixtureMixin, TestCase):
             2,
         )
 
-    def test_time_drain_stacks_after_energy_is_replenished(self):
+    def test_time_drain_stacks_with_sufficient_resources(self):
         inventory = self.grant(
             self.host_player,
             TIME_DRAIN_60,
@@ -293,8 +293,6 @@ class SkillServiceTests(V2FixtureMixin, TestCase):
             idempotency_key="drain-1",
             now=now,
         )
-        self.host_player.energy = 2
-        self.host_player.save(update_fields=["energy"])
         service.use(
             user=self.host,
             match_id=self.match.pk,
@@ -308,6 +306,8 @@ class SkillServiceTests(V2FixtureMixin, TestCase):
         inventory.refresh_from_db()
         self.assertEqual(self.opponent_player.time_penalty_seconds, 120)
         self.assertEqual(inventory.quantity, 0)
+        self.host_player.refresh_from_db()
+        self.assertEqual(self.host_player.energy, 1)
         self.assertEqual(SkillUse.objects.count(), 2)
         self.assertEqual(SkillEffect.objects.count(), 0)
 

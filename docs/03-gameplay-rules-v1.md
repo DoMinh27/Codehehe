@@ -125,7 +125,8 @@ Mặc định:
 Trong V1, Match có:
 
 * 2 bài Easy.
-* 2 bài Medium.
+* 1 bài Medium.
+* 1 bài Hard.
 
 Tổng base score mặc định tối đa:
 

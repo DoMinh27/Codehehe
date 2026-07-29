@@ -12,6 +12,7 @@ from matches.models import (
     PlayerProblemProgress,
     Submission,
 )
+from matches.rules import rules_for_match
 from matches.skills.rewards import RewardService
 
 from .db import retry_transient_db_lock
@@ -57,8 +58,10 @@ class ScoringService:
                     submission.save(update_fields=["is_score_processed"])
                 return submission
 
-            match_problem = MatchProblem.objects.select_for_update().get(
-                pk=submission.match_problem_id
+            match_problem = (
+                MatchProblem.objects.select_for_update()
+                .select_related("match")
+                .get(pk=submission.match_problem_id)
             )
             if submission.verdict == Submission.Verdict.ACCEPTED:
                 self._award_base_score(submission, match_problem)
@@ -145,8 +148,12 @@ class ScoringService:
             player_id=candidate.player_id,
             match_problem=match_problem,
         )
-        if progress.first_solve_bonus_awarded == 0:
-            progress.first_solve_bonus_awarded = 1
+        rules = rules_for_match(match_problem.match)
+        if (
+            progress.first_solve_bonus_awarded == 0
+            and rules.first_solve_bonus
+        ):
+            progress.first_solve_bonus_awarded = rules.first_solve_bonus
             progress.save(
                 update_fields=["first_solve_bonus_awarded", "updated_at"]
             )

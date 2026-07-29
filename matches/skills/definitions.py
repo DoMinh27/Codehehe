@@ -11,7 +11,6 @@ REQUIRED_SKILL_CODES = (
     TIME_DRAIN_60,
     TYPING_CHALLENGE,
 )
-TIME_DRAIN_SECONDS = 60
 TYPING_PROMPTS = (
     "practice makes progress",
     "focus on the next test",
@@ -31,7 +30,6 @@ TYPING_PROMPTS = (
 class SkillDefinition:
     code: str
     effect_kind: str
-    time_penalty_seconds: int = 0
 
 
 SKILL_REGISTRY = {
@@ -40,7 +38,6 @@ SKILL_REGISTRY = {
     TIME_DRAIN_60: SkillDefinition(
         TIME_DRAIN_60,
         "TIME_PENALTY",
-        time_penalty_seconds=TIME_DRAIN_SECONDS,
     ),
     TYPING_CHALLENGE: SkillDefinition(TYPING_CHALLENGE, "TYPING_CHALLENGE"),
 }

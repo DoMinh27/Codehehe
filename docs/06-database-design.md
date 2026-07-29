@@ -193,7 +193,9 @@ Lưu một trận đấu 1v1.
 | `status` | `CharField(choices, default="WAITING")` | Có | Trạng thái match |
 | `started_at` | `DateTimeField(null=True, blank=True)` | Không | Thời điểm start |
 | `ended_at` | `DateTimeField(null=True, blank=True)` | Không | Thời điểm kết thúc |
-| `duration_seconds` | `PositiveIntegerField(default=900)` | Có | 15 phút |
+| `duration_seconds` | `PositiveIntegerField(default=300)` | Có | Thời lượng đã snapshot; mặc định 5 phút |
+| `ruleset_version` | `CharField(default="v3.1")` | Có | Phiên bản luật của Match |
+| `rules_snapshot` | `JSONField` | Có | Problem mix, scoring, Energy, Skill effect và Typing catalog |
 | `winner` | `ForeignKey(User, null=True, blank=True, related_name="won_matches")` | Không | Null nếu chưa xong hoặc Draw |
 | `is_draw` | `BooleanField(default=False)` | Có | True nếu hòa |
 | `created_at` | `DateTimeField(auto_now_add=True)` | Có | Audit |

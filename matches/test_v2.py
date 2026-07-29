@@ -1,4 +1,5 @@
 import json
+from copy import deepcopy
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
@@ -176,7 +177,11 @@ class EnergyRewardTests(V2FixtureMixin, TestCase):
         self.assertEqual(self.host_progress.skill_awarded, selected)
 
     def test_full_energy_still_drops_skill_without_exceeding_cap(self):
-        self.host_player.energy = 3
+        snapshot = deepcopy(self.match.rules_snapshot)
+        snapshot["energy"]["max"] = 2
+        self.match.rules_snapshot = snapshot
+        self.match.save(update_fields=["rules_snapshot"])
+        self.host_player.energy = 2
         self.host_player.save(update_fields=["energy"])
         selected = self.match_skills[BLUR_STATEMENT]
         submission = self.accepted_submission()
@@ -187,7 +192,7 @@ class EnergyRewardTests(V2FixtureMixin, TestCase):
 
         self.host_player.refresh_from_db()
         self.host_progress.refresh_from_db()
-        self.assertEqual(self.host_player.energy, 3)
+        self.assertEqual(self.host_player.energy, 2)
         self.assertEqual(self.host_progress.energy_awarded, 0)
         self.assertEqual(
             MatchPlayerSkill.objects.get(
@@ -310,6 +315,31 @@ class SkillServiceTests(V2FixtureMixin, TestCase):
         self.assertEqual(self.host_player.energy, 1)
         self.assertEqual(SkillUse.objects.count(), 2)
         self.assertEqual(SkillEffect.objects.count(), 0)
+
+    def test_time_drain_uses_match_rules_snapshot(self):
+        snapshot = deepcopy(self.match.rules_snapshot)
+        snapshot["skill_effects"]["TIME_DRAIN_60"][
+            "time_penalty_seconds"
+        ] = 15
+        self.match.rules_snapshot = snapshot
+        self.match.save(update_fields=["rules_snapshot"])
+        self.grant(
+            self.host_player,
+            TIME_DRAIN_60,
+            energy=3,
+        )
+
+        SkillService().use(
+            user=self.host,
+            match_id=self.match.pk,
+            skill_code=TIME_DRAIN_60,
+            target_player_id=self.opponent_player.pk,
+            idempotency_key="drain-snapshot",
+            now=timezone.now(),
+        )
+
+        self.opponent_player.refresh_from_db()
+        self.assertEqual(self.opponent_player.time_penalty_seconds, 15)
 
     def test_outsider_self_target_and_reused_key_payload_are_rejected(self):
         self.grant(self.host_player, MIRROR_CODE)

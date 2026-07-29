@@ -25,10 +25,10 @@ Energy và Skills chưa được kích hoạt trong V1 nhưng kiến trúc phả
 * Ngôn ngữ: Python.
 * Runtime chính thức: Python 3.12.
 * Số bài: 4.
-* Thời gian: 15 phút.
+* Thời gian mặc định: 5 phút, có thể cấu hình cho phòng mới.
 * Hai bài đầu: Easy.
-* Hai bài sau: Medium.
-* Hard Problem không bắt buộc trong V1.
+* Bài thứ ba: Medium.
+* Bài thứ tư: Hard.
 * Hai người nhận cùng danh sách bài.
 * Mỗi người giải bài theo thứ tự tùy chọn.
 * Không có chat.
@@ -49,7 +49,7 @@ Energy và Skills chưa được kích hoạt trong V1 nhưng kiến trúc phả
 
    * `status = PLAYING`.
    * `started_at`.
-   * `ends_at = started_at + 15 phút`.
+   * `ends_at = started_at + duration_seconds`.
 8. Hai người được chuyển tới Battle page.
 
 Host không thể Start khi:
@@ -99,7 +99,7 @@ Sample tests chỉ để người chơi hiểu đề, không quyết định Acc
 
 ## 6. Quy tắc thời gian
 
-* Mỗi trận kéo dài 15 phút.
+* Mỗi trận dùng thời lượng đã snapshot khi tạo phòng; mặc định là 5 phút.
 * Server là nguồn thời gian chính.
 * Client chỉ hiển thị countdown.
 * Refresh không reset timer.
@@ -203,7 +203,7 @@ Match kết thúc khi:
 
 * Cả hai Player Accepted cả 4 bài.
 * Match có thể kết thúc sớm.
-* Không cần chờ hết 15 phút.
+* Không cần chờ hết thời lượng đã snapshot.
 
 ### Trường hợp chỉ một người giải hết bài
 

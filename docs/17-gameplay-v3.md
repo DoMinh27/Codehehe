@@ -9,9 +9,10 @@ or the challenge expires.
 The official client renders the challenge as a sticky popup immediately above
 the active problem's Python editor and moves it when the player changes tabs.
 
-Prompts are server-selected lowercase ASCII phrases between 20 and 35
-characters. Matching is exact, including spaces and letter case. The official
-client disables paste into the challenge input.
+Prompts are server-selected ASCII strings from the Match's frozen rules
+snapshot. Matching is exact, including spaces and letter case. The official
+client disables paste into the challenge input. The current prompt catalog is
+kept unchanged for V3.1.
 
 ## Lifecycle
 

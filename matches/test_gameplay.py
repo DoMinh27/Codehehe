@@ -1,4 +1,5 @@
 from datetime import timedelta
+from copy import deepcopy
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -147,6 +148,31 @@ class StartMatchServiceTests(TestCase):
         self.assertEqual(
             match.match_problems.values("problem_id").distinct().count(),
             4,
+        )
+
+    def test_start_uses_problem_distribution_from_match_rules_snapshot(self):
+        snapshot = deepcopy(self.match.rules_snapshot)
+        snapshot["problem_counts"] = {
+            "EASY": 1,
+            "MEDIUM": 2,
+            "HARD": 1,
+        }
+        self.match.rules_snapshot = snapshot
+        self.match.save(update_fields=["rules_snapshot"])
+
+        match = StartMatchService().start(
+            user=self.host,
+            match_id=self.match.pk,
+        )
+
+        self.assertEqual(
+            list(
+                match.match_problems.values_list(
+                    "difficulty_snapshot",
+                    flat=True,
+                )
+            ),
+            ["EASY", "MEDIUM", "MEDIUM", "HARD"],
         )
 
     def test_only_host_can_start(self):
@@ -416,6 +442,25 @@ class ScoringServiceTests(TestCase):
 
         self.host_player.refresh_from_db()
         self.assertEqual(self.host_player.score, 3)
+
+    def test_first_solve_bonus_uses_match_rules_snapshot(self):
+        snapshot = deepcopy(self.match.rules_snapshot)
+        snapshot["scoring"]["first_solve_bonus"] = 0
+        self.match.rules_snapshot = snapshot
+        self.match.save(update_fields=["rules_snapshot"])
+        accepted = self.submission(
+            self.host_player,
+            Submission.Verdict.ACCEPTED,
+        )
+
+        self.scoring.process_submission(accepted.pk)
+
+        self.host_player.refresh_from_db()
+        progress = PlayerProblemProgress.objects.get(player=self.host_player)
+        self.match_problem.refresh_from_db()
+        self.assertEqual(self.host_player.score, 2)
+        self.assertEqual(progress.first_solve_bonus_awarded, 0)
+        self.assertEqual(self.match_problem.first_solver, self.host_player)
 
     def test_wrong_answer_does_not_add_score(self):
         wrong = self.submission(

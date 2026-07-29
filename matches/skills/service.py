@@ -17,6 +17,7 @@ from matches.models import (
     SkillEffect,
     SkillUse,
 )
+from matches.rules import rules_for_match
 from matches.services.db import retry_transient_db_lock
 
 from .definitions import SKILL_REGISTRY
@@ -160,6 +161,7 @@ class SkillService:
 
             if match.status != Match.Status.PLAYING or match.ends_at is None:
                 raise SkillUseConflictError("Match is not playing.")
+            rules = rules_for_match(match)
             source_deadline = source.personal_ends_at
             if source_deadline is None or evaluation_time > source_deadline:
                 raise SkillUseConflictError("Your personal time has ended.")
@@ -248,6 +250,7 @@ class SkillService:
                 apply_skill_effect(
                     skill_use=skill_use,
                     target_player=target,
+                    rules=rules,
                     now=evaluation_time,
                     prompt_selector=self.prompt_selector,
                 )

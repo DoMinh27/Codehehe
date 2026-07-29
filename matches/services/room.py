@@ -8,6 +8,7 @@ import string
 from django.db import IntegrityError, transaction
 
 from matches.models import Match, MatchPlayer
+from matches.rules import MatchRules, current_match_rules
 
 from .db import retry_transient_db_lock
 
@@ -88,6 +89,7 @@ def get_active_match_player(*, user) -> MatchPlayer | None:
 @dataclass
 class CreateRoomService:
     code_generator: Callable[[], str] = generate_room_code
+    rules_provider: Callable[[], MatchRules] = current_match_rules
     max_attempts: int = 10
 
     def create(self, *, user) -> Match:
@@ -95,11 +97,16 @@ class CreateRoomService:
         if active_player is not None:
             raise ActiveMatchExistsError(active_player.match)
 
+        rules = self.rules_provider()
         for _ in range(self.max_attempts):
             room_code = normalize_room_code(self.code_generator())
             try:
                 return retry_transient_db_lock(
-                    lambda: self._create_once(user=user, room_code=room_code)
+                    lambda: self._create_once(
+                        user=user,
+                        room_code=room_code,
+                        rules=rules,
+                    )
                 )
             except IntegrityError:
                 active_player = get_active_match_player(user=user)
@@ -112,12 +119,20 @@ class CreateRoomService:
         raise RoomCodeGenerationError("Không thể tạo mã phòng. Vui lòng thử lại.")
 
     @staticmethod
-    def _create_once(*, user, room_code: str) -> Match:
+    def _create_once(
+        *,
+        user,
+        room_code: str,
+        rules: MatchRules,
+    ) -> Match:
         with transaction.atomic():
             match = Match.objects.create(
                 room_code=room_code,
                 host=user,
                 status=Match.Status.WAITING,
+                duration_seconds=rules.match_duration_seconds,
+                ruleset_version=rules.version,
+                rules_snapshot=rules.to_snapshot(),
             )
             MatchPlayer.objects.create(
                 match=match,

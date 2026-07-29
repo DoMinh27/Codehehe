@@ -236,6 +236,9 @@ Mỗi quyết định mới phải ghi:
 
 **Trạng thái:** Approved
 
+**Cập nhật:** Phần thời lượng cố định đã được DEC-052 thay thế. Phân bố bài
+được DEC-050 thay thế.
+
 **Quyết định:**
 
 * 4 bài mỗi trận.
@@ -331,6 +334,9 @@ Mỗi quyết định mới phải ghi:
 ## DEC-023 — Match ending
 
 **Trạng thái:** Approved
+
+**Cập nhật:** Mốc 15 phút đã được DEC-052 thay bằng thời lượng snapshot theo
+Match.
 
 **Quyết định:** Match kết thúc khi:
 
@@ -776,7 +782,32 @@ nhưng các trận khác nhau không luôn lặp lại bốn bài có `order` th
 
 **Quyết định:** `TYPING_CHALLENGE` là Skill/minigame tấn công giá 1 Energy,
 khóa Run, Submit và Skill của mục tiêu tối đa 20 giây. Mục tiêu được mở khóa
-ngay khi gõ chính xác prompt tiếng Anh ASCII do server chọn.
+ngay khi gõ chính xác prompt ASCII do server chọn từ catalog.
 
 **Hệ quả:** Typing dùng chung SkillEffect lifecycle, không stack cùng loại,
 không khóa CodeMirror và không tạo thêm time penalty khi hết hạn.
+
+---
+
+## DEC-052 — Versioned Match Ruleset
+
+**Ngày:** 2026-07-29
+
+**Trạng thái:** Approved
+
+**Quyết định:**
+
+* Mỗi Match lưu `ruleset_version` và `rules_snapshot` từ lúc tạo phòng.
+* Ruleset hiện tại là `v3.1`.
+* Thời lượng mặc định là 300 giây và có thể cấu hình bằng
+  `MATCH_DURATION_SECONDS`.
+* Thay đổi cấu hình hoặc ruleset chỉ áp dụng cho phòng tạo mới.
+* Problem mix, scoring, Energy, Skill effect và Typing Prompt catalog được đọc
+  từ snapshot của Match.
+* Nội dung Typing Prompt hiện tại được giữ nguyên.
+
+**Lý do:** Giữ trận đang tồn tại ổn định qua các lần deploy và gom luật chơi về
+một nguồn có thể kiểm thử, audit và nâng version.
+
+**Hệ quả:** Mỗi lần thay đổi semantics gameplay phải tạo ruleset version mới;
+không sửa snapshot của Match đang chờ, đang chơi hoặc đã kết thúc.

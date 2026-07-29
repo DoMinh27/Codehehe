@@ -1,4 +1,3 @@
-import json
 import math
 
 from django.contrib.auth.decorators import login_required
@@ -22,22 +21,19 @@ from matches.skills.typing import (
     TypingChallengePermissionError,
     TypingChallengeService,
 )
+from matches.views.api import ApiPayloadError, api_error, parse_json_object
 
 
 @login_required
 @require_POST
 def use_skill(request, match_id, skill_code):
     try:
-        payload = json.loads(request.body)
-    except (UnicodeDecodeError, json.JSONDecodeError):
-        return JsonResponse(
-            {"error": "Request body must be valid JSON."},
-            status=400,
-        )
-    if not isinstance(payload, dict):
-        return JsonResponse(
-            {"error": "Request body must be a JSON object."},
-            status=400,
+        payload = parse_json_object(request)
+    except ApiPayloadError as error:
+        return api_error(
+            code=error.code,
+            message=error.message,
+            status=error.status,
         )
 
     try:
@@ -49,13 +45,13 @@ def use_skill(request, match_id, skill_code):
             idempotency_key=payload.get("idempotency_key"),
         )
     except InvalidSkillUseError as error:
-        return JsonResponse({"error": str(error)}, status=400)
+        return api_error(code="INVALID_SKILL_USE", message=str(error), status=400)
     except SkillUsePermissionError as error:
-        return JsonResponse({"error": str(error)}, status=403)
+        return api_error(code="SKILL_USE_FORBIDDEN", message=str(error), status=403)
     except SkillUseNotFoundError as error:
-        return JsonResponse({"error": str(error)}, status=404)
+        return api_error(code="SKILL_NOT_FOUND", message=str(error), status=404)
     except SkillUseConflictError as error:
-        return JsonResponse({"error": str(error)}, status=409)
+        return api_error(code="SKILL_USE_CONFLICT", message=str(error), status=409)
 
     skill_use = result.skill_use
     effect = (
@@ -121,16 +117,12 @@ def use_skill(request, match_id, skill_code):
 @require_POST
 def complete_typing_challenge(request, match_id, challenge_id):
     try:
-        payload = json.loads(request.body)
-    except (UnicodeDecodeError, json.JSONDecodeError):
-        return JsonResponse(
-            {"error": "Request body must be valid JSON."},
-            status=400,
-        )
-    if not isinstance(payload, dict):
-        return JsonResponse(
-            {"error": "Request body must be a JSON object."},
-            status=400,
+        payload = parse_json_object(request)
+    except ApiPayloadError as error:
+        return api_error(
+            code=error.code,
+            message=error.message,
+            status=error.status,
         )
 
     try:
@@ -141,13 +133,29 @@ def complete_typing_challenge(request, match_id, challenge_id):
             typed_text=payload.get("typed_text"),
         )
     except InvalidTypingChallengeError as error:
-        return JsonResponse({"error": str(error)}, status=400)
+        return api_error(
+            code="INVALID_TYPING_CHALLENGE",
+            message=str(error),
+            status=400,
+        )
     except TypingChallengePermissionError as error:
-        return JsonResponse({"error": str(error)}, status=403)
+        return api_error(
+            code="TYPING_CHALLENGE_FORBIDDEN",
+            message=str(error),
+            status=403,
+        )
     except TypingChallengeNotFoundError as error:
-        return JsonResponse({"error": str(error)}, status=404)
+        return api_error(
+            code="TYPING_CHALLENGE_NOT_FOUND",
+            message=str(error),
+            status=404,
+        )
     except TypingChallengeConflictError as error:
-        return JsonResponse({"error": str(error)}, status=409)
+        return api_error(
+            code="TYPING_CHALLENGE_CONFLICT",
+            message=str(error),
+            status=409,
+        )
 
     return JsonResponse(
         {

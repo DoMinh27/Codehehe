@@ -1,5 +1,3 @@
-import json
-
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
@@ -25,10 +23,19 @@ from matches.services.submission import (
     SubmissionService,
     UnavailableJudgeService,
 )
-from problems.services.judge import (
-    Judge0ConfigurationError,
-    Judge0Service,
-)
+from matches.views.api import ApiPayloadError, api_error, parse_json_object
+from problems.services.judge import Judge0ConfigurationError, Judge0Service
+
+
+def _payload_or_error(request):
+    try:
+        return parse_json_object(request), None
+    except ApiPayloadError as error:
+        return None, api_error(
+            code=error.code,
+            message=error.message,
+            status=error.status,
+        )
 
 
 @login_required
@@ -40,22 +47,15 @@ def run_code(request, match_id, match_problem_id):
         limit=settings.MATCH_RUN_RATE_LIMIT,
         window_seconds=settings.MATCH_RATE_LIMIT_WINDOW_SECONDS,
     ):
-        return JsonResponse(
-            {"error": "Bạn chạy thử quá nhanh. Vui lòng chờ một chút."},
+        return api_error(
+            code="RATE_LIMITED",
+            message="Bạn chạy thử quá nhanh. Vui lòng chờ một chút.",
             status=429,
         )
-    try:
-        payload = json.loads(request.body)
-    except (UnicodeDecodeError, json.JSONDecodeError):
-        return JsonResponse(
-            {"error": "Request body must be valid JSON."},
-            status=400,
-        )
-    if not isinstance(payload, dict):
-        return JsonResponse(
-            {"error": "Request body must be a JSON object."},
-            status=400,
-        )
+
+    payload, error_response = _payload_or_error(request)
+    if error_response is not None:
+        return error_response
 
     try:
         runner = Judge0Service.from_environment()
@@ -71,15 +71,23 @@ def run_code(request, match_id, match_problem_id):
             input_data=payload.get("input_data", ""),
         )
     except InvalidCodeRunError as error:
-        return JsonResponse({"error": str(error)}, status=400)
+        return api_error(code="INVALID_CODE_RUN", message=str(error), status=400)
     except CodeRunPermissionError as error:
-        return JsonResponse({"error": str(error)}, status=403)
+        return api_error(code="CODE_RUN_FORBIDDEN", message=str(error), status=403)
     except CodeRunNotFoundError as error:
-        return JsonResponse({"error": str(error)}, status=404)
+        return api_error(
+            code="MATCH_PROBLEM_NOT_FOUND",
+            message=str(error),
+            status=404,
+        )
     except CodeRunConflictError as error:
-        return JsonResponse({"error": str(error)}, status=409)
+        return api_error(code="CODE_RUN_CONFLICT", message=str(error), status=409)
     except CodeRunUnavailableError as error:
-        return JsonResponse({"error": str(error)}, status=503)
+        return api_error(
+            code="CODE_RUN_UNAVAILABLE",
+            message=str(error),
+            status=503,
+        )
 
     messages = {
         "COMPLETED": "Program completed.",
@@ -105,23 +113,15 @@ def submit_submission(request, match_id, match_problem_id):
         limit=settings.MATCH_SUBMIT_RATE_LIMIT,
         window_seconds=settings.MATCH_RATE_LIMIT_WINDOW_SECONDS,
     ):
-        return JsonResponse(
-            {"error": "Bạn nộp bài quá nhanh. Vui lòng chờ một chút."},
+        return api_error(
+            code="RATE_LIMITED",
+            message="Bạn nộp bài quá nhanh. Vui lòng chờ một chút.",
             status=429,
         )
-    try:
-        payload = json.loads(request.body)
-    except (UnicodeDecodeError, json.JSONDecodeError):
-        return JsonResponse(
-            {"error": "Request body must be valid JSON."},
-            status=400,
-        )
 
-    if not isinstance(payload, dict):
-        return JsonResponse(
-            {"error": "Request body must be a JSON object."},
-            status=400,
-        )
+    payload, error_response = _payload_or_error(request)
+    if error_response is not None:
+        return error_response
 
     try:
         judge_service = Judge0Service.from_environment()
@@ -140,23 +140,30 @@ def submit_submission(request, match_id, match_problem_id):
             source_code=payload.get("source_code"),
             idempotency_key=payload.get("idempotency_key"),
         )
-    except InvalidSubmissionError:
-        return JsonResponse(
-            {"error": "source_code must not be empty."},
+    except InvalidSubmissionError as error:
+        return api_error(
+            code="INVALID_SUBMISSION",
+            message=str(error) or "source_code must not be empty.",
             status=400,
         )
-    except SubmissionPermissionError:
-        return JsonResponse(
-            {"error": "You are not a player in this match."},
+    except SubmissionPermissionError as error:
+        return api_error(
+            code="SUBMISSION_FORBIDDEN",
+            message=str(error) or "You are not a player in this match.",
             status=403,
         )
-    except SubmissionNotFoundError:
-        return JsonResponse(
-            {"error": "Match problem was not found."},
+    except SubmissionNotFoundError as error:
+        return api_error(
+            code="MATCH_PROBLEM_NOT_FOUND",
+            message=str(error) or "Match problem was not found.",
             status=404,
         )
     except SubmissionConflictError as error:
-        return JsonResponse({"error": str(error)}, status=409)
+        return api_error(
+            code="SUBMISSION_CONFLICT",
+            message=str(error),
+            status=409,
+        )
 
     return JsonResponse(
         {
@@ -169,8 +176,7 @@ def submit_submission(request, match_id, match_problem_id):
                 else None
             ),
             "message": (
-                submission.judge_message
-                or "Submission is still being judged."
+                submission.judge_message or "Submission is still being judged."
             ),
         },
         status=201,

@@ -1,7 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
-from django.http import JsonResponse
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
@@ -22,6 +22,8 @@ from matches.services.room import (
     get_active_match_player,
     normalize_room_code,
 )
+
+from .api import api_error
 
 
 def _active_match_redirect(match):
@@ -135,7 +137,23 @@ def waiting_room(request, room_code):
 
 @login_required
 def waiting_room_state(request, room_code):
-    match = _get_room_for_member(user=request.user, room_code=room_code)
+    try:
+        match = _get_room_for_member(
+            user=request.user,
+            room_code=room_code,
+        )
+    except Http404:
+        return api_error(
+            code="ROOM_NOT_FOUND",
+            message="Không tìm thấy phòng.",
+            status=404,
+        )
+    except PermissionDenied:
+        return api_error(
+            code="ROOM_FORBIDDEN",
+            message="Bạn không thuộc phòng này.",
+            status=403,
+        )
     players = _room_players(match)
     player_slots = [
         {"username": player.user.username, "is_host": player.is_host}
@@ -179,9 +197,17 @@ def leave_room(request, room_code):
             room_code=room_code,
         )
     except RoomNotFoundError:
-        return JsonResponse({"error": "Không tìm thấy phòng."}, status=404)
+        return api_error(
+            code="ROOM_NOT_FOUND",
+            message="Không tìm thấy phòng.",
+            status=404,
+        )
     except RoomLeaveError as error:
-        return JsonResponse({"error": str(error)}, status=409)
+        return api_error(
+            code="ROOM_LEAVE_CONFLICT",
+            message=str(error),
+            status=409,
+        )
     if match.status == Match.Status.CANCELLED:
         messages.info(request, "Phòng đã được hủy.")
     else:

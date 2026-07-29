@@ -2,7 +2,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db.models import Count
-from django.http import Http404, JsonResponse
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
@@ -34,6 +34,8 @@ from matches.services.match_state import (
 from matches.services.scoring import ScoringService
 from matches.services.submission import PendingSubmissionRecoveryService
 
+from .api import api_error
+
 
 @login_required
 @require_POST
@@ -44,12 +46,17 @@ def start_match(request, match_id):
             match_id=match_id,
         )
     except MatchNotFoundError:
-        return JsonResponse(
-            {"error": "Không tìm thấy trận đấu."},
+        return api_error(
+            code="MATCH_NOT_FOUND",
+            message="Không tìm thấy trận đấu.",
             status=404,
         )
     except MatchPermissionError as error:
-        return JsonResponse({"error": str(error)}, status=403)
+        return api_error(
+            code="MATCH_FORBIDDEN",
+            message=str(error),
+            status=403,
+        )
     except (
         MatchPlayerCountError,
         MatchStateError,
@@ -142,21 +149,40 @@ def match_state(request, match_id):
             match_id=match_id,
         )
     except MatchStateNotFoundError as error:
-        raise Http404 from error
+        return api_error(
+            code="MATCH_NOT_FOUND",
+            message=str(error),
+            status=404,
+        )
     except MatchStatePermissionError as error:
-        raise PermissionDenied from error
+        return api_error(
+            code="MATCH_FORBIDDEN",
+            message=str(error),
+            status=403,
+        )
     return JsonResponse(payload)
 
 
 @login_required
 @require_POST
 def finalize_match(request, match_id):
-    match = get_object_or_404(Match, pk=match_id)
+    try:
+        match = Match.objects.get(pk=match_id)
+    except Match.DoesNotExist:
+        return api_error(
+            code="MATCH_NOT_FOUND",
+            message="Không tìm thấy trận đấu.",
+            status=404,
+        )
     if not MatchPlayer.objects.filter(
         match=match,
         user=request.user,
     ).exists():
-        raise PermissionDenied
+        return api_error(
+            code="MATCH_FORBIDDEN",
+            message="Bạn không thuộc trận đấu này.",
+            status=403,
+        )
     PendingSubmissionRecoveryService(
         scoring_service=ScoringService(),
     ).recover(match_id=match_id)
@@ -168,9 +194,23 @@ def finalize_match(request, match_id):
             status=202,
         )
     except MatchNotReadyToFinishError as error:
-        return JsonResponse({"error": str(error)}, status=409)
-    except (MatchPlayerCountError, MatchStateError) as error:
-        return JsonResponse({"error": str(error)}, status=409)
+        return api_error(
+            code="MATCH_NOT_READY",
+            message=str(error),
+            status=409,
+        )
+    except MatchPlayerCountError as error:
+        return api_error(
+            code="MATCH_PLAYER_COUNT_INVALID",
+            message=str(error),
+            status=409,
+        )
+    except MatchStateError as error:
+        return api_error(
+            code="MATCH_STATE_CONFLICT",
+            message=str(error),
+            status=409,
+        )
     return JsonResponse(
         {
             "status": match.status,
@@ -191,14 +231,29 @@ def surrender_match(request, match_id):
             match_id=match_id,
         )
     except MatchNotFoundError:
-        return JsonResponse(
-            {"error": "Không tìm thấy trận đấu."},
+        return api_error(
+            code="MATCH_NOT_FOUND",
+            message="Không tìm thấy trận đấu.",
             status=404,
         )
     except MatchPermissionError as error:
-        return JsonResponse({"error": str(error)}, status=403)
-    except (MatchPlayerCountError, MatchStateError) as error:
-        return JsonResponse({"error": str(error)}, status=409)
+        return api_error(
+            code="MATCH_FORBIDDEN",
+            message=str(error),
+            status=403,
+        )
+    except MatchPlayerCountError as error:
+        return api_error(
+            code="MATCH_PLAYER_COUNT_INVALID",
+            message=str(error),
+            status=409,
+        )
+    except MatchStateError as error:
+        return api_error(
+            code="MATCH_STATE_CONFLICT",
+            message=str(error),
+            status=409,
+        )
     return JsonResponse(
         {
             "status": match.status,

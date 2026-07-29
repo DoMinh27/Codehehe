@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from django.utils import timezone
 
 from matches.models import Match, MatchPlayer, MatchProblem
+from matches.skills.typing import has_active_typing_challenge
 from problems.services.judge import (
     CodeRunner,
     Judge0ConfigurationError,
@@ -119,8 +120,12 @@ class CodeRunService:
             match = Match.objects.get(pk=match_id)
         except Match.DoesNotExist as error:
             raise CodeRunNotFoundError("Match was not found.") from error
-        if not MatchPlayer.objects.filter(match=match, user=user).exists():
-            raise CodeRunPermissionError("You are not a player in this match.")
+        try:
+            player = MatchPlayer.objects.get(match=match, user=user)
+        except MatchPlayer.DoesNotExist as error:
+            raise CodeRunPermissionError(
+                "You are not a player in this match."
+            ) from error
         if not MatchProblem.objects.filter(
             pk=match_problem_id,
             match=match,
@@ -128,8 +133,13 @@ class CodeRunService:
             raise CodeRunNotFoundError("Match problem was not found.")
         if match.status != Match.Status.PLAYING:
             raise CodeRunConflictError("Match is not playing.")
-        if match.ends_at is None or timezone.now() > match.ends_at:
-            raise CodeRunConflictError("Match has ended.")
+        player_deadline = player.personal_ends_at
+        if player_deadline is None or timezone.now() > player_deadline:
+            raise CodeRunConflictError("Your personal time has ended.")
+        if has_active_typing_challenge(player_id=player.id):
+            raise CodeRunConflictError(
+                "Complete the Typing challenge before running code."
+            )
 
     @staticmethod
     def _safe_text(value: str, limit: int) -> str:

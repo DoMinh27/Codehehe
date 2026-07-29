@@ -44,14 +44,17 @@ class MatchModelTests(TestCase):
 
     def test_match_defaults_and_ends_at(self):
         self.assertEqual(self.match.status, Match.Status.WAITING)
-        self.assertEqual(self.match.duration_seconds, 900)
+        self.assertEqual(self.match.duration_seconds, 300)
         self.assertIsNone(self.match.ends_at)
 
         started_at = timezone.now()
         self.match.started_at = started_at
         self.match.save()
 
-        self.assertEqual(self.match.ends_at, started_at + timedelta(minutes=15))
+        self.assertEqual(
+            self.match.ends_at,
+            started_at + timedelta(seconds=self.match.duration_seconds),
+        )
 
     def test_match_cannot_have_winner_and_draw(self):
         with self.assertRaises(IntegrityError), transaction.atomic():

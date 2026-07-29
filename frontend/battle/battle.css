@@ -1,0 +1,84 @@
+.battle-status,
+.skill-panel,
+.problem-tabs,
+.battle-problem,
+.submission-form,
+.run-form {
+    margin-block: 1rem;
+}
+
+.energy-meter {
+    font-weight: 700;
+}
+
+.skill-list {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.skill-card {
+    border: 1px solid #aaa;
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+}
+
+.skill-card button {
+    margin-top: 0.5rem;
+}
+
+.typing-challenge {
+    background: #fff7ed;
+    border: 2px solid #9a3412;
+    border-radius: 0.5rem;
+    margin-block: 1rem;
+    padding: 1rem;
+    position: sticky;
+    top: 0.75rem;
+    z-index: 10;
+    box-shadow: 0 0.5rem 1rem rgb(0 0 0 / 20%);
+}
+
+.typing-prompt {
+    display: block;
+    font-size: 1.1rem;
+    margin-block: 0.75rem;
+    user-select: none;
+}
+
+#typing-input {
+    min-width: min(100%, 28rem);
+}
+
+.problem-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.problem-tab {
+    padding: 0.5rem;
+}
+
+.code-editor {
+    border: 1px solid #777;
+    max-width: 100%;
+}
+
+.code-editor .cm-editor {
+    min-height: 22rem;
+}
+
+.code-editor .cm-scroller {
+    overflow: auto;
+}
+
+.skill-blur-active .problem-content {
+    filter: blur(6px);
+    pointer-events: none;
+    user-select: none;
+}
+
+.skill-notice {
+    min-height: 1.5rem;
+}

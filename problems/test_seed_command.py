@@ -13,16 +13,16 @@ from problems.models import Problem, TestCase as ProblemTestCase
 
 
 class SeedProblemsCommandTests(TestCase):
-    def test_default_seed_creates_eight_problems_and_tests(self):
+    def test_default_seed_creates_ten_problems_and_tests(self):
         output = StringIO()
 
         call_command("seed_problems", stdout=output)
 
-        self.assertEqual(Problem.objects.count(), 8)
-        self.assertEqual(ProblemTestCase.objects.count(), 32)
+        self.assertEqual(Problem.objects.count(), 10)
+        self.assertEqual(ProblemTestCase.objects.count(), 70)
         self.assertEqual(
             Problem.objects.filter(difficulty=Problem.Difficulty.EASY).count(),
-            2,
+            3,
         )
         self.assertEqual(
             Problem.objects.filter(difficulty=Problem.Difficulty.MEDIUM).count(),
@@ -30,9 +30,9 @@ class SeedProblemsCommandTests(TestCase):
         )
         self.assertEqual(
             Problem.objects.filter(difficulty=Problem.Difficulty.HARD).count(),
-            2,
+            3,
         )
-        self.assertIn("8 created", output.getvalue())
+        self.assertIn("10 created", output.getvalue())
 
     def test_rerun_updates_by_slug_without_duplicates(self):
         call_command("seed_problems", stdout=StringIO())
@@ -43,13 +43,13 @@ class SeedProblemsCommandTests(TestCase):
             output = StringIO()
             call_command("seed_problems", file=seed_file, stdout=output)
 
-        self.assertEqual(Problem.objects.count(), 8)
-        self.assertEqual(ProblemTestCase.objects.count(), 32)
+        self.assertEqual(Problem.objects.count(), 10)
+        self.assertEqual(ProblemTestCase.objects.count(), 70)
         self.assertEqual(
             Problem.objects.get(slug="sum-two-numbers").title,
             "Tên mới của bài tính tổng",
         )
-        self.assertIn("0 created, 8 updated", output.getvalue())
+        self.assertIn("0 created, 10 updated", output.getvalue())
 
     def test_duplicate_slug_rejects_entire_file(self):
         payload = self._default_payload()

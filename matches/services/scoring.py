@@ -1,5 +1,7 @@
 """Idempotent score and first-solve processing."""
 
+from dataclasses import dataclass, field
+
 from django.db import transaction
 from django.db.models import Q, Sum
 
@@ -10,6 +12,7 @@ from matches.models import (
     PlayerProblemProgress,
     Submission,
 )
+from matches.skills.rewards import RewardService
 
 from .db import retry_transient_db_lock
 
@@ -22,8 +25,11 @@ class ProgressNotFoundError(ScoringError):
     """Raised when a started match is missing player progress."""
 
 
+@dataclass
 class ScoringService:
     """Apply base points and safely finalize first-solve."""
+
+    reward_service: RewardService = field(default_factory=RewardService)
 
     def process_submission(self, submission_id: int) -> Submission:
         return retry_transient_db_lock(
@@ -97,6 +103,10 @@ class ScoringService:
                     "accepted_submission",
                     "updated_at",
                 ]
+            )
+            self.reward_service.award_first_solve(
+                progress=progress,
+                player=submission.player,
             )
             self._sync_player_score(submission.player_id)
         elif progress.solved_at is None or submission.received_at < progress.solved_at:

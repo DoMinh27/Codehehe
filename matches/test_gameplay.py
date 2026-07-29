@@ -15,12 +15,15 @@ from .models import (
     Match,
     MatchPlayer,
     MatchProblem,
+    MatchSkill,
     PlayerProblemProgress,
+    Skill,
     Submission,
 )
 from .services.gameplay import (
     FinishMatchService,
     InsufficientProblemsError,
+    InsufficientSkillsError,
     MatchHasPendingSubmissionsError,
     MatchNotReadyToFinishError,
     MatchPermissionError,
@@ -76,6 +79,20 @@ class StartMatchServiceTests(TestCase):
                 expected_output=str(index),
                 is_sample=False,
             )
+            hard_problem = Problem.objects.create(
+                slug=f"hard-{index}",
+                title=f"Hard {index}",
+                statement=f"Hard statement {index}",
+                difficulty=Problem.Difficulty.HARD,
+                points=3,
+                starter_code=f"# hard {index}",
+                order=index + 1,
+            )
+            hard_problem.test_cases.create(
+                input_data=str(index),
+                expected_output=str(index),
+                is_sample=False,
+            )
 
     def test_start_creates_frozen_problems_progress_and_timer(self):
         match = StartMatchService().start(user=self.host, match_id=self.match.pk)
@@ -84,9 +101,10 @@ class StartMatchServiceTests(TestCase):
         self.assertIsNotNone(match.started_at)
         self.assertEqual(match.match_problems.count(), 4)
         self.assertEqual(match.problem_progress.count(), 8)
+        self.assertEqual(match.match_skills.count(), 4)
         self.assertEqual(
             list(match.match_problems.values_list("difficulty_snapshot", flat=True)),
-            ["EASY", "EASY", "MEDIUM", "MEDIUM"],
+            ["EASY", "EASY", "MEDIUM", "HARD"],
         )
 
         problem = Problem.objects.get(slug="easy-0")
@@ -95,6 +113,40 @@ class StartMatchServiceTests(TestCase):
         self.assertEqual(
             MatchProblem.objects.get(match=match, problem=problem).title_snapshot,
             "Easy 0",
+        )
+
+    def test_start_selects_two_problems_from_each_difficulty(self):
+        for index in range(2, 5):
+            for difficulty in (
+                Problem.Difficulty.EASY,
+                Problem.Difficulty.MEDIUM,
+            ):
+                problem = Problem.objects.create(
+                    slug=f"{difficulty.lower()}-{index}",
+                    title=f"{difficulty.title()} {index}",
+                    statement=f"{difficulty.title()} statement {index}",
+                    difficulty=difficulty,
+                    points=1,
+                    order=index + 1,
+                )
+                problem.test_cases.create(
+                    input_data=str(index),
+                    expected_output=str(index),
+                    is_sample=False,
+                )
+
+        service = StartMatchService(
+            problem_selector=lambda candidates, count: candidates[-count:]
+        )
+        match = service.start(user=self.host, match_id=self.match.pk)
+
+        self.assertEqual(
+            list(match.match_problems.values_list("problem__slug", flat=True)),
+            ["easy-3", "easy-4", "medium-4", "hard-1"],
+        )
+        self.assertEqual(
+            match.match_problems.values("problem_id").distinct().count(),
+            4,
         )
 
     def test_only_host_can_start(self):
@@ -127,6 +179,29 @@ class StartMatchServiceTests(TestCase):
         self.assertEqual(self.match.status, Match.Status.WAITING)
         self.assertIsNone(self.match.started_at)
         self.assertFalse(MatchProblem.objects.filter(match=self.match).exists())
+
+    def test_missing_hard_problem_rolls_back(self):
+        Problem.objects.filter(difficulty=Problem.Difficulty.HARD).delete()
+
+        with self.assertRaises(InsufficientProblemsError):
+            StartMatchService().start(user=self.host, match_id=self.match.pk)
+
+        self.match.refresh_from_db()
+        self.assertEqual(self.match.status, Match.Status.WAITING)
+        self.assertIsNone(self.match.started_at)
+        self.assertFalse(MatchProblem.objects.filter(match=self.match).exists())
+
+    def test_incomplete_skill_catalog_rolls_back(self):
+        Skill.objects.filter(code="MIRROR_CODE").update(is_active=False)
+
+        with self.assertRaises(InsufficientSkillsError):
+            StartMatchService().start(user=self.host, match_id=self.match.pk)
+
+        self.match.refresh_from_db()
+        self.assertEqual(self.match.status, Match.Status.WAITING)
+        self.assertIsNone(self.match.started_at)
+        self.assertFalse(MatchProblem.objects.filter(match=self.match).exists())
+        self.assertFalse(MatchSkill.objects.filter(match=self.match).exists())
 
 
 class StartMatchViewTests(TestCase):
@@ -508,7 +583,8 @@ class LifecycleFixtureMixin:
 
     def expire_match(self):
         Match.objects.filter(pk=self.match.pk).update(
-            started_at=timezone.now() - timedelta(seconds=901)
+            started_at=timezone.now()
+            - timedelta(seconds=self.match.duration_seconds + 1)
         )
         self.match.refresh_from_db()
 
@@ -629,7 +705,7 @@ class MatchLifecycleViewTests(LifecycleFixtureMixin, TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(first_queries), len(second_queries))
-        self.assertLessEqual(len(first_queries), 6)
+        self.assertLessEqual(len(first_queries), 8)
         payload = response.json()
         self.assertEqual(payload["status"], Match.Status.PLAYING)
         self.assertEqual(len(payload["first_solvers"]), 4)

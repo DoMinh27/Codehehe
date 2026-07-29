@@ -1,13 +1,22 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Trận {{ match.room_code }} | CodeHehe{% endblock %}
 
+{% block extra_head %}
+    <link rel="stylesheet" href="{% static 'matches/dist/battle.bundle.css' %}">
+{% endblock %}
+
 {% block content %}
     <h1>Battle {{ match.room_code }}</h1>
-    <section aria-label="Trạng thái trận đấu">
+
+    <section class="battle-status" aria-label="Trạng thái trận đấu">
         <p>
-            Thời gian còn lại:
-            <strong id="match-timer" data-ends-at="{{ match.ends_at|date:'c' }}">--:--</strong>
+            Thời gian của bạn:
+            <strong id="match-timer">--:--</strong>
+            —
+            Thời gian đối thủ:
+            <strong id="opponent-timer">--:--</strong>
         </p>
         <p>
             Bạn: <strong id="my-score">{{ current_player.score }}</strong> điểm
@@ -26,7 +35,45 @@
         </form>
     </section>
 
-    <nav aria-label="Danh sách bài">
+    <section class="skill-panel" aria-label="Energy và Skills">
+        <h2>Skill Battle</h2>
+        <p class="energy-meter">
+            Energy: <span id="my-energy">{{ current_player.energy }}</span>/3
+        </p>
+        <p id="skill-notice" class="skill-notice" role="status"></p>
+        <div id="skill-list" class="skill-list"></div>
+    </section>
+
+    <section
+        id="typing-challenge"
+        class="typing-challenge"
+        aria-label="Thử thách gõ chữ"
+        hidden
+    >
+        <h2>Typing Challenge</h2>
+        <p>
+            Gõ chính xác câu dưới đây để mở lại Run, Submit và Skill.
+            Còn <strong id="typing-countdown">0</strong> giây.
+        </p>
+        <code id="typing-prompt" class="typing-prompt"></code>
+        <form id="typing-form">
+            {% csrf_token %}
+            <label for="typing-input">Câu trả lời</label>
+            <input
+                id="typing-input"
+                name="typed_text"
+                type="text"
+                maxlength="100"
+                autocomplete="off"
+                autocapitalize="none"
+                spellcheck="false"
+            >
+            <button type="submit">Hoàn thành</button>
+            <p id="typing-result" role="status"></p>
+        </form>
+    </section>
+
+    <nav class="problem-tabs" aria-label="Danh sách bài">
         {% for match_problem in match_problems %}
             <button
                 type="button"
@@ -43,313 +90,77 @@
         {% endfor %}
     </nav>
 
-    {% for match_problem in match_problems %}
-        <article
-            id="problem-{{ match_problem.id }}"
-            class="battle-problem"
-            {% if not forloop.first %}hidden{% endif %}
-        >
-            <h2>{{ match_problem.title_snapshot }}</h2>
-            <p>
-                {{ match_problem.get_difficulty_snapshot_display|default:match_problem.difficulty_snapshot }}
-                — {{ match_problem.points }} điểm
-            </p>
-            <div>{{ match_problem.statement_snapshot|linebreaks }}</div>
-
-            <section>
-                <h3>Ví dụ</h3>
-                {% for test_case in match_problem.sample_tests_snapshot %}
-                    <p>Input:</p>
-                    <pre>{{ test_case.input_data }}</pre>
-                    <p>Output:</p>
-                    <pre>{{ test_case.expected_output }}</pre>
-                {% empty %}
-                    <p>Chưa có ví dụ.</p>
-                {% endfor %}
-            </section>
-
-            <form
-                class="submission-form"
-                data-submit-url="{% url 'submission-create' match_id=match.id match_problem_id=match_problem.id %}"
+    <div id="battle-problems">
+        {% for match_problem in match_problems %}
+            <article
+                id="problem-{{ match_problem.id }}"
+                class="battle-problem"
+                {% if not forloop.first %}hidden{% endif %}
             >
-                {% csrf_token %}
-                <label for="source-{{ match_problem.id }}">Python</label>
-                <textarea
-                    id="source-{{ match_problem.id }}"
-                    name="source_code"
-                    rows="16"
-                    cols="90"
-                    required
-                >{{ match_problem.starter_code_snapshot }}</textarea>
-                <button type="submit">Nộp bài</button>
-                <p class="submission-result" role="status"></p>
-            </form>
+                <section class="problem-content">
+                    <h2>{{ match_problem.title_snapshot }}</h2>
+                    <p>
+                        {{ match_problem.get_difficulty_snapshot_display|default:match_problem.difficulty_snapshot }}
+                        — {{ match_problem.points }} điểm
+                    </p>
+                    <div>{{ match_problem.statement_snapshot|linebreaks }}</div>
 
-            <form
-                class="run-form"
-                data-run-url="{% url 'code-run' match_id=match.id match_problem_id=match_problem.id %}"
-            >
-                {% csrf_token %}
-                <label for="input-{{ match_problem.id }}">Dữ liệu nhập (stdin)</label>
-                <textarea
-                    id="input-{{ match_problem.id }}"
-                    name="input_data"
-                    rows="5"
-                    cols="90"
-                    placeholder="Ví dụ: 2 3&#10;Chỉ nhập dữ liệu, không dán code Python vào đây."
-                ></textarea>
-                <button type="submit">Chạy thử</button>
-                <p class="run-verdict" role="status"></p>
-                <pre class="run-output" aria-label="Kết quả chạy thử"></pre>
-            </form>
-        </article>
-    {% endfor %}
+                    <section>
+                        <h3>Ví dụ</h3>
+                        {% for test_case in match_problem.sample_tests_snapshot %}
+                            <p>Input:</p>
+                            <pre>{{ test_case.input_data }}</pre>
+                            <p>Output:</p>
+                            <pre>{{ test_case.expected_output }}</pre>
+                        {% empty %}
+                            <p>Chưa có ví dụ.</p>
+                        {% endfor %}
+                    </section>
+                </section>
 
-    <script>
-        (() => {
-            const timer = document.getElementById("match-timer");
-            const stateUrl = "{% url 'match-state' match_id=match.id %}";
-            const finalizeUrl = "{% url 'match-finalize' match_id=match.id %}";
-            const surrenderUrl = "{% url 'match-surrender' match_id=match.id %}";
-            const resultUrl = "{% url 'match-result' match_id=match.id %}";
-            const currentPlayerId = {{ current_player.id }};
-            const opponentPlayerId = {{ opponent.id }};
-            const csrfToken = document.querySelector(
-                ".submission-form [name='csrfmiddlewaretoken']"
-            ).value;
-            let remainingSeconds = null;
-            let lastStateAt = Date.now();
-            let finalizeInFlight = false;
-            let stateInFlight = false;
-            let pollHandle = null;
+                <form
+                    class="submission-form"
+                    data-submit-url="{% url 'submission-create' match_id=match.id match_problem_id=match_problem.id %}"
+                >
+                    {% csrf_token %}
+                    <label for="source-{{ match_problem.id }}">Python</label>
+                    <textarea
+                        id="source-{{ match_problem.id }}"
+                        class="source-code-input"
+                        name="source_code"
+                        data-match-problem-id="{{ match_problem.id }}"
+                        rows="16"
+                        cols="90"
+                        required
+                    >{{ match_problem.starter_code_snapshot }}</textarea>
+                    <button type="submit">Nộp bài</button>
+                    <p class="submission-result" role="status"></p>
+                </form>
 
-            function renderTimer() {
-                if (remainingSeconds === null) {
-                    timer.textContent = "--:--";
-                    return;
-                }
-                const elapsed = Math.floor((Date.now() - lastStateAt) / 1000);
-                const seconds = Math.max(0, remainingSeconds - elapsed);
-                const minutesPart = String(Math.floor(seconds / 60)).padStart(2, "0");
-                const secondsPart = String(seconds % 60).padStart(2, "0");
-                timer.textContent = `${minutesPart}:${secondsPart}`;
-                if (seconds === 0) {
-                    requestFinalize();
-                }
-            }
+                <form
+                    class="run-form"
+                    data-run-url="{% url 'code-run' match_id=match.id match_problem_id=match_problem.id %}"
+                >
+                    {% csrf_token %}
+                    <label for="input-{{ match_problem.id }}">Dữ liệu nhập (stdin)</label>
+                    <textarea
+                        id="input-{{ match_problem.id }}"
+                        name="input_data"
+                        rows="5"
+                        cols="90"
+                        placeholder="Ví dụ: 2 3&#10;Chỉ nhập dữ liệu, không dán code Python vào đây."
+                    ></textarea>
+                    <button type="submit">Chạy thử</button>
+                    <p class="run-verdict" role="status"></p>
+                    <pre class="run-output" aria-label="Kết quả chạy thử"></pre>
+                </form>
+            </article>
+        {% endfor %}
+    </div>
 
-            function updateProgress(payload) {
-                const mySolved = new Set(payload.my_solved_problem_ids);
-                const opponentSolved = new Set(payload.opponent_solved_problem_ids);
-                for (const tab of document.querySelectorAll(".problem-tab")) {
-                    const problemId = Number(tab.dataset.matchProblemId);
-                    tab.querySelector(".my-progress").textContent =
-                        mySolved.has(problemId) ? "✓ Bạn" : "";
-                    tab.querySelector(".opponent-progress").textContent =
-                        opponentSolved.has(problemId) ? "✓ Đối thủ" : "";
-                    const firstSolver = payload.first_solvers[String(problemId)];
-                    tab.querySelector(".first-solver").textContent =
-                        firstSolver === currentPlayerId
-                            ? "★ Bạn giải đầu"
-                            : firstSolver === opponentPlayerId
-                                ? "★ Đối thủ giải đầu"
-                                : "";
-                }
-            }
+    {{ battle_config|json_script:"battle-config" }}
+{% endblock %}
 
-            async function requestFinalize() {
-                if (finalizeInFlight) {
-                    return;
-                }
-                finalizeInFlight = true;
-                try {
-                    const response = await fetch(finalizeUrl, {
-                        method: "POST",
-                        headers: {"X-CSRFToken": csrfToken},
-                    });
-                    const payload = await response.json();
-                    if (response.status === 200 && payload.status === "FINISHED") {
-                        window.location.assign(payload.result_url || resultUrl);
-                    }
-                } catch (finalizeError) {
-                    // Polling will retry; do not replace the submission verdict.
-                } finally {
-                    finalizeInFlight = false;
-                }
-            }
-
-            async function refreshState() {
-                if (stateInFlight) {
-                    schedulePoll();
-                    return;
-                }
-                stateInFlight = true;
-                try {
-                    const response = await fetch(stateUrl, {
-                        headers: {"Accept": "application/json"},
-                    });
-                    if (!response.ok) {
-                        return;
-                    }
-                    const payload = await response.json();
-                    if (payload.status === "FINISHED") {
-                        window.location.assign(payload.result_url || resultUrl);
-                        return;
-                    }
-                    remainingSeconds = payload.remaining_seconds;
-                    lastStateAt = Date.now();
-                    document.getElementById("my-score").textContent = payload.my_score;
-                    document.getElementById("opponent-score").textContent =
-                        payload.opponent_score;
-                    updateProgress(payload);
-                    renderTimer();
-                } finally {
-                    stateInFlight = false;
-                    schedulePoll();
-                }
-            }
-
-            function schedulePoll() {
-                window.clearTimeout(pollHandle);
-                pollHandle = window.setTimeout(
-                    refreshState,
-                    document.hidden ? 4000 : 1000,
-                );
-            }
-
-            for (const tab of document.querySelectorAll(".problem-tab")) {
-                tab.addEventListener("click", () => {
-                    for (const problem of document.querySelectorAll(".battle-problem")) {
-                        problem.hidden = problem.id !== tab.dataset.problemTarget;
-                    }
-                });
-            }
-
-            for (const form of document.querySelectorAll(".submission-form")) {
-                const sourceInput = form.querySelector("[name='source_code']");
-                sourceInput.addEventListener("input", () => {
-                    delete form.dataset.idempotencyKey;
-                });
-                form.addEventListener("submit", async (event) => {
-                    event.preventDefault();
-                    const button = form.querySelector("button[type='submit']");
-                    const result = form.querySelector(".submission-result");
-                    const sourceCode = sourceInput.value;
-                    const csrfToken = form.querySelector("[name='csrfmiddlewaretoken']").value;
-                    const idempotencyKey = form.dataset.idempotencyKey || (
-                        window.crypto && window.crypto.randomUUID
-                            ? window.crypto.randomUUID()
-                            : `${Date.now()}-${Math.random()}`
-                    );
-                    form.dataset.idempotencyKey = idempotencyKey;
-                    button.disabled = true;
-                    result.textContent = "Đang chấm…";
-
-                    try {
-                        const response = await fetch(form.dataset.submitUrl, {
-                            method: "POST",
-                            headers: {
-                                "Content-Type": "application/json",
-                                "X-CSRFToken": csrfToken,
-                            },
-                            body: JSON.stringify({
-                                source_code: sourceCode,
-                                idempotency_key: idempotencyKey,
-                            }),
-                        });
-                        const payload = await response.json();
-                        if (!response.ok) {
-                            throw new Error(payload.error || "Không thể nộp bài.");
-                        }
-                        result.textContent = `${payload.verdict}: ${payload.message}`;
-                        if (payload.verdict !== "PENDING") {
-                            delete form.dataset.idempotencyKey;
-                        }
-                        refreshState().catch(() => {
-                            // Verdict is already rendered; regular polling will recover.
-                        });
-                    } catch (submitError) {
-                        result.textContent = submitError.message;
-                    } finally {
-                        button.disabled = false;
-                    }
-                });
-            }
-
-            for (const form of document.querySelectorAll(".run-form")) {
-                form.addEventListener("submit", async (event) => {
-                    event.preventDefault();
-                    const problem = form.closest(".battle-problem");
-                    const button = form.querySelector("button[type='submit']");
-                    const verdict = form.querySelector(".run-verdict");
-                    const output = form.querySelector(".run-output");
-                    const sourceCode = problem.querySelector(
-                        "[name='source_code']"
-                    ).value;
-                    const inputData = form.querySelector("[name='input_data']").value;
-                    const formCsrfToken = form.querySelector(
-                        "[name='csrfmiddlewaretoken']"
-                    ).value;
-                    button.disabled = true;
-                    verdict.textContent = "Đang chạy…";
-                    output.textContent = "";
-
-                    try {
-                        const response = await fetch(form.dataset.runUrl, {
-                            method: "POST",
-                            headers: {
-                                "Content-Type": "application/json",
-                                "X-CSRFToken": formCsrfToken,
-                            },
-                            body: JSON.stringify({
-                                source_code: sourceCode,
-                                input_data: inputData,
-                            }),
-                        });
-                        const payload = await response.json();
-                        if (!response.ok) {
-                            throw new Error(payload.error || "Không thể chạy code.");
-                        }
-                        verdict.textContent = `${payload.verdict}: ${payload.message}`;
-                        output.textContent = payload.stdout || "(Không có output)";
-                    } catch (runError) {
-                        verdict.textContent = runError.message;
-                    } finally {
-                        button.disabled = false;
-                    }
-                });
-            }
-
-            const surrenderForm = document.getElementById("surrender-form");
-            surrenderForm.addEventListener("submit", async (event) => {
-                event.preventDefault();
-                if (!window.confirm("Bạn chắc chắn muốn đầu hàng?")) {
-                    return;
-                }
-                const button = surrenderForm.querySelector("button[type='submit']");
-                const result = document.getElementById("surrender-result");
-                button.disabled = true;
-                result.textContent = "Đang kết thúc trận…";
-                try {
-                    const response = await fetch(surrenderUrl, {
-                        method: "POST",
-                        headers: {"X-CSRFToken": csrfToken},
-                    });
-                    const payload = await response.json();
-                    if (!response.ok) {
-                        throw new Error(payload.error || "Không thể đầu hàng.");
-                    }
-                    window.location.assign(payload.result_url || resultUrl);
-                } catch (surrenderError) {
-                    result.textContent = surrenderError.message;
-                    button.disabled = false;
-                }
-            });
-
-            renderTimer();
-            window.setInterval(renderTimer, 1000);
-            refreshState();
-            document.addEventListener("visibilitychange", schedulePoll);
-        })();
-    </script>
+{% block extra_scripts %}
+    <script src="{% static 'matches/dist/main.bundle.js' %}" defer></script>
 {% endblock %}

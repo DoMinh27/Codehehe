@@ -1,6 +1,8 @@
 """Match start and finish lifecycle services."""
 
 from dataclasses import dataclass, field
+from random import SystemRandom
+from typing import Callable
 
 from django.db import transaction
 from django.db.models import Count, Q
@@ -10,9 +12,12 @@ from matches.models import (
     Match,
     MatchPlayer,
     MatchProblem,
+    MatchSkill,
     PlayerProblemProgress,
+    Skill,
     Submission,
 )
+from matches.skills.definitions import REQUIRED_SKILL_CODES
 from problems.models import Problem
 
 from .scoring import ScoringService
@@ -43,6 +48,10 @@ class InsufficientProblemsError(MatchLifecycleError):
     """Raised when the problem bank cannot supply the V1 set."""
 
 
+class InsufficientSkillsError(MatchLifecycleError):
+    """Raised when the V2 Skill catalog is incomplete."""
+
+
 class MatchNotReadyToFinishError(MatchLifecycleError):
     """Raised when neither finish condition has been reached."""
 
@@ -55,13 +64,16 @@ class MatchHasPendingSubmissionsError(MatchLifecycleError):
 class StartMatchService:
     """Create a frozen four-problem battle and start its server timer."""
 
+    problem_selector: Callable[[list[Problem], int], list[Problem]] = field(
+        default_factory=lambda: SystemRandom().sample
+    )
+
     def start(self, *, user, match_id: int) -> Match:
         return retry_transient_db_lock(
             lambda: self._start_once(user=user, match_id=match_id)
         )
 
-    @staticmethod
-    def _start_once(*, user, match_id: int) -> Match:
+    def _start_once(self, *, user, match_id: int) -> Match:
         with transaction.atomic():
             try:
                 match = Match.objects.select_for_update().get(pk=match_id)
@@ -81,30 +93,55 @@ class StartMatchService:
             if len(players) != 2:
                 raise MatchPlayerCountError("Phòng cần đúng hai người để bắt đầu.")
 
+            active_skills = {
+                skill.code: skill
+                for skill in Skill.objects.filter(
+                    is_active=True,
+                    code__in=REQUIRED_SKILL_CODES,
+                )
+            }
+            if set(active_skills) != set(REQUIRED_SKILL_CODES):
+                raise InsufficientSkillsError(
+                    "Cấu hình Skill Battle chưa đầy đủ."
+                )
+
             eligible_problems = Problem.objects.annotate(
                 hidden_test_count=Count(
                     "test_cases",
                     filter=Q(test_cases__is_sample=False),
                 )
             ).filter(is_active=True, hidden_test_count__gt=0)
-            easy_problems = list(
+            easy_candidates = list(
                 eligible_problems.filter(
                     difficulty=Problem.Difficulty.EASY,
-                ).order_by("order", "id")[:2]
+                ).order_by("order", "id")
             )
-            medium_problems = list(
+            medium_candidates = list(
                 eligible_problems.filter(
                     difficulty=Problem.Difficulty.MEDIUM,
-                ).order_by("order", "id")[:2]
+                ).order_by("order", "id")
             )
-            if len(easy_problems) != 2 or len(medium_problems) != 2:
+            hard_candidates = list(
+                eligible_problems.filter(
+                    difficulty=Problem.Difficulty.HARD,
+                ).order_by("order", "id")
+            )
+            if (
+                len(easy_candidates) < 2
+                or len(medium_candidates) < 1
+                or len(hard_candidates) < 1
+            ):
                 raise InsufficientProblemsError(
-                    "Cần ít nhất 2 bài Easy và 2 bài Medium đang hoạt động."
+                    "Cần ít nhất 2 bài Easy, 1 bài Medium và 1 bài Hard "
+                    "đang hoạt động."
                 )
+            easy_problems = self.problem_selector(easy_candidates, 2)
+            medium_problems = self.problem_selector(medium_candidates, 1)
+            hard_problems = self.problem_selector(hard_candidates, 1)
 
             match_problems = []
             for order, problem in enumerate(
-                [*easy_problems, *medium_problems],
+                [*easy_problems, *medium_problems, *hard_problems],
                 start=1,
             ):
                 sample_tests = []
@@ -133,6 +170,22 @@ class StartMatchService:
                     )
                 )
             MatchProblem.objects.bulk_create(match_problems)
+            MatchSkill.objects.bulk_create(
+                [
+                    MatchSkill(
+                        match=match,
+                        skill=active_skills[code],
+                        code_snapshot=active_skills[code].code,
+                        name_snapshot=active_skills[code].name,
+                        description_snapshot=active_skills[code].description,
+                        energy_cost_snapshot=active_skills[code].energy_cost,
+                        duration_seconds_snapshot=(
+                            active_skills[code].duration_seconds
+                        ),
+                    )
+                    for code in REQUIRED_SKILL_CODES
+                ]
+            )
             PlayerProblemProgress.objects.bulk_create(
                 [
                     PlayerProblemProgress(
@@ -209,8 +262,18 @@ class FinishMatchService:
             both_solved_all = problem_count > 0 and all(
                 solved_counts.get(player.id, 0) == problem_count for player in players
             )
-            deadline_reached = evaluation_time >= match.ends_at
-            if not deadline_reached and not both_solved_all:
+            player_deadlines = {
+                player.id: player.personal_ends_at for player in players
+            }
+            all_players_terminal = problem_count > 0 and all(
+                solved_counts.get(player.id, 0) == problem_count
+                or (
+                    player_deadlines[player.id] is not None
+                    and evaluation_time >= player_deadlines[player.id]
+                )
+                for player in players
+            )
+            if not all_players_terminal:
                 raise MatchNotReadyToFinishError(
                     "Trận đấu chưa đủ điều kiện kết thúc."
                 )
@@ -218,7 +281,6 @@ class FinishMatchService:
             if Submission.objects.filter(
                 match=match,
                 verdict=Submission.Verdict.PENDING,
-                received_at__lte=match.ends_at,
             ).exists():
                 raise MatchHasPendingSubmissionsError(
                     "Đang chờ submission hợp lệ hoàn tất."
@@ -235,11 +297,20 @@ class FinishMatchService:
             highest_score = max(player.score for player in players)
             leaders = [player for player in players if player.score == highest_score]
             match.status = Match.Status.FINISHED
-            match.ended_at = match.ends_at if deadline_reached else evaluation_time
+            unfinished_player_deadlines = [
+                player_deadlines[player.id]
+                for player in players
+                if solved_counts.get(player.id, 0) != problem_count
+            ]
+            match.ended_at = (
+                max(unfinished_player_deadlines)
+                if unfinished_player_deadlines
+                else evaluation_time
+            )
             match.finish_reason = (
-                Match.FinishReason.TIMEOUT
-                if deadline_reached
-                else Match.FinishReason.ALL_SOLVED
+                Match.FinishReason.ALL_SOLVED
+                if both_solved_all
+                else Match.FinishReason.TIMEOUT
             )
             match.surrendered_by = None
             if len(leaders) == 1:

@@ -11,6 +11,7 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from matches.models import Match, MatchPlayer, MatchProblem, Submission
+from matches.skills.typing import has_active_typing_challenge
 from problems.services.judge import (
     Judge0ConfigurationError,
     Judge0UnavailableError,
@@ -185,8 +186,13 @@ class SubmissionService:
 
             if match.status != Match.Status.PLAYING:
                 raise SubmissionConflictError("match is not playing")
-            if match.ends_at is None or timezone.now() > match.ends_at:
-                raise SubmissionConflictError("match has ended")
+            player_deadline = player.personal_ends_at
+            if player_deadline is None or timezone.now() > player_deadline:
+                raise SubmissionConflictError("your personal time has ended")
+            if has_active_typing_challenge(player_id=player.id):
+                raise SubmissionConflictError(
+                    "complete the Typing challenge before submitting"
+                )
 
             if idempotency_key is not None:
                 existing = Submission.objects.filter(

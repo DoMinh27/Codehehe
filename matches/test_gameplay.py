@@ -32,6 +32,11 @@ from .services.gameplay import (
     MatchStateError,
     StartMatchService,
 )
+from .services.match_state import (
+    MatchStateNotFoundError,
+    MatchStatePermissionError,
+    MatchStateService,
+)
 from .services.scoring import ScoringService
 
 User = get_user_model()
@@ -519,7 +524,7 @@ class ScoringServiceTests(TestCase):
         self.assertEqual(self.opponent_player.score, 3)
         self.assertEqual(self.match_problem.first_solver, self.opponent_player)
 
-    @patch("matches.views.Judge0Service.from_environment")
+    @patch("matches.views.submissions.Judge0Service.from_environment")
     def test_submission_endpoint_runs_scoring(self, judge_factory):
         judge_factory.return_value = FakeJudgeService()
         self.problem.test_cases.create(
@@ -773,6 +778,33 @@ class MatchLifecycleViewTests(LifecycleFixtureMixin, TestCase):
         response = self.client.get(reverse("match-state", args=[self.match.pk]))
         self.assertEqual(response.status_code, 403)
 
+    def test_state_service_is_deterministic_and_enforces_membership(self):
+        now = self.match.started_at + timedelta(seconds=10)
+
+        payload = MatchStateService().get(
+            user=self.host,
+            match_id=self.match.pk,
+            now=now,
+        )
+
+        self.assertEqual(payload["server_time"], now.isoformat())
+        self.assertEqual(
+            payload["remaining_seconds"],
+            self.match.duration_seconds - 10,
+        )
+        with self.assertRaises(MatchStatePermissionError):
+            MatchStateService().get(
+                user=self.outsider,
+                match_id=self.match.pk,
+                now=now,
+            )
+        with self.assertRaises(MatchStateNotFoundError):
+            MatchStateService().get(
+                user=self.host,
+                match_id=999999,
+                now=now,
+            )
+
     def test_finalize_endpoint_returns_409_202_then_200(self):
         self.client.force_login(self.host)
         url = reverse("match-finalize", args=[self.match.pk])
@@ -848,7 +880,7 @@ class MatchLifecycleViewTests(LifecycleFixtureMixin, TestCase):
             reverse("match-result", args=[self.match.pk]),
         )
 
-    @patch("matches.views.Judge0Service.from_environment")
+    @patch("matches.views.submissions.Judge0Service.from_environment")
     def test_last_accepted_submission_finishes_match_early(self, judge_factory):
         judge_factory.return_value = FakeJudgeService()
         last_problem = self.match_problems[-1]

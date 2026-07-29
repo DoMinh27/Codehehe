@@ -286,7 +286,7 @@ class Gate35ViewTests(Gate35FixtureMixin, TestCase):
     def setUp(self):
         self.create_fixture(room_code="VIEW35")
 
-    @patch("matches.views.Judge0Service.from_environment")
+    @patch("matches.views.submissions.Judge0Service.from_environment")
     def test_run_json_contract_does_not_persist_or_leak_hidden_data(
         self,
         runner_factory,
@@ -312,7 +312,7 @@ class Gate35ViewTests(Gate35FixtureMixin, TestCase):
         self.assertNotContains(response, "hidden-output")
         self.assertFalse(Submission.objects.exists())
 
-    @patch("matches.views.Judge0Service.from_environment")
+    @patch("matches.views.submissions.Judge0Service.from_environment")
     def test_run_unavailable_returns_503_without_private_detail(
         self,
         runner_factory,
@@ -332,7 +332,7 @@ class Gate35ViewTests(Gate35FixtureMixin, TestCase):
         self.assertEqual(response.status_code, 503)
         self.assertNotContains(response, "private Judge0 URL", status_code=503)
 
-    @patch("matches.views.Judge0Service.from_environment")
+    @patch("matches.views.submissions.Judge0Service.from_environment")
     def test_run_endpoint_validation_and_authorization_statuses(
         self,
         runner_factory,

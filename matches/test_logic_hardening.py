@@ -341,7 +341,7 @@ class RateLimitTests(TestCase):
         self.client.force_login(self.user)
 
     @override_settings(MATCH_RUN_RATE_LIMIT=1, MATCH_RATE_LIMIT_WINDOW_SECONDS=60)
-    @patch("matches.views.Judge0Service.from_environment")
+    @patch("matches.views.submissions.Judge0Service.from_environment")
     def test_run_endpoint_returns_429_after_limit(self, runner_factory):
         runner_factory.return_value = FakeCodeRunner()
         url = reverse(

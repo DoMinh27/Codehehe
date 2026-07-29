@@ -1,46 +1,54 @@
 from django.urls import path
 
-from . import views
+from .views import battle, rooms, skills, submissions
 
 urlpatterns = [
-    path("active/state/", views.active_match_state, name="active-match-state"),
-    path("rooms/create/", views.create_room, name="room-create"),
-    path("rooms/join/", views.join_room, name="room-join"),
-    path("rooms/<str:room_code>/", views.waiting_room, name="waiting-room"),
+    path("active/state/", rooms.active_match_state, name="active-match-state"),
+    path("rooms/create/", rooms.create_room, name="room-create"),
+    path("rooms/join/", rooms.join_room, name="room-join"),
+    path("rooms/<str:room_code>/", rooms.waiting_room, name="waiting-room"),
     path(
         "rooms/<str:room_code>/leave/",
-        views.leave_room,
+        rooms.leave_room,
         name="room-leave",
     ),
     path(
         "rooms/<str:room_code>/state/",
-        views.waiting_room_state,
+        rooms.waiting_room_state,
         name="waiting-room-state",
     ),
-    path("<int:match_id>/start/", views.start_match, name="match-start"),
-    path("<int:match_id>/battle/", views.battle, name="battle"),
-    path("<int:match_id>/state/", views.match_state, name="match-state"),
+    path("<int:match_id>/start/", battle.start_match, name="match-start"),
+    path("<int:match_id>/battle/", battle.battle, name="battle"),
+    path("<int:match_id>/state/", battle.match_state, name="match-state"),
     path(
         "<int:match_id>/skills/<str:skill_code>/use/",
-        views.use_skill,
+        skills.use_skill,
         name="skill-use",
     ),
     path(
         "<int:match_id>/typing-challenges/<int:challenge_id>/complete/",
-        views.complete_typing_challenge,
+        skills.complete_typing_challenge,
         name="typing-challenge-complete",
     ),
-    path("<int:match_id>/finalize/", views.finalize_match, name="match-finalize"),
-    path("<int:match_id>/surrender/", views.surrender_match, name="match-surrender"),
-    path("<int:match_id>/result/", views.match_result, name="match-result"),
+    path(
+        "<int:match_id>/finalize/",
+        battle.finalize_match,
+        name="match-finalize",
+    ),
+    path(
+        "<int:match_id>/surrender/",
+        battle.surrender_match,
+        name="match-surrender",
+    ),
+    path("<int:match_id>/result/", battle.match_result, name="match-result"),
     path(
         "<int:match_id>/problems/<int:match_problem_id>/run/",
-        views.run_code,
+        submissions.run_code,
         name="code-run",
     ),
     path(
         "<int:match_id>/problems/<int:match_problem_id>/submissions/",
-        views.submit_submission,
+        submissions.submit_submission,
         name="submission-create",
     ),
 ]

@@ -263,8 +263,10 @@ Cách chọn V1:
 
 ### FR-MATCH-04 — Thời lượng
 
-* Một trận kéo dài 15 phút.
-* Server lưu `started_at` và `ends_at`, hoặc `duration_seconds = 900`.
+* Một trận mặc định kéo dài 5 phút.
+* Deployment có thể cấu hình thời lượng phòng mới qua
+  `MATCH_DURATION_SECONDS`; mặc định là `300`.
+* Server snapshot thời lượng vào `Match.duration_seconds` khi tạo phòng.
 * Frontend countdown dựa trên thời gian server.
 * Refresh không reset timer.
 

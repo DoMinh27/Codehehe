@@ -382,6 +382,9 @@ class GroqAIReviewProviderTests(TestCase):
         )
         prompt = kwargs["messages"][0]["content"]
         self.assertIn("dữ liệu không tin cậy", prompt)
+        self.assertIn("đầu vào luôn hợp lệ", prompt)
+        self.assertIn("improvements là danh sách rỗng", prompt)
+        self.assertIn("chỉ chứa ký hiệu Big-O", prompt)
         self.assertNotIn("username", prompt)
         self.assertNotIn("hidden", prompt.lower().replace("test ẩn", ""))
 

@@ -6,9 +6,15 @@ const STATUS_MESSAGES = {
 };
 
 
-function addList(documentRoot, parent, headingText, items) {
+function addList(documentRoot, parent, headingText, items, emptyText) {
     const heading = documentRoot.createElement("h4");
     heading.textContent = headingText;
+    if (items.length === 0) {
+        const emptyMessage = documentRoot.createElement("p");
+        emptyMessage.textContent = emptyText;
+        parent.append(heading, emptyMessage);
+        return;
+    }
     const list = documentRoot.createElement("ul");
     for (const item of items) {
         const listItem = documentRoot.createElement("li");
@@ -27,8 +33,20 @@ function renderCompleted(documentRoot, card, analysis) {
         `Độ phức tạp: thời gian ${analysis.time_complexity}; `
         + `bộ nhớ ${analysis.space_complexity}.`;
     card.append(summary, complexity);
-    addList(documentRoot, card, "Điểm tốt", analysis.strengths);
-    addList(documentRoot, card, "Điểm cần cải thiện", analysis.improvements);
+    addList(
+        documentRoot,
+        card,
+        "Điểm tốt",
+        analysis.strengths,
+        "Không có điểm nổi bật được ghi nhận.",
+    );
+    addList(
+        documentRoot,
+        card,
+        "Điểm cần cải thiện",
+        analysis.improvements,
+        "Không có điểm cần cải thiện đáng kể.",
+    );
     const betterHeading = documentRoot.createElement("h4");
     betterHeading.textContent = "Hướng tiếp cận tốt hơn";
     const betterApproach = documentRoot.createElement("p");

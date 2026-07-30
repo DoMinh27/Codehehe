@@ -213,7 +213,7 @@ if AI_REVIEW_REASONING_EFFORT not in {"low", "medium", "high"}:
     raise ImproperlyConfigured(
         "AI_REVIEW_REASONING_EFFORT must be low, medium, or high."
     )
-AI_REVIEW_PROMPT_VERSION = os.getenv("AI_REVIEW_PROMPT_VERSION", "v1").strip()
+AI_REVIEW_PROMPT_VERSION = os.getenv("AI_REVIEW_PROMPT_VERSION", "v2").strip()
 AI_REVIEW_MAX_OUTPUT_TOKENS = int(
     os.getenv("AI_REVIEW_MAX_OUTPUT_TOKENS", "800")
 )

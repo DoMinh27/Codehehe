@@ -57,4 +57,31 @@ describe("AI review renderer", () => {
         expect(document.body.textContent).toContain("Chưa thể phân tích");
         expect(document.body.textContent).toContain("Chưa có bài Accepted");
     });
+
+    it("renders a clear message when there are no improvements", () => {
+        const renderer = createReviewRenderer({documentRoot: document});
+        renderer.render({
+            terminal: true,
+            players: [{
+                username: "player",
+                reviews: [{
+                    title: "Tính tích hai số",
+                    status: "COMPLETED",
+                    analysis: {
+                        approach_summary: "Đọc hai số và in ra tích.",
+                        time_complexity: "O(1)",
+                        space_complexity: "O(1)",
+                        strengths: ["Lời giải đã tối ưu."],
+                        improvements: [],
+                        better_approach: "Không cần thay đổi.",
+                    },
+                }],
+            }],
+        });
+
+        expect(document.body.textContent).toContain(
+            "Không có điểm cần cải thiện đáng kể.",
+        );
+        expect(document.querySelectorAll("ul")).toHaveLength(1);
+    });
 });

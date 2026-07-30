@@ -4,56 +4,51 @@
 
 {% block content %}
     <section class="lobby-hero" aria-labelledby="lobby-heading">
-        <div>
-            <p class="eyebrow">Xin chào, {{ user.username }}</p>
-            <h1 id="lobby-heading">Sẵn sàng cho trận đấu tiếp theo?</h1>
-            <p class="lead">
-                Tạo một phòng riêng hoặc nhập mã mời. Khi đủ hai người,
-                cuộc đua giải 4 bài sẽ bắt đầu.
-            </p>
-        </div>
-        <div class="arena-signal" aria-label="Arena đang sẵn sàng">
-            <div class="arena-signal-content">
-                <span class="badge badge-success">ONLINE</span>
-                <p>matchmaking.private_room</p>
-            </div>
-        </div>
+        <p class="eyebrow">Sảnh thi đấu</p>
+        <h1 id="lobby-heading">Lobby</h1>
+        <p class="lead">Xin chào <strong>{{ user.username }}</strong>. Hãy tạo một phòng mới hoặc tham gia cùng bạn bè.</p>
     </section>
 
     <div class="action-grid">
         <section class="action-card action-card-featured">
-            <span class="action-number">01 / HOST</span>
-            <h2>Tạo phòng mới</h2>
-            <p>Nhận mã mời 6 ký tự và làm chủ trận đấu của bạn.</p>
-            <form method="post" action="{% url 'room-create' %}">
-                {% csrf_token %}
-                <button type="submit">Tạo phòng ngay</button>
-            </form>
+            <span class="action-icon" aria-hidden="true">＋</span>
+            <div class="action-card-content">
+                <span class="action-number">01 / HOST</span>
+                <h2>Tạo phòng</h2>
+                <p>Tạo một phòng mới và mời bạn bè tham gia.</p>
+                <form method="post" action="{% url 'room-create' %}">
+                    {% csrf_token %}
+                    <button type="submit">＋ Tạo phòng mới</button>
+                </form>
+            </div>
         </section>
 
         <section class="action-card">
-            <span class="action-number">02 / JOIN</span>
-            <h2>Tham gia phòng</h2>
-            <p>Dán mã được gửi từ bạn bè để vào khu vực chờ.</p>
-            <form method="post" action="{% url 'room-join' %}">
-                {% csrf_token %}
-                <div>
-                    <label class="visually-hidden" for="room-code">Mã phòng</label>
-                    <input
-                        id="room-code"
-                        name="room_code"
-                        type="text"
-                        minlength="6"
-                        maxlength="6"
-                        pattern="[A-Za-z0-9]{6}"
-                        placeholder="VD: HEHE24"
-                        inputmode="text"
-                        autocomplete="off"
-                        required
-                    >
-                </div>
-                <button type="submit">Vào phòng</button>
-            </form>
+            <span class="action-icon" aria-hidden="true">↪</span>
+            <div class="action-card-content">
+                <span class="action-number">02 / JOIN</span>
+                <h2>Tham gia phòng</h2>
+                <p>Nhập mã phòng để tham gia cùng bạn bè.</p>
+                <form method="post" action="{% url 'room-join' %}">
+                    {% csrf_token %}
+                    <div>
+                        <label class="visually-hidden" for="room-code">Mã phòng</label>
+                        <input
+                            id="room-code"
+                            name="room_code"
+                            type="text"
+                            minlength="6"
+                            maxlength="6"
+                            pattern="[A-Za-z0-9]{6}"
+                            placeholder="Mã phòng"
+                            inputmode="text"
+                            autocomplete="off"
+                            required
+                        >
+                    </div>
+                    <button class="button button-secondary" type="submit">↪ Tham gia</button>
+                </form>
+            </div>
         </section>
     </div>
 

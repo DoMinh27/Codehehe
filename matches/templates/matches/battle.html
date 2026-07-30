@@ -61,7 +61,11 @@
             </div>
             <p class="energy-meter">
                 <span>Energy</span>
-                <strong><span id="my-energy">{{ current_player.energy }}</span>/3</strong>
+                <strong class="energy-value" aria-live="polite">
+                    <span id="my-energy">{{ current_player.energy }}</span>
+                    <span class="energy-divider" aria-hidden="true">/</span>
+                    <span>3</span>
+                </strong>
             </p>
         </div>
         <p id="skill-notice" class="skill-notice" role="status">Chọn đúng thời điểm để tạo lợi thế.</p>

@@ -281,3 +281,77 @@
         grid-column: 2;
     }
 }
+
+/* Light illustrated result theme */
+.result-hero,
+.score-section,
+.solve-section,
+.ai-review-section {
+    border-width: 2px;
+    border-color: var(--line);
+    background: #fffefa;
+    color: var(--text);
+    box-shadow: 0.35rem 0.35rem 0 rgb(111 121 233 / 8%);
+}
+
+.result-hero::after {
+    border-color: rgb(111 121 233 / 25%);
+    box-shadow: 0 0 0 3rem rgb(111 121 233 / 5%), 0 0 0 6rem rgb(111 121 233 / 3%);
+}
+
+.result-symbol {
+    border: 2px solid var(--line);
+    background: #7c86ed;
+    color: #fff;
+    box-shadow: 0.35rem 0.35rem 0 rgb(22 28 56 / 12%);
+}
+
+.result-meta span {
+    border: 1.5px solid var(--line);
+    background: #f3f4ff;
+    color: #4c557e;
+}
+
+.score-card {
+    border: 2px solid var(--line);
+    background: #fffdfa;
+}
+
+.score-card-winner {
+    border-color: var(--line);
+    background: #edf0ff;
+    box-shadow: 0.3rem 0.3rem 0 rgb(111 121 233 / 16%);
+}
+
+.score-value {
+    color: #4e5bd0;
+}
+
+.solve-list li {
+    border-color: #d8dbea;
+}
+
+.ai-review-card {
+    border: 2px solid var(--line);
+    background: #fbfbff;
+}
+
+.ai-review-card[data-status="COMPLETED"] {
+    border-color: #299b77;
+    background: #f3fff9;
+}
+
+.ai-review-card h4 {
+    color: var(--text);
+}
+
+.ai-review-card p,
+.ai-review-card li {
+    color: var(--muted);
+}
+
+.ai-mark {
+    border: 2px solid var(--line);
+    background: #eef0ff;
+    color: #4e5bd0;
+}

@@ -166,15 +166,23 @@
 }
 
 .energy-meter strong {
-    display: grid;
+    display: inline-flex;
     min-width: 3.5rem;
     height: 2rem;
-    place-items: center;
+    align-items: center;
+    justify-content: center;
+    gap: 0.1rem;
     border-radius: 99rem;
     background: rgb(200 255 77 / 10%);
     color: var(--accent);
     font-family: var(--mono);
     font-size: 0.85rem;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.energy-divider {
+    opacity: 0.55;
 }
 
 .skill-notice {
@@ -633,4 +641,139 @@
     #typing-form button {
         width: 100%;
     }
+}
+
+/* Light illustrated battle theme */
+.battle-page .site-main {
+    width: 100%;
+}
+
+.competitor-card,
+.skill-panel,
+.problem-tab,
+.problem-content,
+.submission-form,
+.run-form {
+    border-width: 2px;
+    border-color: var(--line);
+    background: #fffefa;
+    color: var(--text);
+    box-shadow: 0.3rem 0.3rem 0 rgb(111 121 233 / 8%);
+}
+
+.competitor-me {
+    border-color: var(--line);
+    background: #f1f3ff;
+}
+
+.competitor-stat strong,
+.energy-meter strong {
+    color: #4e5bd0;
+}
+
+.versus {
+    border-width: 2px;
+    border-color: var(--line);
+    background: #7c86ed;
+    color: #fff;
+}
+
+.energy-meter strong {
+    border: 1.5px solid var(--line);
+    background: #eef0ff;
+}
+
+.skill-card {
+    border: 2px solid var(--line);
+    background: #fffdfa;
+    color: var(--text);
+}
+
+.skill-card p,
+.skill-notice,
+.competitor-card small,
+.competitor-label {
+    color: var(--muted);
+}
+
+.typing-challenge {
+    border: 2px solid var(--line);
+    background: #fff7df;
+    color: var(--text);
+}
+
+.typing-challenge p {
+    color: #5f5138;
+}
+
+.typing-prompt {
+    border-color: #b98735;
+    background: #fffdf4;
+    color: #7c5518;
+}
+
+.problem-tab:hover {
+    border-color: var(--line);
+    background: #f2f3ff;
+    color: var(--text);
+}
+
+.problem-tab[aria-selected="true"],
+.problem-tab.is-active,
+.problem-tab.active {
+    border-color: var(--line);
+    background: #dfe3ff;
+    box-shadow: 0.3rem 0.3rem 0 rgb(111 121 233 / 18%);
+}
+
+.problem-tab-number {
+    border: 1.5px solid var(--line);
+    background: #7c86ed;
+    color: #fff;
+}
+
+.statement-copy {
+    color: var(--text);
+}
+
+.sample-tests pre,
+.run-output {
+    background: #f6f6fc;
+    color: var(--text);
+}
+
+.editor-toolbar,
+.run-heading,
+.submission-actions {
+    border-color: var(--line);
+    background: #eef0ff;
+    color: #4c557e;
+}
+
+.code-editor,
+.code-editor .cm-editor {
+    background: #fbfbff;
+    color: #19203f;
+}
+
+.code-editor .cm-gutters {
+    border-right-color: #c9cee7;
+    background: #eef0f8;
+    color: #69708a;
+}
+
+.code-editor .cm-content,
+.code-editor .cm-line {
+    color: #19203f;
+}
+
+.source-code-input,
+.run-form > textarea {
+    background: #fbfbff;
+    color: var(--text);
+}
+
+.submission-result,
+.run-verdict {
+    color: #58607a;
 }

@@ -12,51 +12,58 @@
 </head>
 <body class="{% block body_class %}{% endblock %}">
     <a class="skip-link" href="#main-content">Đi tới nội dung chính</a>
-    <header class="site-header">
-        <nav class="site-nav" aria-label="Điều hướng chính">
-            <a class="brand" href="{% url 'lobby' %}" aria-label="CodeHehe — Trang chủ">
-                <span class="brand-mark" aria-hidden="true">C/</span>
-                <span>Code<span>Hehe</span></span>
-            </a>
+    <div class="app-frame">
+        <div class="window-bar" aria-hidden="true">
+            <span class="window-dot window-dot-red"></span>
+            <span class="window-dot window-dot-yellow"></span>
+            <span class="window-dot window-dot-green"></span>
+        </div>
+        <header class="site-header">
+            <nav class="site-nav" aria-label="Điều hướng chính">
+                <a class="brand" href="{% url 'lobby' %}" aria-label="CodeHehe — Trang chủ">
+                    <span class="brand-mark" aria-hidden="true">&lt;/&gt;</span>
+                    <span>Code<span>Hehe</span></span>
+                </a>
 
-            {% if user.is_authenticated %}
-                <div class="nav-links">
-                    <a href="{% url 'lobby' %}">Sảnh đấu</a>
-                    <a href="{% url 'problem-list' %}">Luyện tập</a>
-                </div>
-                <div class="nav-account">
-                    <span class="user-chip" title="{{ user.username }}">
-                        <span class="user-avatar" aria-hidden="true">{{ user.username|first|upper }}</span>
-                        <span class="user-name">{{ user.username }}</span>
-                    </span>
-                    <form method="post" action="{% url 'logout' %}">
-                        {% csrf_token %}
-                        <button class="button button-ghost button-small" type="submit">Đăng xuất</button>
-                    </form>
-                </div>
-            {% else %}
-                <div class="nav-account">
-                    <a class="button button-ghost button-small" href="{% url 'login' %}">Đăng nhập</a>
-                    <a class="button button-primary button-small" href="{% url 'register' %}">Bắt đầu ngay</a>
-                </div>
+                {% if user.is_authenticated %}
+                    <div class="nav-links">
+                        <a href="{% url 'lobby' %}">Sảnh đấu</a>
+                        <a href="{% url 'problem-list' %}">Luyện tập</a>
+                    </div>
+                    <div class="nav-account">
+                        <span class="user-chip" title="{{ user.username }}">
+                            <span class="user-avatar" aria-hidden="true">{{ user.username|first|upper }}</span>
+                            <span class="user-name">{{ user.username }}</span>
+                        </span>
+                        <form method="post" action="{% url 'logout' %}">
+                            {% csrf_token %}
+                            <button class="button button-ghost button-small" type="submit">Đăng xuất</button>
+                        </form>
+                    </div>
+                {% else %}
+                    <div class="nav-account">
+                        <a class="button button-ghost button-small" href="{% url 'login' %}">Đăng nhập</a>
+                        <a class="button button-primary button-small" href="{% url 'register' %}">Bắt đầu ngay</a>
+                    </div>
+                {% endif %}
+            </nav>
+        </header>
+
+        <main id="main-content" class="site-main">
+            {% if messages %}
+                <section class="message-stack" aria-label="Thông báo">
+                    {% for message in messages %}
+                        <p class="message message-{{ message.tags|default:'info' }}" role="alert">{{ message }}</p>
+                    {% endfor %}
+                </section>
             {% endif %}
-        </nav>
-    </header>
-
-    <main id="main-content" class="site-main">
-        {% if messages %}
-            <section class="message-stack" aria-label="Thông báo">
-                {% for message in messages %}
-                    <p class="message message-{{ message.tags|default:'info' }}" role="alert">{{ message }}</p>
-                {% endfor %}
-            </section>
-        {% endif %}
-        {% block content %}{% endblock %}
-    </main>
-    <footer class="site-footer">
-        <p><span class="status-dot" aria-hidden="true"></span> Arena đang hoạt động</p>
-        <p>CodeHehe · Code nhanh. Đấu vui.</p>
-    </footer>
+            {% block content %}{% endblock %}
+        </main>
+        <footer class="site-footer">
+            <p><span class="status-dot" aria-hidden="true"></span> Arena đang hoạt động</p>
+            <p>CodeHehe · Code nhanh. Đấu vui.</p>
+        </footer>
+    </div>
     <script src="{% static 'accounts/app.js' %}" defer></script>
     {% if user.is_authenticated %}
         <script>

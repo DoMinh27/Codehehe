@@ -3,20 +3,32 @@
 {% block title %}Bài tập | CodeHehe{% endblock %}
 
 {% block content %}
-    <h1>Ngân hàng bài tập</h1>
+    <header class="page-header">
+        <div>
+            <p class="eyebrow">Practice mode</p>
+            <h1>Ngân hàng bài tập</h1>
+            <p class="lead">Đọc đề, nghiên cứu ví dụ và làm quen với các dạng bài trước khi bước vào arena.</p>
+        </div>
+        <a class="button button-ghost" href="{% url 'lobby' %}">Quay lại sảnh</a>
+    </header>
 
     {% if problems %}
-        <ol>
+        <div class="problem-grid">
             {% for problem in problems %}
-                <li>
-                    <a href="{% url 'problem-detail' problem.slug %}">
-                        {{ problem.title }}
-                    </a>
-                    — {{ problem.get_difficulty_display }} — {{ problem.points }} điểm
-                </li>
+                <a class="problem-card" href="{% url 'problem-detail' problem.slug %}">
+                    <span class="problem-card-index">PROBLEM / {{ forloop.counter|stringformat:"02d" }}</span>
+                    <h2>{{ problem.title }}</h2>
+                    <span class="problem-meta">
+                        <span class="badge">{{ problem.get_difficulty_display }}</span>
+                        <span>{{ problem.points }} điểm →</span>
+                    </span>
+                </a>
             {% endfor %}
-        </ol>
+        </div>
     {% else %}
-        <p>Hiện chưa có bài tập nào.</p>
+        <div class="empty-state">
+            <h2>Chưa có bài tập</h2>
+            <p>Hiện chưa có bài tập nào.</p>
+        </div>
     {% endif %}
 {% endblock %}

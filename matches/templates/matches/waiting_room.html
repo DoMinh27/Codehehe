@@ -3,39 +3,68 @@
 {% block title %}Phòng {{ match.room_code }} | CodeHehe{% endblock %}
 
 {% block content %}
-    <h1>Waiting Room</h1>
-    <p>Mã phòng: <strong id="room-code">{{ match.room_code }}</strong></p>
-    <p>Trạng thái: <span id="room-status">{{ match.get_status_display }}</span></p>
+    <div class="room-shell">
+        <header class="room-hero surface">
+            <p class="eyebrow">Private match</p>
+            <h1>Phòng đấu đã sẵn sàng</h1>
+            <p class="muted">Gửi mã này cho đối thủ của bạn.</p>
+            <div class="room-code-wrap">
+                <strong id="room-code" class="room-code">{{ match.room_code }}</strong>
+                <button
+                    class="button button-ghost button-small"
+                    type="button"
+                    data-copy-target="#room-code"
+                    aria-label="Sao chép mã phòng"
+                >Sao chép</button>
+            </div>
+            <p>
+                <span class="status-dot" aria-hidden="true"></span>
+                <span id="room-status">{{ match.get_status_display }}</span>
+            </p>
+        </header>
 
-    <section aria-labelledby="players-heading">
-        <h2 id="players-heading">Người chơi</h2>
-        <ol id="player-list">
-            {% for player in players %}
-                <li>{{ player.user.username }}{% if player.is_host %} (Host){% endif %}</li>
-            {% endfor %}
-            {% if players|length < 2 %}
-                <li>Đang chờ người chơi thứ hai…</li>
-            {% endif %}
-        </ol>
-    </section>
+        <div class="room-grid">
+            <section class="card" aria-labelledby="players-heading">
+                <p class="card-kicker">Match roster · 2 slots</p>
+                <h2 id="players-heading">Người chơi</h2>
+                <ol id="player-list" class="player-list">
+                    {% for player in players %}
+                        <li>{{ player.user.username }}{% if player.is_host %} · Chủ phòng{% endif %}</li>
+                    {% endfor %}
+                    {% if players|length < 2 %}
+                        <li>Đang chờ đối thủ…</li>
+                    {% endif %}
+                </ol>
+            </section>
 
-    {% if current_player.is_host %}
-        <form method="post" action="{% url 'match-start' match_id=match.id %}">
-            {% csrf_token %}
-            <button id="start-match" type="submit" {% if players|length != 2 %}disabled{% endif %}>
-                Bắt đầu trận
-            </button>
-        </form>
-    {% endif %}
+            <aside class="room-actions surface">
+                <p>
+                    {% if current_player.is_host %}
+                        Trận đấu có thể bắt đầu ngay khi đủ 2 người.
+                    {% else %}
+                        Chủ phòng sẽ bắt đầu khi cả hai đã sẵn sàng.
+                    {% endif %}
+                </p>
+                {% if current_player.is_host %}
+                    <form method="post" action="{% url 'match-start' match_id=match.id %}">
+                        {% csrf_token %}
+                        <button id="start-match" type="submit" {% if players|length != 2 %}disabled{% endif %}>
+                            Bắt đầu trận
+                        </button>
+                    </form>
+                {% endif %}
 
-    <form method="post" action="{% url 'room-leave' room_code=match.room_code %}">
-        {% csrf_token %}
-        <button type="submit">
-            {% if current_player.is_host %}Hủy phòng{% else %}Rời phòng{% endif %}
-        </button>
-    </form>
+                <form method="post" action="{% url 'room-leave' room_code=match.room_code %}">
+                    {% csrf_token %}
+                    <button class="button button-danger" type="submit">
+                        {% if current_player.is_host %}Hủy phòng{% else %}Rời phòng{% endif %}
+                    </button>
+                </form>
+            </aside>
+        </div>
 
-    <p id="poll-error" role="alert" hidden></p>
+        <p id="poll-error" class="message message-error" role="alert" hidden></p>
+    </div>
 
     <script>
         (() => {
@@ -79,8 +108,8 @@
                     for (const player of state.players) {
                         const item = document.createElement("li");
                         item.textContent = player
-                            ? `${player.username}${player.is_host ? " (Host)" : ""}`
-                            : "Đang chờ người chơi thứ hai…";
+                            ? `${player.username}${player.is_host ? " · Chủ phòng" : ""}`
+                            : "Đang chờ đối thủ…";
                         playerList.appendChild(item);
                     }
                     error.hidden = true;

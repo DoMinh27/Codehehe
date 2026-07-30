@@ -131,8 +131,18 @@ export function bootstrapBattle({
         refreshState: () => polling.refresh(),
     }).bind();
 
-    for (const tab of documentRoot.querySelectorAll(".problem-tab")) {
+    const problemTabs = [
+        ...documentRoot.querySelectorAll(".problem-tab"),
+    ];
+    problemTabs.forEach((tab, index) => {
+        tab.setAttribute("aria-selected", String(index === 0));
         tab.addEventListener("click", () => {
+            for (const candidate of problemTabs) {
+                candidate.setAttribute(
+                    "aria-selected",
+                    String(candidate === tab),
+                );
+            }
             for (const problem of documentRoot.querySelectorAll(
                 ".battle-problem",
             )) {
@@ -144,7 +154,7 @@ export function bootstrapBattle({
                 renderer.moveTypingPopupToVisibleEditor();
             }
         });
-    }
+    });
 
     const surrenderForm = documentRoot.getElementById("surrender-form");
     surrenderForm.addEventListener("submit", async (event) => {

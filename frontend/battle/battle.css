@@ -1,76 +1,552 @@
-.battle-status,
-.skill-panel,
-.problem-tabs,
-.battle-problem,
-.submission-form,
-.run-form {
-    margin-block: 1rem;
+.battle-page .site-main {
+    width: min(100% - 1.5rem, 98rem);
+    padding-top: 2rem;
+}
+
+.battle-page .site-footer {
+    display: none;
+}
+
+.battle-heading {
+    display: flex;
+    margin-bottom: 1rem;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.battle-heading .eyebrow {
+    margin-bottom: 0.5rem;
+}
+
+.battle-heading h1 {
+    margin: 0;
+    font-size: clamp(2rem, 4vw, 3rem);
+}
+
+#surrender-form {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+#surrender-result {
+    max-width: 18rem;
+    color: var(--danger);
+    font-size: 0.78rem;
+}
+
+.battle-status {
+    display: grid;
+    margin-bottom: 1rem;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: stretch;
+    gap: 0.65rem;
+}
+
+.competitor-card {
+    display: grid;
+    min-width: 0;
+    padding: 1rem 1.2rem;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: clamp(0.75rem, 3vw, 2.5rem);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+}
+
+.competitor-me {
+    border-color: rgb(200 255 77 / 25%);
+}
+
+.competitor-label {
+    grid-column: 1;
+    margin-bottom: -0.4rem;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.competitor-name {
+    min-width: 0;
+    grid-column: 1;
+    overflow: hidden;
+    font-size: 1.05rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.competitor-stat,
+.competitor-timer {
+    display: grid;
+    grid-row: 1 / 3;
+    text-align: right;
+}
+
+.competitor-stat {
+    grid-column: 2;
+}
+
+.competitor-timer {
+    grid-column: 3;
+}
+
+.competitor-stat strong,
+.competitor-timer strong {
+    line-height: 1;
+}
+
+.competitor-stat strong {
+    color: var(--accent);
+    font-size: 1.4rem;
+}
+
+.competitor-timer strong {
+    font-family: var(--mono);
+    font-size: clamp(1.5rem, 3vw, 2.35rem);
+    letter-spacing: -0.08em;
+}
+
+.competitor-card small {
+    margin-top: 0.35rem;
+    color: var(--muted);
+    font-size: 0.65rem;
+}
+
+.versus {
+    display: grid;
+    width: 2.8rem;
+    height: 2.8rem;
+    place-self: center;
+    place-items: center;
+    border: 1px solid var(--line-strong);
+    border-radius: 50%;
+    background: var(--bg);
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    font-weight: 900;
+}
+
+.skill-panel {
+    margin-bottom: 1rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+    padding: 1rem;
+}
+
+.skill-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.skill-heading .card-kicker {
+    margin-bottom: 0.25rem;
+}
+
+.skill-heading h2 {
+    margin-bottom: 0;
+    font-size: 1.25rem;
 }
 
 .energy-meter {
-    font-weight: 700;
+    display: flex;
+    margin: 0;
+    align-items: center;
+    gap: 0.65rem;
+    color: var(--muted);
+    font-size: 0.75rem;
+}
+
+.energy-meter strong {
+    display: grid;
+    min-width: 3.5rem;
+    height: 2rem;
+    place-items: center;
+    border-radius: 99rem;
+    background: rgb(200 255 77 / 10%);
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 0.85rem;
+}
+
+.skill-notice {
+    min-height: 1.25rem;
+    margin: 0.5rem 0 0;
+    color: var(--muted);
+    font-size: 0.78rem;
 }
 
 .skill-list {
     display: grid;
-    gap: 0.75rem;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    margin-top: 0.75rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.65rem;
 }
 
 .skill-card {
-    border: 1px solid #aaa;
-    border-radius: 0.5rem;
-    padding: 0.75rem;
+    display: grid;
+    padding: 0.85rem;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 0.35rem 0.75rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: #0b0e15;
+}
+
+.skill-card h3 {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.skill-card p {
+    grid-column: 1;
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.7rem;
+    line-height: 1.45;
 }
 
 .skill-card button {
-    margin-top: 0.5rem;
+    min-height: 2.4rem;
+    grid-column: 2;
+    grid-row: 1 / 4;
+    padding: 0.55rem 0.75rem;
+    font-size: 0.7rem;
 }
 
 .typing-challenge {
-    background: #fff7ed;
-    border: 2px solid #9a3412;
-    border-radius: 0.5rem;
-    margin-block: 1rem;
-    padding: 1rem;
     position: sticky;
-    top: 0.75rem;
-    z-index: 10;
-    box-shadow: 0 0.5rem 1rem rgb(0 0 0 / 20%);
+    z-index: 20;
+    top: 5.25rem;
+    margin: 0 0 1rem;
+    border: 1px solid rgb(255 204 102 / 60%);
+    border-radius: var(--radius);
+    background: #221b0d;
+    padding: 1rem;
+    box-shadow: var(--shadow);
+}
+
+.typing-challenge .card-kicker {
+    margin-bottom: 0.25rem;
+    color: var(--warning);
+}
+
+.typing-challenge h2 {
+    margin-bottom: 0.45rem;
+    font-size: 1.25rem;
+}
+
+.typing-challenge p {
+    margin-bottom: 0.75rem;
+    color: #dacaa8;
+    font-size: 0.8rem;
 }
 
 .typing-prompt {
     display: block;
-    font-size: 1.1rem;
-    margin-block: 0.75rem;
+    margin-bottom: 0.75rem;
+    border: 1px dashed rgb(255 204 102 / 35%);
+    border-radius: var(--radius-sm);
+    background: rgb(0 0 0 / 20%);
+    padding: 0.7rem;
+    color: var(--warning);
+    font-size: 0.9rem;
     user-select: none;
 }
 
-#typing-input {
-    min-width: min(100%, 28rem);
+#typing-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 0.5rem;
+}
+
+#typing-form label,
+#typing-result {
+    grid-column: 1 / -1;
+}
+
+#typing-result {
+    min-height: 0;
+    margin: 0;
 }
 
 .problem-tabs {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    margin-bottom: 1rem;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 0.5rem;
 }
 
 .problem-tab {
-    padding: 0.5rem;
+    display: grid;
+    min-width: 0;
+    min-height: 4.25rem;
+    padding: 0.65rem;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 0.65rem;
+    border-color: var(--line-strong);
+    background: var(--surface);
+    color: var(--text);
+    text-align: left;
+}
+
+.problem-tab:hover {
+    border-color: #546079;
+    background: var(--surface-raised);
+    color: var(--text);
+}
+
+.problem-tab[aria-selected="true"],
+.problem-tab.is-active,
+.problem-tab.active {
+    border-color: var(--accent);
+    background: rgb(200 255 77 / 8%);
+}
+
+.problem-tab-number {
+    display: grid;
+    width: 2rem;
+    height: 2rem;
+    place-items: center;
+    border-radius: 0.45rem;
+    background: var(--surface-soft);
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 0.7rem;
+}
+
+.problem-tab-copy {
+    display: grid;
+    min-width: 0;
+}
+
+.problem-tab-copy strong {
+    overflow: hidden;
+    font-size: 0.75rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.problem-tab-copy small {
+    color: var(--muted);
+    font-size: 0.65rem;
+}
+
+.my-progress,
+.opponent-progress,
+.first-solver {
+    grid-column: 1 / -1;
+    color: var(--success);
+    font-size: 0.62rem;
+    line-height: 1.1;
+}
+
+.opponent-progress {
+    color: var(--cyan);
+}
+
+.first-solver {
+    color: var(--warning);
+}
+
+.battle-problem {
+    display: grid;
+    grid-template-columns: minmax(19rem, 0.82fr) minmax(25rem, 1.18fr);
+    grid-template-areas:
+        "problem editor"
+        "problem run";
+    align-items: start;
+    gap: 0.75rem;
+}
+
+.problem-content,
+.submission-form,
+.run-form {
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+}
+
+.problem-content {
+    position: sticky;
+    top: 5.25rem;
+    max-height: calc(100vh - 6.5rem);
+    grid-area: problem;
+    overflow-y: auto;
+    padding: clamp(1.1rem, 3vw, 1.6rem);
+}
+
+.problem-content-header {
+    display: flex;
+    margin-bottom: 1.5rem;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.problem-content-header .card-kicker {
+    margin-bottom: 0.35rem;
+}
+
+.problem-content-header h2 {
+    margin: 0;
+}
+
+.statement-copy {
+    color: #d5dbe5;
+    font-size: 0.92rem;
+}
+
+.sample-tests {
+    margin-top: 2rem;
+}
+
+.sample-tests h3 {
+    padding-top: 1rem;
+    border-top: 1px solid var(--line);
+}
+
+.sample-label {
+    margin: 0.75rem 0 0.3rem;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.sample-tests pre {
+    margin: 0;
+    font-size: 0.78rem;
+}
+
+.submission-form {
+    grid-area: editor;
+}
+
+.editor-toolbar,
+.run-heading {
+    display: flex;
+    min-height: 3rem;
+    padding: 0.65rem 0.85rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    border-bottom: 1px solid var(--line);
+    background: var(--surface-raised);
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 0.7rem;
+}
+
+.editor-dot {
+    display: inline-block;
+    width: 0.5rem;
+    height: 0.5rem;
+    margin-right: 0.45rem;
+    border-radius: 50%;
+    background: var(--success);
+}
+
+.source-code-input {
+    border: 0;
+    border-radius: 0;
 }
 
 .code-editor {
-    border: 1px solid #777;
     max-width: 100%;
+    background: #090c12;
 }
 
 .code-editor .cm-editor {
-    min-height: 22rem;
+    min-height: clamp(22rem, 48vh, 36rem);
+    background: #090c12;
 }
 
 .code-editor .cm-scroller {
     overflow: auto;
+    font-family: var(--mono);
+    font-size: 0.82rem;
+}
+
+.code-editor .cm-gutters {
+    border-right-color: var(--line);
+    background: #0d1119;
+}
+
+.submission-actions {
+    display: flex;
+    min-height: 4rem;
+    padding: 0.65rem 0.85rem;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 1rem;
+    border-top: 1px solid var(--line);
+    background: var(--surface-raised);
+}
+
+.submission-result {
+    margin: 0 auto 0 0;
+    color: var(--muted);
+    font-size: 0.8rem;
+}
+
+.run-form {
+    grid-area: run;
+    padding-bottom: 0.85rem;
+}
+
+.run-heading {
+    margin-bottom: 0.85rem;
+}
+
+.run-heading label {
+    margin: 0;
+    font-size: 0.72rem;
+}
+
+.run-form > textarea,
+.run-verdict,
+.run-output {
+    width: calc(100% - 1.7rem);
+    margin-inline: 0.85rem;
+}
+
+.run-form > textarea {
+    min-height: 5rem;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+}
+
+.run-verdict {
+    min-height: 1rem;
+    margin-top: 0.65rem;
+    margin-bottom: 0;
+    color: var(--muted);
+    font-size: 0.78rem;
+}
+
+.run-output {
+    min-height: 2.5rem;
+    margin-top: 0.5rem;
+    margin-bottom: 0;
+    font-size: 0.75rem;
+}
+
+.run-output:empty {
+    display: none;
 }
 
 .skill-blur-active .problem-content {
@@ -79,6 +555,82 @@
     user-select: none;
 }
 
-.skill-notice {
-    min-height: 1.5rem;
+@media (max-width: 980px) {
+    .battle-problem {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            "problem"
+            "editor"
+            "run";
+    }
+
+    .problem-content {
+        position: static;
+        max-height: none;
+    }
+
+    .skill-list {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 720px) {
+    .battle-page .site-main {
+        width: min(100% - 1rem, 98rem);
+        padding-top: 1rem;
+    }
+
+    .battle-heading h1 {
+        font-size: 1.8rem;
+    }
+
+    .battle-status {
+        grid-template-columns: 1fr;
+    }
+
+    .versus {
+        width: 2rem;
+        height: 2rem;
+        margin-block: -0.25rem;
+    }
+
+    .competitor-card {
+        gap: 0.65rem;
+        padding: 0.8rem;
+    }
+
+    .competitor-name {
+        font-size: 0.9rem;
+    }
+
+    .competitor-timer strong {
+        font-size: 1.3rem;
+    }
+
+    .problem-tabs {
+        display: flex;
+        margin-inline: -0.5rem;
+        padding: 0 0.5rem 0.25rem;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+    }
+
+    .problem-tab {
+        min-width: 13rem;
+        scroll-snap-align: start;
+    }
+
+    .problem-content-header,
+    .skill-heading {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    #typing-form {
+        grid-template-columns: 1fr;
+    }
+
+    #typing-form button {
+        width: 100%;
+    }
 }

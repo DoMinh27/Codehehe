@@ -2,72 +2,100 @@
 {% load static %}
 
 {% block title %}Kết quả {{ match.room_code }} | CodeHehe{% endblock %}
+{% block body_class %}result-page{% endblock %}
 
 {% block extra_head %}
-    {% if ai_review_config %}
-        <link rel="stylesheet" href="{% static 'matches/dist/result.bundle.css' %}">
-    {% endif %}
+    <link rel="stylesheet" href="{% static 'matches/dist/result.bundle.css' %}">
 {% endblock %}
 
 {% block content %}
-    <h1>Kết quả trận {{ match.room_code }}</h1>
+    <header class="result-hero surface">
+        <p class="eyebrow">Match complete · {{ match.room_code }}</p>
+        {% if match.is_draw %}
+            <span class="result-symbol" aria-hidden="true">=</span>
+            <h1>Bất phân thắng bại</h1>
+            <p class="lead">Hai người chơi kết thúc với cùng một điểm số.</p>
+        {% else %}
+            <span class="result-symbol" aria-hidden="true">01</span>
+            <h1><span class="text-accent">{{ match.winner.username }}</span> chiến thắng</h1>
+            <p class="lead">Tốc độ, độ chính xác và chiến thuật đã tạo nên khác biệt.</p>
+        {% endif %}
+        <div class="result-meta">
+            <span>{{ match.ended_at|date:"H:i · d/m/Y" }}</span>
+            {% if match.finish_reason %}
+                <span>{{ match.get_finish_reason_display }}</span>
+            {% endif %}
+            {% if match.surrendered_by %}
+                <span>{{ match.surrendered_by.username }} đã đầu hàng</span>
+            {% endif %}
+        </div>
+    </header>
 
-    {% if match.is_draw %}
-        <h2>Hòa</h2>
-    {% else %}
-        <h2>Người thắng: {{ match.winner.username }}</h2>
-    {% endif %}
-
-    <p>Kết thúc: {{ match.ended_at }}</p>
-    {% if match.finish_reason %}
-        <p>Lý do: {{ match.get_finish_reason_display }}</p>
-    {% endif %}
-    {% if match.surrendered_by %}
-        <p>{{ match.surrendered_by.username }} đã đầu hàng.</p>
-    {% endif %}
-
-    <section>
-        <h2>Điểm số</h2>
-        <ol>
+    <section class="score-section" aria-labelledby="score-heading">
+        <div class="section-heading">
+            <div>
+                <p class="card-kicker">Final scoreboard</p>
+                <h2 id="score-heading">Điểm số chung cuộc</h2>
+            </div>
+            <span class="badge badge-success">VERIFIED</span>
+        </div>
+        <ol class="score-grid">
             {% for result in player_results %}
-                <li>
-                    {{ result.player.user.username }}:
-                    {{ result.player.score }} điểm,
-                    {{ result.solved_count }}/4 bài
+                <li class="score-card {% if result.player.user == match.winner %}score-card-winner{% endif %}">
+                    <span class="score-rank">#{{ forloop.counter }}</span>
+                    <strong class="score-player">{{ result.player.user.username }}</strong>
+                    {% if result.player.user == match.winner %}
+                        <span class="badge badge-success">WINNER</span>
+                    {% endif %}
+                    <strong class="score-value">{{ result.player.score }} điểm</strong>
+                    <span class="score-label">{{ result.solved_count }}/4 bài đã giải</span>
                 </li>
             {% endfor %}
         </ol>
     </section>
 
-    <section>
-        <h2>First-solve</h2>
-        <ul>
+    <section class="solve-section surface" aria-labelledby="solve-heading">
+        <div class="section-heading">
+            <div>
+                <p class="card-kicker">Problem breakdown</p>
+                <h2 id="solve-heading">Người giải đầu tiên</h2>
+            </div>
+        </div>
+        <ol class="solve-list">
             {% for match_problem in match_problems %}
                 <li>
-                    {{ match_problem.title_snapshot }}:
+                    <span class="solve-index">{{ forloop.counter|stringformat:"02d" }}</span>
+                    <strong>{{ match_problem.title_snapshot }}</strong>
                     {% if match_problem.first_solver %}
-                        {{ match_problem.first_solver.user.username }}
+                        <span class="solve-player">★ {{ match_problem.first_solver.user.username }}</span>
                     {% else %}
-                        Không có
+                        <span class="solve-player muted">Chưa có lời giải</span>
                     {% endif %}
                 </li>
             {% endfor %}
-        </ul>
+        </ol>
     </section>
 
     {% if ai_review_config %}
         <section id="ai-review-section" class="ai-review-section">
-            <h2>Phân tích bài làm bằng AI</h2>
-            <p>
-                Phân tích chỉ xuất hiện sau trận và không ảnh hưởng đến điểm số.
-            </p>
+            <div class="section-heading">
+                <div>
+                    <p class="card-kicker">Post-match intelligence</p>
+                    <h2>Phân tích bài làm bằng AI</h2>
+                    <p class="muted">Nhận xét riêng tư sau trận, không ảnh hưởng đến điểm số.</p>
+                </div>
+                <span class="ai-mark" aria-hidden="true">AI</span>
+            </div>
             <p id="ai-review-notice" role="status"></p>
             <div id="ai-review-list"></div>
         </section>
         {{ ai_review_config|json_script:"ai-review-config" }}
     {% endif %}
 
-    <p><a href="{% url 'lobby' %}">Về Lobby</a></p>
+    <div class="result-actions">
+        <a class="button button-primary" href="{% url 'lobby' %}">Về sảnh đấu</a>
+        <a class="button button-ghost" href="{% url 'problem-list' %}">Luyện tập thêm</a>
+    </div>
 {% endblock %}
 
 {% block extra_scripts %}

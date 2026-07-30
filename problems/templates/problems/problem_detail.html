@@ -3,38 +3,46 @@
 {% block title %}{{ problem.title }} | CodeHehe{% endblock %}
 
 {% block content %}
-    <p><a href="{% url 'problem-list' %}">← Quay lại danh sách bài</a></p>
+    <p><a href="{% url 'problem-list' %}">← Danh sách bài tập</a></p>
 
-    <h1>{{ problem.title }}</h1>
-    <p>
-        Độ khó: {{ problem.get_difficulty_display }}
-        — Điểm: {{ problem.points }}
-    </p>
+    <div class="problem-detail">
+        <article class="problem-statement surface">
+            <p class="eyebrow">Problem briefing</p>
+            <h1>{{ problem.title }}</h1>
+            <p class="problem-meta">
+                <span class="badge">{{ problem.get_difficulty_display }}</span>
+                <span>{{ problem.points }} điểm</span>
+            </p>
 
-    <section>
-        <h2>Đề bài</h2>
-        <div>{{ problem.statement|linebreaks }}</div>
-    </section>
+            <section>
+                <h2>Đề bài</h2>
+                <div>{{ problem.statement|linebreaks }}</div>
+            </section>
 
-    <section>
-        <h2>Code khởi đầu</h2>
-        <textarea name="source_code" rows="12" cols="80" aria-label="Code khởi đầu">{{ problem.starter_code }}</textarea>
-    </section>
+            <section>
+                <h2>Ví dụ</h2>
+                {% if problem.sample_tests %}
+                    {% for test_case in problem.sample_tests %}
+                        <article>
+                            <h3>Test mẫu {{ forloop.counter }}</h3>
+                            <p class="muted">Input</p>
+                            <pre>{{ test_case.input_data }}</pre>
+                            <p class="muted">Output</p>
+                            <pre>{{ test_case.expected_output }}</pre>
+                        </article>
+                    {% endfor %}
+                {% else %}
+                    <p class="muted">Bài tập này chưa có ví dụ.</p>
+                {% endif %}
+            </section>
+        </article>
 
-    <section>
-        <h2>Ví dụ</h2>
-        {% if problem.sample_tests %}
-            {% for test_case in problem.sample_tests %}
-                <article>
-                    <h3>Ví dụ {{ forloop.counter }}</h3>
-                    <p>Input:</p>
-                    <pre>{{ test_case.input_data }}</pre>
-                    <p>Output:</p>
-                    <pre>{{ test_case.expected_output }}</pre>
-                </article>
-            {% endfor %}
-        {% else %}
-            <p>Bài tập này chưa có ví dụ.</p>
-        {% endif %}
-    </section>
+        <aside class="problem-sidebar surface">
+            <p class="card-kicker">Starter code</p>
+            <label for="practice-source">Python</label>
+            <textarea id="practice-source" name="source_code" rows="12" aria-label="Code khởi đầu" spellcheck="false">{{ problem.starter_code }}</textarea>
+            <p class="form-help">Đây là chế độ đọc đề. Hãy vào trận để chạy và nộp code.</p>
+            <a class="button button-primary button-wide" href="{% url 'lobby' %}">Tìm đối thủ</a>
+        </aside>
+    </div>
 {% endblock %}

@@ -2,45 +2,69 @@
 {% load static %}
 
 {% block title %}Trận {{ match.room_code }} | CodeHehe{% endblock %}
+{% block body_class %}battle-page{% endblock %}
 
 {% block extra_head %}
     <link rel="stylesheet" href="{% static 'matches/dist/battle.bundle.css' %}">
 {% endblock %}
 
 {% block content %}
-    <h1>Battle {{ match.room_code }}</h1>
-
-    <section class="battle-status" aria-label="Trạng thái trận đấu">
-        <p>
-            Thời gian của bạn:
-            <strong id="match-timer">--:--</strong>
-            —
-            Thời gian đối thủ:
-            <strong id="opponent-timer">--:--</strong>
-        </p>
-        <p>
-            Bạn: <strong id="my-score">{{ current_player.score }}</strong> điểm
-            —
-            {{ opponent.user.username }}:
-            <strong id="opponent-score">{{ opponent.score }}</strong> điểm
-        </p>
+    <header class="battle-heading">
+        <div>
+            <p class="eyebrow">Live match · {{ match.room_code }}</p>
+            <h1>Code arena</h1>
+        </div>
         <form
             id="surrender-form"
             method="post"
             action="{% url 'match-surrender' match_id=match.id %}"
         >
             {% csrf_token %}
-            <button type="submit">Đầu hàng</button>
+            <button class="button button-danger button-small" type="submit">Đầu hàng</button>
             <span id="surrender-result" role="status"></span>
         </form>
+    </header>
+
+    <section class="battle-status" aria-label="Trạng thái trận đấu">
+        <article class="competitor-card competitor-me">
+            <span class="competitor-label">Bạn</span>
+            <strong class="competitor-name">{{ current_player.user.username }}</strong>
+            <span class="competitor-stat">
+                <strong id="my-score">{{ current_player.score }}</strong>
+                <small>điểm</small>
+            </span>
+            <span class="competitor-timer">
+                <small>Thời gian</small>
+                <strong id="match-timer">--:--</strong>
+            </span>
+        </article>
+        <div class="versus" aria-hidden="true">VS</div>
+        <article class="competitor-card competitor-opponent">
+            <span class="competitor-label">Đối thủ</span>
+            <strong class="competitor-name">{{ opponent.user.username }}</strong>
+            <span class="competitor-stat">
+                <strong id="opponent-score">{{ opponent.score }}</strong>
+                <small>điểm</small>
+            </span>
+            <span class="competitor-timer">
+                <small>Thời gian</small>
+                <strong id="opponent-timer">--:--</strong>
+            </span>
+        </article>
     </section>
 
     <section class="skill-panel" aria-label="Energy và Skills">
-        <h2>Skill Battle</h2>
-        <p class="energy-meter">
-            Energy: <span id="my-energy">{{ current_player.energy }}</span>/3
-        </p>
-        <p id="skill-notice" class="skill-notice" role="status"></p>
+        <div class="skill-heading">
+            <div>
+                <p class="card-kicker">Tactical loadout</p>
+                <h2>Skill battle</h2>
+            </div>
+            <p class="energy-meter">
+                <span>Energy</span>
+                <strong><span id="my-energy">{{ current_player.energy }}</span>/3</strong>
+            </p>
+        </div>
+        <p id="skill-notice" class="skill-notice" role="status">Chọn đúng thời điểm để tạo lợi thế.</p>
         <div id="skill-list" class="skill-list"></div>
     </section>
 
@@ -50,15 +74,16 @@
         aria-label="Thử thách gõ chữ"
         hidden
     >
-        <h2>Typing Challenge</h2>
+        <p class="card-kicker">Action locked</p>
+        <h2>Thử thách gõ nhanh</h2>
         <p>
-            Gõ chính xác câu dưới đây để mở lại Run, Submit và Skill.
+            Gõ chính xác câu dưới đây để mở lại Chạy thử, Nộp bài và Skill.
             Còn <strong id="typing-countdown">0</strong> giây.
         </p>
         <code id="typing-prompt" class="typing-prompt"></code>
         <form id="typing-form">
             {% csrf_token %}
-            <label for="typing-input">Câu trả lời</label>
+            <label for="typing-input">Nhập lại câu thử thách</label>
             <input
                 id="typing-input"
                 name="typed_text"
@@ -68,7 +93,7 @@
                 autocapitalize="none"
                 spellcheck="false"
             >
-            <button type="submit">Hoàn thành</button>
+            <button type="submit">Mở khóa</button>
             <p id="typing-result" role="status"></p>
         </form>
     </section>
@@ -81,8 +106,11 @@
                 data-problem-target="problem-{{ match_problem.id }}"
                 data-match-problem-id="{{ match_problem.id }}"
             >
-                {{ match_problem.order }}. {{ match_problem.title_snapshot }}
-                ({{ match_problem.points }} điểm)
+                <span class="problem-tab-number">{{ match_problem.order|stringformat:"02d" }}</span>
+                <span class="problem-tab-copy">
+                    <strong>{{ match_problem.title_snapshot }}</strong>
+                    <small>{{ match_problem.points }} điểm</small>
+                </span>
                 <span class="my-progress" aria-label="Tiến độ của bạn"></span>
                 <span class="opponent-progress" aria-label="Tiến độ đối thủ"></span>
                 <span class="first-solver" aria-label="Người giải đầu"></span>
@@ -98,22 +126,27 @@
                 {% if not forloop.first %}hidden{% endif %}
             >
                 <section class="problem-content">
-                    <h2>{{ match_problem.title_snapshot }}</h2>
-                    <p>
-                        {{ match_problem.get_difficulty_snapshot_display|default:match_problem.difficulty_snapshot }}
-                        — {{ match_problem.points }} điểm
-                    </p>
-                    <div>{{ match_problem.statement_snapshot|linebreaks }}</div>
+                    <header class="problem-content-header">
+                        <div>
+                            <p class="card-kicker">Problem {{ match_problem.order|stringformat:"02d" }}</p>
+                            <h2>{{ match_problem.title_snapshot }}</h2>
+                        </div>
+                        <span class="badge">
+                            {{ match_problem.get_difficulty_snapshot_display|default:match_problem.difficulty_snapshot }}
+                            · {{ match_problem.points }} điểm
+                        </span>
+                    </header>
+                    <div class="statement-copy">{{ match_problem.statement_snapshot|linebreaks }}</div>
 
-                    <section>
-                        <h3>Ví dụ</h3>
+                    <section class="sample-tests">
+                        <h3>Test mẫu</h3>
                         {% for test_case in match_problem.sample_tests_snapshot %}
-                            <p>Input:</p>
+                            <p class="sample-label">Input</p>
                             <pre>{{ test_case.input_data }}</pre>
-                            <p>Output:</p>
+                            <p class="sample-label">Output</p>
                             <pre>{{ test_case.expected_output }}</pre>
                         {% empty %}
-                            <p>Chưa có ví dụ.</p>
+                            <p class="muted">Chưa có ví dụ.</p>
                         {% endfor %}
                     </section>
                 </section>
@@ -123,7 +156,11 @@
                     data-submit-url="{% url 'submission-create' match_id=match.id match_problem_id=match_problem.id %}"
                 >
                     {% csrf_token %}
-                    <label for="source-{{ match_problem.id }}">Python</label>
+                    <div class="editor-toolbar">
+                        <span><span class="editor-dot" aria-hidden="true"></span> main.py</span>
+                        <span class="badge">Python 3</span>
+                    </div>
+                    <label class="visually-hidden" for="source-{{ match_problem.id }}">Code Python</label>
                     <textarea
                         id="source-{{ match_problem.id }}"
                         class="source-code-input"
@@ -131,10 +168,13 @@
                         data-match-problem-id="{{ match_problem.id }}"
                         rows="16"
                         cols="90"
+                        spellcheck="false"
                         required
                     >{{ match_problem.starter_code_snapshot }}</textarea>
-                    <button type="submit">Nộp bài</button>
-                    <p class="submission-result" role="status"></p>
+                    <div class="submission-actions">
+                        <p class="submission-result" role="status"></p>
+                        <button type="submit">Nộp bài</button>
+                    </div>
                 </form>
 
                 <form
@@ -142,7 +182,10 @@
                     data-run-url="{% url 'code-run' match_id=match.id match_problem_id=match_problem.id %}"
                 >
                     {% csrf_token %}
-                    <label for="input-{{ match_problem.id }}">Dữ liệu nhập (stdin)</label>
+                    <div class="run-heading">
+                        <label for="input-{{ match_problem.id }}">Dữ liệu nhập (stdin)</label>
+                        <button class="button button-secondary button-small" type="submit">Chạy thử</button>
+                    </div>
                     <textarea
                         id="input-{{ match_problem.id }}"
                         name="input_data"
@@ -150,7 +193,6 @@
                         cols="90"
                         placeholder="Ví dụ: 2 3&#10;Chỉ nhập dữ liệu, không dán code Python vào đây."
                     ></textarea>
-                    <button type="submit">Chạy thử</button>
                     <p class="run-verdict" role="status"></p>
                     <pre class="run-output" aria-label="Kết quả chạy thử"></pre>
                 </form>

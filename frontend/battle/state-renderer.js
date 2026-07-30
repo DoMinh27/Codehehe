@@ -76,10 +76,10 @@ export function createStateRenderer({
             description.textContent = skill.description;
             const resources = documentRoot.createElement("p");
             resources.textContent =
-                `Charge: ${skill.quantity} — Cost: ${skill.energy_cost} Energy`;
+                `Còn ${skill.quantity} lượt · Tốn ${skill.energy_cost} energy`;
             const button = documentRoot.createElement("button");
             button.type = "button";
-            button.textContent = "Dùng lên đối thủ";
+            button.textContent = "Kích hoạt";
             button.disabled =
                 payload.my_timed_out
                 || payload.my_action_locked

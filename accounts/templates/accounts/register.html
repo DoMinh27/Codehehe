@@ -1,17 +1,32 @@
 {% extends "base.html" %}
 
 {% block title %}Đăng ký | CodeHehe{% endblock %}
+{% block body_class %}auth-page{% endblock %}
 
 {% block content %}
-    <h1>Đăng ký</h1>
+    <div class="auth-shell">
+        <section class="auth-intro" aria-labelledby="auth-heading">
+            <p class="eyebrow">Ready player one</p>
+            <h1 id="auth-heading">Tạo tài khoản. Vào trận trong <span class="text-accent">vài giây.</span></h1>
+            <p class="lead">
+                Không cần hồ sơ dài dòng. Chọn tên người chơi, giữ vững nhịp code
+                và để bảng điểm lên tiếng.
+            </p>
+            <p class="auth-demo">Nhanh · Công bằng · Không pay-to-win</p>
+        </section>
 
-    <form method="post">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">Tạo tài khoản</button>
-    </form>
-
-    <p>
-        <a href="{% url 'login' %}">Đã có tài khoản? Đăng nhập</a>
-    </p>
+        <section class="auth-card card" aria-labelledby="register-heading">
+            <p class="card-kicker">New challenger</p>
+            <h2 id="register-heading">Tạo tài khoản</h2>
+            <p>Một tài khoản là đủ để luyện tập và thi đấu.</p>
+            <form method="post">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <button type="submit">Tạo tài khoản</button>
+            </form>
+            <p class="auth-switch">
+                Đã có tài khoản? <a href="{% url 'login' %}">Đăng nhập</a>
+            </p>
+        </section>
+    </div>
 {% endblock %}

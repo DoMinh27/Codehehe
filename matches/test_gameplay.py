@@ -64,6 +64,7 @@ class StartMatchServiceTests(TestCase):
                 difficulty=Problem.Difficulty.EASY,
                 points=1,
                 starter_code=f"# easy {index}",
+                reference_solution=f"print({index})",
                 order=index + 1,
             )
             easy_problem.test_cases.create(
@@ -78,6 +79,7 @@ class StartMatchServiceTests(TestCase):
                 difficulty=Problem.Difficulty.MEDIUM,
                 points=2,
                 starter_code=f"# medium {index}",
+                reference_solution=f"print({index})",
                 order=index + 1,
             )
             medium_problem.test_cases.create(
@@ -92,6 +94,7 @@ class StartMatchServiceTests(TestCase):
                 difficulty=Problem.Difficulty.HARD,
                 points=3,
                 starter_code=f"# hard {index}",
+                reference_solution=f"print({index})",
                 order=index + 1,
             )
             hard_problem.test_cases.create(
@@ -114,12 +117,16 @@ class StartMatchServiceTests(TestCase):
         )
 
         problem = Problem.objects.get(slug="easy-0")
+        frozen_reference = MatchProblem.objects.get(
+            match=match,
+            problem=problem,
+        ).reference_solution_snapshot
         problem.title = "Changed after start"
+        problem.reference_solution = "print('changed')"
         problem.save()
-        self.assertEqual(
-            MatchProblem.objects.get(match=match, problem=problem).title_snapshot,
-            "Easy 0",
-        )
+        snapshot = MatchProblem.objects.get(match=match, problem=problem)
+        self.assertEqual(snapshot.title_snapshot, "Easy 0")
+        self.assertEqual(snapshot.reference_solution_snapshot, frozen_reference)
 
     def test_start_selects_two_problems_from_each_difficulty(self):
         for index in range(2, 5):
@@ -133,6 +140,7 @@ class StartMatchServiceTests(TestCase):
                     statement=f"{difficulty.title()} statement {index}",
                     difficulty=difficulty,
                     points=1,
+                    reference_solution=f"print({index})",
                     order=index + 1,
                 )
                 problem.test_cases.create(

@@ -357,6 +357,7 @@ class MatchProblem(models.Model):
     title_snapshot = models.CharField(max_length=200)
     statement_snapshot = models.TextField()
     starter_code_snapshot = models.TextField(blank=True)
+    reference_solution_snapshot = models.TextField(blank=True)
     difficulty_snapshot = models.CharField(max_length=20)
     sample_tests_snapshot = models.JSONField(default=list)
     hidden_tests_snapshot = models.JSONField(default=list)

@@ -1,8 +1,27 @@
 from django.contrib import admin
 from django.core.exceptions import ValidationError
+from django.forms import ModelForm
 from django.forms.models import BaseInlineFormSet
 
 from .models import Problem, TestCase
+
+
+class ProblemAdminForm(ModelForm):
+    class Meta:
+        model = Problem
+        fields = "__all__"
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if (
+            cleaned_data.get("is_active")
+            and not cleaned_data.get("reference_solution", "").strip()
+        ):
+            self.add_error(
+                "reference_solution",
+                "Bài đang hoạt động phải có lời giải chuẩn.",
+            )
+        return cleaned_data
 
 
 class TestCaseInlineFormSet(BaseInlineFormSet):
@@ -30,6 +49,7 @@ class TestCaseInline(admin.TabularInline):
 
 @admin.register(Problem)
 class ProblemAdmin(admin.ModelAdmin):
+    form = ProblemAdminForm
     list_display = ("title", "slug", "difficulty", "points", "order", "is_active")
     list_filter = ("difficulty", "is_active")
     search_fields = ("title", "slug", "statement")

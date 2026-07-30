@@ -132,6 +132,7 @@ class SnapshotAndIdempotencyTests(TestCase):
                 statement="No hidden tests",
                 difficulty=difficulty,
                 points=1,
+                reference_solution="print('invalid')",
                 order=0,
             )
             self.assertTrue(invalid.is_active)
@@ -142,6 +143,7 @@ class SnapshotAndIdempotencyTests(TestCase):
                     statement="Frozen statement",
                     difficulty=difficulty,
                     points=1,
+                    reference_solution="print('hidden-output')",
                     order=index + 1,
                 )
                 problem.test_cases.create(

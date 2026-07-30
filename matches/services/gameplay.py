@@ -111,7 +111,10 @@ class StartMatchService:
                     "test_cases",
                     filter=Q(test_cases__is_sample=False),
                 )
-            ).filter(is_active=True, hidden_test_count__gt=0)
+            ).filter(
+                is_active=True,
+                hidden_test_count__gt=0,
+            ).exclude(reference_solution="")
             selected_problems = []
             for difficulty, required_count in rules.problem_counts.items():
                 if required_count == 0:
@@ -154,6 +157,7 @@ class StartMatchService:
                         title_snapshot=problem.title,
                         statement_snapshot=problem.statement,
                         starter_code_snapshot=problem.starter_code,
+                        reference_solution_snapshot=problem.reference_solution,
                         difficulty_snapshot=problem.difficulty,
                         sample_tests_snapshot=sample_tests,
                         hidden_tests_snapshot=hidden_tests,

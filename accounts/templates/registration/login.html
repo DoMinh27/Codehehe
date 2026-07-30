@@ -1,20 +1,39 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Đăng nhập | CodeHehe{% endblock %}
+{% block body_class %}auth-page{% endblock %}
+{% block main_class %}site-main--narrow{% endblock %}
 
 {% block content %}
-    <h1>Đăng nhập</h1>
+<div class="auth-shell">
+  <section class="card auth-card" aria-labelledby="login-title">
+    <div class="auth-card__icon" aria-hidden="true">
+      <svg><use href="{% static 'matches/ui/icons.svg' %}#icon-login"></use></svg>
+    </div>
+    <div class="auth-card__heading">
+      <h1 id="login-title">Đăng nhập</h1>
+      <p>Tiếp tục hành trình chinh phục các thử thách lập trình.</p>
+    </div>
 
-    <form method="post">
-        {% csrf_token %}
-        {{ form.as_p }}
-        {% if next %}
-            <input type="hidden" name="next" value="{{ next }}">
-        {% endif %}
-        <button type="submit">Đăng nhập</button>
+    <form method="post" class="stack">
+      {% csrf_token %}
+      {% for field in form %}
+        <div class="form-field{% if field.errors %} form-field--error{% endif %}">
+          {{ field.label_tag }}
+          {{ field }}
+          {% if field.help_text %}<span class="form-help">{{ field.help_text }}</span>{% endif %}
+          {% for error in field.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+        </div>
+      {% endfor %}
+      {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+      <button class="button button--primary button--block" type="submit">
+        <svg aria-hidden="true"><use href="{% static 'matches/ui/icons.svg' %}#icon-login"></use></svg>
+        Đăng nhập
+      </button>
     </form>
 
-    <p>
-        <a href="{% url 'register' %}">Chưa có tài khoản? Đăng ký</a>
-    </p>
+    <p class="auth-card__switch">Chưa có tài khoản? <a href="{% url 'register' %}">Đăng ký ngay</a></p>
+  </section>
+</div>
 {% endblock %}

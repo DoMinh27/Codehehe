@@ -1,40 +1,66 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}{{ problem.title }} | CodeHehe{% endblock %}
 
 {% block content %}
-    <p><a href="{% url 'problem-list' %}">← Quay lại danh sách bài</a></p>
+<a class="back-link" href="{% url 'problem-list' %}">← Quay lại ngân hàng bài tập</a>
 
+<header class="page-heading page-heading--compact">
+  <span class="page-heading__icon" aria-hidden="true">
+    <svg><use href="{% static 'matches/ui/icons.svg' %}#icon-code"></use></svg>
+  </span>
+  <div>
+    <div class="heading-badges">
+      <span class="badge badge--{{ problem.difficulty|lower }}">{{ problem.get_difficulty_display }}</span>
+      <span class="badge badge--neutral">{{ problem.points }} điểm</span>
+    </div>
     <h1>{{ problem.title }}</h1>
-    <p>
-        Độ khó: {{ problem.get_difficulty_display }}
-        — Điểm: {{ problem.points }}
-    </p>
+  </div>
+</header>
 
+<div class="problem-detail-layout">
+  <article class="card problem-statement">
     <section>
-        <h2>Đề bài</h2>
-        <div>{{ problem.statement|linebreaks }}</div>
+      <h2>Đề bài</h2>
+      <div class="prose">{{ problem.statement|linebreaks }}</div>
     </section>
 
     <section>
+      <h2>Ví dụ</h2>
+      {% if problem.sample_tests %}
+        <div class="sample-list">
+          {% for test_case in problem.sample_tests %}
+            <article class="sample-case">
+              <h3>Ví dụ {{ forloop.counter }}</h3>
+              <div class="sample-case__grid">
+                <div>
+                  <span class="eyebrow">Input</span>
+                  <pre>{{ test_case.input_data }}</pre>
+                </div>
+                <div>
+                  <span class="eyebrow">Output</span>
+                  <pre>{{ test_case.expected_output }}</pre>
+                </div>
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="muted">Bài tập này chưa có ví dụ.</p>
+      {% endif %}
+    </section>
+  </article>
+
+  <aside class="card starter-panel">
+    <div class="section-heading">
+      <div>
         <h2>Code khởi đầu</h2>
-        <textarea name="source_code" rows="12" cols="80" aria-label="Code khởi đầu">{{ problem.starter_code }}</textarea>
-    </section>
-
-    <section>
-        <h2>Ví dụ</h2>
-        {% if problem.sample_tests %}
-            {% for test_case in problem.sample_tests %}
-                <article>
-                    <h3>Ví dụ {{ forloop.counter }}</h3>
-                    <p>Input:</p>
-                    <pre>{{ test_case.input_data }}</pre>
-                    <p>Output:</p>
-                    <pre>{{ test_case.expected_output }}</pre>
-                </article>
-            {% endfor %}
-        {% else %}
-            <p>Bài tập này chưa có ví dụ.</p>
-        {% endif %}
-    </section>
+        <p>Python 3</p>
+      </div>
+      <svg aria-hidden="true"><use href="{% static 'matches/ui/icons.svg' %}#icon-code"></use></svg>
+    </div>
+    <textarea name="source_code" rows="16" aria-label="Code khởi đầu" readonly>{{ problem.starter_code }}</textarea>
+  </aside>
+</div>
 {% endblock %}

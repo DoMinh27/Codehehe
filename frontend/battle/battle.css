@@ -1,76 +1,584 @@
-.battle-status,
-.skill-panel,
-.problem-tabs,
-.battle-problem,
-.submission-form,
-.run-form {
-    margin-block: 1rem;
+.battle-main {
+    padding-top: 1rem;
 }
 
-.energy-meter {
-    font-weight: 700;
+.battle-heading {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1rem;
 }
 
-.skill-list {
+.battle-heading h1 {
+    font-size: clamp(1.4rem, 2.5vw, 2rem);
+    margin: 0;
+}
+
+.battle-live {
+    align-items: center;
+    color: var(--color-success);
+    display: inline-flex;
+    font-size: 0.85rem;
+    font-weight: 750;
+    gap: 0.45rem;
+}
+
+.battle-live > span {
+    background: var(--color-success);
+    border-radius: 50%;
+    height: 0.6rem;
+    width: 0.6rem;
+}
+
+.battle-scoreboard {
+    align-items: center;
     display: grid;
-    gap: 0.75rem;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-}
-
-.skill-card {
-    border: 1px solid #aaa;
-    border-radius: 0.5rem;
-    padding: 0.75rem;
-}
-
-.skill-card button {
-    margin-top: 0.5rem;
-}
-
-.typing-challenge {
-    background: #fff7ed;
-    border: 2px solid #9a3412;
-    border-radius: 0.5rem;
-    margin-block: 1rem;
-    padding: 1rem;
+    gap: 0;
+    grid-template-columns:
+        minmax(10rem, 1.25fr)
+        minmax(8rem, 0.8fr)
+        minmax(10rem, 1.25fr)
+        minmax(8rem, 0.8fr)
+        minmax(6rem, 0.65fr)
+        auto;
+    margin-bottom: 1rem;
+    padding: 0;
     position: sticky;
-    top: 0.75rem;
-    z-index: 10;
-    box-shadow: 0 0.5rem 1rem rgb(0 0 0 / 20%);
+    top: 0.5rem;
+    z-index: 30;
 }
 
-.typing-prompt {
+.battle-scoreboard > * {
+    align-items: center;
+    border-right: 1px solid var(--color-border);
+    display: flex;
+    gap: 0.75rem;
+    min-height: 5rem;
+    padding: 0.8rem 1rem;
+}
+
+.battle-scoreboard > *:last-child {
+    border-right: 0;
+}
+
+.score-player strong {
     display: block;
-    font-size: 1.1rem;
-    margin-block: 0.75rem;
-    user-select: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-#typing-input {
-    min-width: min(100%, 28rem);
+.score-value {
+    color: var(--color-primary);
+    font-size: 1.6rem;
+    font-weight: 850;
+    margin-left: auto;
+}
+
+.avatar--blue {
+    background: var(--color-blue-soft);
+    border-color: #c6dcff;
+    color: var(--color-blue);
+}
+
+.score-timer {
+    justify-content: center;
+    text-align: center;
+}
+
+.score-timer svg {
+    color: var(--color-primary);
+}
+
+.score-timer strong,
+.score-timer span,
+.score-energy strong,
+.score-energy > span {
+    display: block;
+}
+
+.score-timer strong {
+    color: var(--color-primary);
+    font-size: 1.35rem;
+    letter-spacing: 0.03em;
+}
+
+.score-timer span,
+.score-energy > span {
+    color: var(--color-muted);
+    font-size: 0.72rem;
+    white-space: nowrap;
+}
+
+.score-timer--opponent strong {
+    color: var(--color-blue);
+}
+
+.score-energy {
+    justify-content: center;
+}
+
+.score-energy svg {
+    color: #e3a008;
+}
+
+.score-energy strong {
+    color: var(--color-primary);
+    font-size: 1.25rem;
+}
+
+#surrender-form {
+    border-right: 0;
+    flex-direction: column;
+    justify-content: center;
+}
+
+#surrender-result {
+    color: var(--color-danger);
+    font-size: 0.72rem;
+}
+
+.skill-panel {
+    align-items: center;
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: minmax(10rem, 0.45fr) minmax(0, 1.55fr);
+    margin-bottom: 1rem;
+    overflow: visible;
+    padding: 0.9rem 1rem;
+    position: relative;
+    z-index: 20;
+}
+
+.skill-panel__heading h2 {
+    font-size: 1rem;
+    margin-bottom: 0.15rem;
+}
+
+.skill-panel__heading p {
+    color: var(--color-muted);
+    font-size: 0.8rem;
+    margin: 0;
+}
+
+.skill-notice:not(:empty) {
+    color: var(--color-primary);
+    margin-top: 0.35rem;
+}
+
+.skill-toolbar {
+    display: flex;
+    gap: 0.65rem;
+    justify-content: flex-end;
+}
+
+.skill-toolbar__item {
+    position: relative;
+}
+
+.skill-trigger {
+    align-items: center;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 0.75rem;
+    color: var(--color-text);
+    cursor: pointer;
+    display: inline-flex;
+    height: 3.5rem;
+    justify-content: center;
+    padding: 0;
+    position: relative;
+    width: 3.5rem;
+}
+
+.skill-trigger:hover:not(:disabled),
+.skill-trigger:focus-visible {
+    background: var(--color-primary-soft);
+    border-color: #cfc5ff;
+    color: var(--color-primary);
+}
+
+.skill-trigger > svg {
+    height: 1.45rem;
+    width: 1.45rem;
+}
+
+.skill-trigger__quantity {
+    align-items: center;
+    background: var(--color-primary-soft);
+    border-radius: 999px;
+    display: inline-flex;
+    font-size: 0.7rem;
+    font-weight: 800;
+    height: 1.35rem;
+    justify-content: center;
+    min-width: 1.35rem;
+    padding-inline: 0.25rem;
+    position: absolute;
+    right: -0.35rem;
+    top: -0.35rem;
+}
+
+.skill-trigger:disabled {
+    color: var(--color-muted);
+    cursor: not-allowed;
+    opacity: 0.45;
+}
+
+.skill-tooltip {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-card);
+    box-shadow: 0 0.9rem 2.5rem rgb(35 50 90 / 18%);
+    opacity: 0;
+    padding: 1rem;
+    pointer-events: none;
+    position: absolute;
+    right: 0;
+    top: calc(100% + 0.55rem);
+    transform: translateY(-0.25rem);
+    transition: opacity 100ms ease, transform 100ms ease, visibility 100ms ease;
+    visibility: hidden;
+    width: min(20rem, calc(100vw - 2rem));
+    z-index: 40;
+}
+
+.skill-toolbar__item:hover .skill-tooltip,
+.skill-trigger:focus-visible + .skill-tooltip {
+    opacity: 1;
+    transform: translateY(0);
+    visibility: visible;
+}
+
+.skill-tooltip h3 {
+    margin-bottom: 0.45rem;
+}
+
+.skill-tooltip__description {
+    color: var(--color-muted);
+    font-size: 0.86rem;
+}
+
+.skill-tooltip__details {
+    border-top: 1px solid var(--color-border);
+    display: flex;
+    gap: 0.5rem;
+    padding-top: 0.7rem;
+}
+
+.skill-tooltip__details span {
+    background: var(--color-surface-soft);
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    color: var(--color-muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.3rem 0.5rem;
+}
+
+.skill-tooltip__status {
+    color: var(--color-danger);
+    font-size: 0.82rem;
+    font-weight: 700;
+    margin: 0.75rem 0 0;
+}
+
+.skill-tooltip__status[data-available="true"] {
+    color: var(--color-success);
 }
 
 .problem-tabs {
     display: flex;
-    flex-wrap: wrap;
     gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    overflow-x: auto;
+    padding: 0.2rem 0.05rem 0.45rem;
+    scrollbar-width: thin;
 }
 
 .problem-tab {
-    padding: 0.5rem;
+    align-items: center;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-control);
+    color: var(--color-muted);
+    cursor: pointer;
+    display: grid;
+    flex: 0 0 auto;
+    gap: 0.25rem 0.5rem;
+    grid-template-columns: auto auto auto;
+    max-width: 20rem;
+    min-height: 3.25rem;
+    padding: 0.5rem 0.7rem;
+    text-align: left;
+}
+
+.problem-tab:hover {
+    border-color: #cfc5ff;
+    color: var(--color-text);
+}
+
+.problem-tab[aria-current="true"] {
+    background: var(--color-primary-soft);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.problem-tab__number {
+    align-items: center;
+    background: var(--color-primary-soft);
+    border-radius: 50%;
+    display: inline-flex;
+    font-size: 0.72rem;
+    font-weight: 800;
+    height: 1.5rem;
+    justify-content: center;
+    width: 1.5rem;
+}
+
+.problem-tab__title {
+    font-size: 0.83rem;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.problem-tab__points {
+    background: var(--color-surface-soft);
+    border-radius: 0.35rem;
+    font-size: 0.7rem;
+    font-weight: 750;
+    padding: 0.15rem 0.35rem;
+}
+
+.problem-tab__progress {
+    display: flex;
+    font-size: 0.65rem;
+    gap: 0.4rem;
+    grid-column: 2 / 4;
+    min-height: 0.95rem;
+}
+
+.my-progress {
+    color: var(--color-success);
+}
+
+.opponent-progress {
+    color: var(--color-blue);
+}
+
+.first-solver {
+    color: var(--color-warning);
+}
+
+.battle-problem {
+    align-items: start;
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: minmax(20rem, 0.82fr) minmax(28rem, 1.18fr);
+}
+
+.problem-content {
+    max-height: calc(100vh - 10rem);
+    overflow-y: auto;
+    position: sticky;
+    top: 6.5rem;
+}
+
+.problem-content__heading {
+    align-items: flex-start;
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.problem-content__heading h2 {
+    margin: 0.45rem 0 0;
+}
+
+.problem-prose {
+    color: #34405a;
+    line-height: 1.65;
+}
+
+.battle-samples {
+    border-top: 1px solid var(--color-border);
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+}
+
+.battle-sample {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.battle-sample + .battle-sample {
+    margin-top: 1rem;
+}
+
+.battle-sample pre {
+    margin: 0;
+    min-height: 3.2rem;
+}
+
+.workspace-column {
+    display: grid;
+    gap: 0.75rem;
+    min-width: 0;
+}
+
+.submission-form,
+.run-form {
+    margin: 0;
+    padding: 0;
+}
+
+.editor-heading {
+    align-items: center;
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    justify-content: space-between;
+    min-height: 3rem;
+    padding: 0.65rem 1rem;
+}
+
+.editor-heading label {
+    margin: 0;
+}
+
+.editor-heading span,
+.run-label {
+    color: var(--color-muted);
+    font-size: 0.78rem;
+    font-weight: 650;
+}
+
+.source-code-input {
+    border: 0;
+    border-radius: 0;
 }
 
 .code-editor {
-    border: 1px solid #777;
+    border: 0;
     max-width: 100%;
 }
 
 .code-editor .cm-editor {
-    min-height: 22rem;
+    min-height: 25rem;
 }
 
 .code-editor .cm-scroller {
     overflow: auto;
+}
+
+.submission-actions,
+.run-form__actions {
+    align-items: center;
+    border-top: 1px solid var(--color-border);
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+    min-height: 4rem;
+    padding: 0.65rem 1rem;
+}
+
+.submission-result,
+.run-verdict {
+    color: var(--color-muted);
+    margin: 0;
+}
+
+.run-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.run-form__input,
+.run-form__output {
+    padding: 0.9rem 1rem;
+}
+
+.run-form__input {
+    border-right: 1px solid var(--color-border);
+}
+
+.run-form textarea {
+    margin-top: 0.35rem;
+    resize: vertical;
+}
+
+.run-output {
+    margin: 0.75rem 0 0;
+    min-height: 5.1rem;
+}
+
+.run-form__actions {
+    grid-column: 1 / 3;
+}
+
+.typing-challenge {
+    background: var(--color-warning-soft);
+    border: 2px solid #e5b959;
+    border-radius: var(--radius-card);
+    box-shadow: 0 0.75rem 2rem rgb(90 64 14 / 14%);
+    padding: 1rem;
+    position: sticky;
+    top: 6.5rem;
+    z-index: 15;
+}
+
+.typing-challenge__heading {
+    align-items: center;
+    display: flex;
+    gap: 0.75rem;
+}
+
+.typing-challenge__heading > svg {
+    color: var(--color-warning);
+    flex: 0 0 auto;
+}
+
+.typing-challenge__heading h2 {
+    font-size: 1rem;
+    margin-bottom: 0.15rem;
+}
+
+.typing-challenge__heading p {
+    color: #75521c;
+    font-size: 0.82rem;
+    margin: 0;
+}
+
+.typing-challenge__heading > strong {
+    margin-left: auto;
+}
+
+.typing-prompt {
+    background: var(--color-surface);
+    border: 1px solid #e5c783;
+    border-radius: var(--radius-control);
+    display: block;
+    font-size: 1rem;
+    margin-block: 0.75rem;
+    padding: 0.7rem;
+    user-select: none;
+}
+
+.typing-form__actions {
+    display: flex;
+    gap: 0.6rem;
+}
+
+#typing-input {
+    flex: 1;
+}
+
+#typing-result {
+    color: var(--color-danger);
+    margin: 0.5rem 0 0;
 }
 
 .skill-blur-active .problem-content {
@@ -79,6 +587,126 @@
     user-select: none;
 }
 
-.skill-notice {
-    min-height: 1.5rem;
+@media (max-width: 76rem) {
+    .battle-scoreboard {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        position: static;
+    }
+
+    .battle-scoreboard > * {
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    .score-energy,
+    #surrender-form {
+        border-bottom: 0;
+    }
+
+    .skill-panel {
+        grid-template-columns: 1fr;
+    }
+
+    .skill-toolbar {
+        justify-content: flex-start;
+    }
+
+    .skill-tooltip {
+        left: 0;
+        right: auto;
+    }
+
+    .battle-problem {
+        grid-template-columns: minmax(18rem, 0.75fr) minmax(24rem, 1.25fr);
+    }
+}
+
+@media (max-width: 62rem) {
+    .battle-problem {
+        grid-template-columns: 1fr;
+    }
+
+    .problem-content {
+        max-height: none;
+        position: static;
+    }
+
+    .typing-challenge {
+        position: static;
+    }
+}
+
+@media (max-width: 48rem) {
+    .battle-scoreboard {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .battle-scoreboard > * {
+        border-right: 1px solid var(--color-border);
+        min-height: 4.5rem;
+    }
+
+    .battle-scoreboard > *:nth-child(even) {
+        border-right: 0;
+    }
+
+    .score-player--opponent {
+        grid-column: 1;
+        grid-row: 2;
+    }
+
+    .score-timer--opponent {
+        grid-column: 2;
+        grid-row: 2;
+    }
+
+    .score-player--opponent .score-value {
+        margin: 0;
+        order: 3;
+    }
+
+    .run-form {
+        grid-template-columns: 1fr;
+    }
+
+    .run-form__input {
+        border-bottom: 1px solid var(--color-border);
+        border-right: 0;
+    }
+
+    .run-form__actions {
+        grid-column: 1;
+    }
+
+    .battle-sample {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 30rem) {
+    .battle-heading {
+        align-items: flex-start;
+    }
+
+    .battle-live {
+        font-size: 0;
+        padding-top: 0.5rem;
+    }
+
+    .battle-scoreboard > * {
+        padding-inline: 0.65rem;
+    }
+
+    .score-player .avatar {
+        display: none;
+    }
+
+    .score-timer svg,
+    .score-energy svg {
+        display: none;
+    }
+
+    .typing-form__actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
 }

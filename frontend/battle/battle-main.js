@@ -133,6 +133,14 @@ export function bootstrapBattle({
 
     for (const tab of documentRoot.querySelectorAll(".problem-tab")) {
         tab.addEventListener("click", () => {
+            for (const problemTab of documentRoot.querySelectorAll(
+                ".problem-tab",
+            )) {
+                problemTab.setAttribute(
+                    "aria-current",
+                    problemTab === tab ? "true" : "false",
+                );
+            }
             for (const problem of documentRoot.querySelectorAll(
                 ".battle-problem",
             )) {

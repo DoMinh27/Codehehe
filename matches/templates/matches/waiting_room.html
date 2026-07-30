@@ -1,99 +1,175 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Phòng {{ match.room_code }} | CodeHehe{% endblock %}
 
 {% block content %}
-    <h1>Waiting Room</h1>
-    <p>Mã phòng: <strong id="room-code">{{ match.room_code }}</strong></p>
-    <p>Trạng thái: <span id="room-status">{{ match.get_status_display }}</span></p>
+<header class="page-heading">
+  <span class="page-heading__icon" aria-hidden="true">
+    <svg><use href="{% static 'matches/ui/icons.svg' %}#icon-users"></use></svg>
+  </span>
+  <div>
+    <h1>Phòng chờ</h1>
+    <p>{% if current_player.is_host %}Chia sẻ mã phòng và bắt đầu khi đủ người.{% else %}Đợi host bắt đầu trận đấu.{% endif %}</p>
+  </div>
+</header>
 
-    <section aria-labelledby="players-heading">
-        <h2 id="players-heading">Người chơi</h2>
-        <ol id="player-list">
-            {% for player in players %}
-                <li>{{ player.user.username }}{% if player.is_host %} (Host){% endif %}</li>
-            {% endfor %}
-            {% if players|length < 2 %}
-                <li>Đang chờ người chơi thứ hai…</li>
-            {% endif %}
-        </ol>
-    </section>
+<div class="room-summary">
+  <section class="card room-summary__card" aria-label="Mã phòng">
+    <span class="room-summary__icon" aria-hidden="true">
+      <svg><use href="{% static 'matches/ui/icons.svg' %}#icon-hash"></use></svg>
+    </span>
+    <div>
+      <span class="eyebrow">Mã phòng</span>
+      <strong class="room-code" id="room-code">{{ match.room_code }}</strong>
+      <span id="copy-status" class="copy-status" role="status"></span>
+    </div>
+    <button class="button button--quiet" type="button" data-copy-target="#room-code" data-copy-status="#copy-status">
+      <svg aria-hidden="true"><use href="{% static 'matches/ui/icons.svg' %}#icon-copy"></use></svg>
+      Sao chép
+    </button>
+  </section>
 
-    {% if current_player.is_host %}
-        <form method="post" action="{% url 'match-start' match_id=match.id %}">
-            {% csrf_token %}
-            <button id="start-match" type="submit" {% if players|length != 2 %}disabled{% endif %}>
-                Bắt đầu trận
-            </button>
-        </form>
+  <section class="card room-summary__card" aria-label="Trạng thái phòng">
+    <span class="room-summary__icon room-summary__icon--blue" aria-hidden="true">
+      <svg><use href="{% static 'matches/ui/icons.svg' %}#icon-clock"></use></svg>
+    </span>
+    <div>
+      <span class="eyebrow">Trạng thái</span>
+      <strong class="room-status" id="room-status">{{ match.get_status_display }}</strong>
+      <span class="muted">Hệ thống tự cập nhật khi có người tham gia.</span>
+    </div>
+  </section>
+</div>
+
+<section class="card player-panel" aria-labelledby="players-heading">
+  <header class="section-heading">
+    <div>
+      <h2 id="players-heading">Người chơi trong phòng</h2>
+      <p>Sẵn sàng cho trận đấu 1 đối 1.</p>
+    </div>
+    <span class="badge badge--neutral" id="player-count">{{ players|length }} / 2</span>
+  </header>
+  <ol id="player-list" class="player-list">
+    {% for player in players %}
+      <li class="player-row">
+        <span class="avatar avatar--large" aria-hidden="true">{{ player.user.username|slice:":1"|upper }}</span>
+        <span class="player-row__main">
+          <strong>{{ player.user.username }}</strong>
+          {% if player.is_host %}<span class="badge badge--warning">Host</span>{% endif %}
+        </span>
+        <span class="player-ready"><span aria-hidden="true"></span>Đã sẵn sàng</span>
+      </li>
+    {% endfor %}
+    {% if players|length < 2 %}
+      <li class="player-row player-row--empty">
+        <span class="avatar avatar--large avatar--empty" aria-hidden="true">?</span>
+        <span class="player-row__main"><span>Đang chờ người chơi thứ hai…</span></span>
+      </li>
     {% endif %}
+  </ol>
+</section>
 
-    <form method="post" action="{% url 'room-leave' room_code=match.room_code %}">
-        {% csrf_token %}
-        <button type="submit">
-            {% if current_player.is_host %}Hủy phòng{% else %}Rời phòng{% endif %}
-        </button>
+<div class="room-actions">
+  {% if current_player.is_host %}
+    <form method="post" action="{% url 'match-start' match_id=match.id %}">
+      {% csrf_token %}
+      <button class="button button--primary button--wide" id="start-match" type="submit" {% if players|length != 2 %}disabled{% endif %}>
+        <svg aria-hidden="true"><use href="{% static 'matches/ui/icons.svg' %}#icon-play"></use></svg>
+        Bắt đầu trận
+      </button>
     </form>
+  {% endif %}
 
-    <p id="poll-error" role="alert" hidden></p>
+  <form method="post" action="{% url 'room-leave' room_code=match.room_code %}">
+    {% csrf_token %}
+    <button class="button button--danger-outline button--wide" type="submit">
+      <svg aria-hidden="true"><use href="{% static 'matches/ui/icons.svg' %}#{% if current_player.is_host %}icon-trash{% else %}icon-logout{% endif %}"></use></svg>
+      {% if current_player.is_host %}Hủy phòng{% else %}Rời phòng{% endif %}
+    </button>
+  </form>
+</div>
 
-    <script>
-        (() => {
-            const stateUrl = "{% url 'waiting-room-state' room_code=match.room_code %}";
-            const playerList = document.getElementById("player-list");
-            const status = document.getElementById("room-status");
-            const error = document.getElementById("poll-error");
-            const startButton = document.getElementById("start-match");
-            let pollHandle = null;
+<p id="poll-error" class="alert alert--error" role="alert" hidden></p>
 
-            function schedulePoll() {
-                window.clearTimeout(pollHandle);
-                pollHandle = window.setTimeout(
-                    refreshRoom,
-                    document.hidden ? 5000 : 2000,
-                );
-            }
+<script>
+  (() => {
+    const stateUrl = "{% url 'waiting-room-state' room_code=match.room_code %}";
+    const playerList = document.getElementById("player-list");
+    const playerCount = document.getElementById("player-count");
+    const status = document.getElementById("room-status");
+    const error = document.getElementById("poll-error");
+    const startButton = document.getElementById("start-match");
+    let pollHandle = null;
 
-            async function refreshRoom() {
-                try {
-                    const response = await fetch(stateUrl, {
-                        headers: {"Accept": "application/json"},
-                    });
-                    if (!response.ok) {
-                        throw new Error("Không thể cập nhật phòng.");
-                    }
-                    const state = await response.json();
-                    if (state.battle_url) {
-                        window.location.assign(state.battle_url);
-                        return;
-                    }
-                    if (state.lobby_url) {
-                        window.location.assign(state.lobby_url);
-                        return;
-                    }
-                    status.textContent = state.status;
-                    if (startButton) {
-                        startButton.disabled = !state.can_start;
-                    }
-                    playerList.replaceChildren();
-                    for (const player of state.players) {
-                        const item = document.createElement("li");
-                        item.textContent = player
-                            ? `${player.username}${player.is_host ? " (Host)" : ""}`
-                            : "Đang chờ người chơi thứ hai…";
-                        playerList.appendChild(item);
-                    }
-                    error.hidden = true;
-                } catch (pollError) {
-                    error.textContent = pollError.message;
-                    error.hidden = false;
-                } finally {
-                    schedulePoll();
-                }
-            }
+    function schedulePoll() {
+      window.clearTimeout(pollHandle);
+      pollHandle = window.setTimeout(refreshRoom, document.hidden ? 5000 : 2000);
+    }
 
-            refreshRoom();
-            document.addEventListener("visibilitychange", schedulePoll);
-        })();
-    </script>
+    function createPlayerRow(player) {
+      const item = document.createElement("li");
+      item.className = `player-row${player ? "" : " player-row--empty"}`;
+
+      const avatar = document.createElement("span");
+      avatar.className = `avatar avatar--large${player ? "" : " avatar--empty"}`;
+      avatar.setAttribute("aria-hidden", "true");
+      avatar.textContent = player ? player.username.slice(0, 1).toUpperCase() : "?";
+
+      const main = document.createElement("span");
+      main.className = "player-row__main";
+      const name = document.createElement(player ? "strong" : "span");
+      name.textContent = player ? player.username : "Đang chờ người chơi thứ hai…";
+      main.appendChild(name);
+
+      if (player?.is_host) {
+        const host = document.createElement("span");
+        host.className = "badge badge--warning";
+        host.textContent = "Host";
+        main.appendChild(host);
+      }
+
+      item.append(avatar, main);
+      if (player) {
+        const ready = document.createElement("span");
+        ready.className = "player-ready";
+        const dot = document.createElement("span");
+        dot.setAttribute("aria-hidden", "true");
+        ready.append(dot, "Đã sẵn sàng");
+        item.appendChild(ready);
+      }
+      return item;
+    }
+
+    async function refreshRoom() {
+      try {
+        const response = await fetch(stateUrl, {headers: {"Accept": "application/json"}});
+        if (!response.ok) throw new Error("Không thể cập nhật phòng.");
+        const state = await response.json();
+        if (state.battle_url) {
+          window.location.assign(state.battle_url);
+          return;
+        }
+        if (state.lobby_url) {
+          window.location.assign(state.lobby_url);
+          return;
+        }
+        status.textContent = state.status === "WAITING" ? "ĐANG CHỜ" : state.status;
+        if (startButton) startButton.disabled = !state.can_start;
+        const activePlayers = state.players.filter(Boolean);
+        playerCount.textContent = `${activePlayers.length} / 2`;
+        playerList.replaceChildren(...state.players.map(createPlayerRow));
+        error.hidden = true;
+      } catch (pollError) {
+        error.textContent = pollError.message;
+        error.hidden = false;
+      } finally {
+        schedulePoll();
+      }
+    }
+
+    refreshRoom();
+    document.addEventListener("visibilitychange", schedulePoll);
+  })();
+</script>
 {% endblock %}

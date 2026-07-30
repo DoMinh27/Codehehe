@@ -1,4 +1,5 @@
 import {activeEffectCodes, newestSkillUseId} from "./effects.js";
+import {createSkillToolbar} from "./skill-toolbar.js";
 import {typingActionLocked, typingSecondsRemaining} from "./typing.js";
 
 
@@ -28,6 +29,12 @@ export function createStateRenderer({
     const typingCountdown = documentRoot.getElementById("typing-countdown");
     const typingInput = documentRoot.getElementById("typing-input");
     const typingResult = documentRoot.getElementById("typing-result");
+    const skillToolbar = createSkillToolbar({
+        documentRoot,
+        container: skillList,
+        iconSpriteUrl: skillList.dataset.iconSpriteUrl,
+        onUseSkill,
+    });
 
     let remainingSeconds = null;
     let opponentRemainingSeconds = null;
@@ -50,50 +57,32 @@ export function createStateRenderer({
         const opponentSolved = new Set(payload.opponent_solved_problem_ids);
         for (const tab of documentRoot.querySelectorAll(".problem-tab")) {
             const problemId = Number(tab.dataset.matchProblemId);
-            tab.querySelector(".my-progress").textContent =
-                mySolved.has(problemId) ? "✓ Bạn" : "";
-            tab.querySelector(".opponent-progress").textContent =
-                opponentSolved.has(problemId) ? "✓ Đối thủ" : "";
+            tab.querySelector(".my-progress").textContent = (
+                mySolved.has(problemId) ? "✓ Bạn" : ""
+            );
+            tab.querySelector(".opponent-progress").textContent = (
+                opponentSolved.has(problemId) ? "✓ Đối thủ" : ""
+            );
             const firstSolver = payload.first_solvers[String(problemId)];
-            tab.querySelector(".first-solver").textContent =
+            tab.querySelector(".first-solver").textContent = (
                 firstSolver === config.currentPlayerId
                     ? "★ Bạn giải đầu"
                     : firstSolver === config.opponentPlayerId
                         ? "★ Đối thủ giải đầu"
-                        : "";
+                        : ""
+            );
         }
     }
 
-    function renderSkills(payload, activeCodes) {
+    function renderSkills(payload) {
         documentRoot.getElementById("my-energy").textContent = payload.my_energy;
-        skillList.replaceChildren();
-        for (const skill of payload.my_skills) {
-            const card = documentRoot.createElement("article");
-            card.className = "skill-card";
-            const heading = documentRoot.createElement("h3");
-            heading.textContent = skill.name;
-            const description = documentRoot.createElement("p");
-            description.textContent = skill.description;
-            const resources = documentRoot.createElement("p");
-            resources.textContent =
-                `Charge: ${skill.quantity} — Cost: ${skill.energy_cost} Energy`;
-            const button = documentRoot.createElement("button");
-            button.type = "button";
-            button.textContent = "Dùng lên đối thủ";
-            button.disabled =
-                payload.my_timed_out
-                || payload.my_action_locked
-                || config.opponentPlayerId === null
-                || skill.quantity < 1
-                || payload.my_energy < skill.energy_cost
-                || activeCodes.has(skill.code);
-            button.addEventListener(
-                "click",
-                () => onUseSkill(skill.code, button),
-            );
-            card.append(heading, description, resources, button);
-            skillList.append(card);
-        }
+        skillToolbar.update({
+            skills: payload.my_skills,
+            energy: payload.my_energy,
+            actionLocked: payload.my_action_locked,
+            timedOut: payload.my_timed_out,
+            hasOpponent: config.opponentPlayerId !== null,
+        });
     }
 
     function moveTypingPopupToVisibleEditor() {
@@ -101,14 +90,15 @@ export function createStateRenderer({
             ".battle-problem",
         )].find((problem) => !problem.hidden);
         const submissionForm = visibleProblem?.querySelector(".submission-form");
+        const workspace = submissionForm?.parentElement;
         if (
             submissionForm
             && (
-                typingPanel.parentElement !== visibleProblem
+                typingPanel.parentElement !== workspace
                 || typingPanel.nextElementSibling !== submissionForm
             )
         ) {
-            visibleProblem.insertBefore(typingPanel, submissionForm);
+            workspace.insertBefore(typingPanel, submissionForm);
         }
     }
 
@@ -146,9 +136,10 @@ export function createStateRenderer({
         );
         if (newUses.length) {
             const latest = newUses.at(-1);
-            skillNotice.textContent =
+            skillNotice.textContent = (
                 `${latest.source_username} đã dùng ${latest.name} lên `
-                + `${latest.target_username}.`;
+                + `${latest.target_username}.`
+            );
         }
         newestRenderedSkillUseId = Math.max(
             newestRenderedSkillUseId,
@@ -167,7 +158,7 @@ export function createStateRenderer({
             "skill-blur-active",
             activeCodes.has("BLUR_STATEMENT"),
         );
-        renderSkills(payload, activeCodes);
+        renderSkills(payload);
     }
 
     function updateActionAvailability(payload) {
@@ -179,10 +170,11 @@ export function createStateRenderer({
             button.dataset.actionLocked = (
                 payload.my_action_locked ? "true" : "false"
             );
-            button.disabled =
+            button.disabled = (
                 payload.my_timed_out
                 || payload.my_action_locked
-                || button.dataset.inFlight === "true";
+                || button.dataset.inFlight === "true"
+            );
         }
     }
 
@@ -190,8 +182,9 @@ export function createStateRenderer({
         const mine = displayedRemaining(remainingSeconds);
         const theirs = displayedRemaining(opponentRemainingSeconds);
         timer.textContent = mine === null ? "--:--" : formatSeconds(mine);
-        opponentTimer.textContent =
-            theirs === null ? "--:--" : formatSeconds(theirs);
+        opponentTimer.textContent = (
+            theirs === null ? "--:--" : formatSeconds(theirs)
+        );
         const typingRemaining = displayedRemaining(typingRemainingSeconds);
         typingCountdown.textContent = String(typingRemaining ?? 0);
         if (
@@ -219,8 +212,9 @@ export function createStateRenderer({
         opponentRemainingSeconds = payload.opponent_remaining_seconds;
         lastStateAt = now();
         documentRoot.getElementById("my-score").textContent = payload.my_score;
-        documentRoot.getElementById("opponent-score").textContent =
-            payload.opponent_score;
+        documentRoot.getElementById("opponent-score").textContent = (
+            payload.opponent_score
+        );
         updateProgress(payload);
         renderTypingChallenge(payload);
         applyEffects(payload);

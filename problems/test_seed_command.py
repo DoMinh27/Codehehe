@@ -20,6 +20,9 @@ class SeedProblemsCommandTests(TestCase):
 
         self.assertEqual(Problem.objects.count(), 10)
         self.assertEqual(ProblemTestCase.objects.count(), 70)
+        self.assertFalse(
+            Problem.objects.filter(reference_solution="").exists()
+        )
         self.assertEqual(
             Problem.objects.filter(difficulty=Problem.Difficulty.EASY).count(),
             3,
@@ -72,6 +75,19 @@ class SeedProblemsCommandTests(TestCase):
             with self.assertRaisesMessage(
                 CommandError,
                 "at least one sample and one hidden test",
+            ):
+                call_command("seed_problems", file=seed_file, stdout=StringIO())
+
+        self.assertFalse(Problem.objects.exists())
+
+    def test_active_problem_requires_reference_solution(self):
+        payload = self._default_payload()
+        payload["problems"][0]["reference_solution"] = ""
+
+        with self._temporary_seed(payload) as seed_file:
+            with self.assertRaisesMessage(
+                CommandError,
+                "reference_solution must be a non-empty string",
             ):
                 call_command("seed_problems", file=seed_file, stdout=StringIO())
 

@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import battle, rooms, skills, submissions
+from .views import battle, reviews, rooms, skills, submissions
 
 urlpatterns = [
     path("active/state/", rooms.active_match_state, name="active-match-state"),
@@ -41,6 +41,11 @@ urlpatterns = [
         name="match-surrender",
     ),
     path("<int:match_id>/result/", battle.match_result, name="match-result"),
+    path(
+        "<int:match_id>/ai-reviews/state/",
+        reviews.ai_review_state,
+        name="match-ai-review-state",
+    ),
     path(
         "<int:match_id>/problems/<int:match_problem_id>/run/",
         submissions.run_code,

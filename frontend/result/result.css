@@ -1,0 +1,23 @@
+.ai-review-section {
+    margin-top: 2rem;
+}
+
+.ai-review-player {
+    display: grid;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.ai-review-card {
+    border: 1px solid #d7dce2;
+    border-radius: 0.5rem;
+    padding: 1rem;
+}
+
+.ai-review-card[data-status="COMPLETED"] {
+    border-color: #4d9b67;
+}
+
+.ai-review-card h4 {
+    margin-top: 0;
+}

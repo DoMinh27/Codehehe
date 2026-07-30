@@ -17,6 +17,7 @@ PROBLEM_FIELDS = {
     "difficulty",
     "points",
     "starter_code",
+    "reference_solution",
     "order",
     "is_active",
     "test_cases",
@@ -90,8 +91,8 @@ class Command(BaseCommand):
     def _validate_payload(self, payload):
         if not isinstance(payload, dict):
             raise CommandError("The JSON root must be an object.")
-        if payload.get("version") != 1:
-            raise CommandError("Only seed format version 1 is supported.")
+        if payload.get("version") != 2:
+            raise CommandError("Only seed format version 2 is supported.")
 
         problems = payload.get("problems")
         if not isinstance(problems, list) or not problems:
@@ -136,6 +137,10 @@ class Command(BaseCommand):
         self._require_integer(problem["points"], f"{label}.points", minimum=1)
         if not isinstance(problem["starter_code"], str):
             raise CommandError(f"{label}.starter_code must be a string.")
+        self._require_text(
+            problem["reference_solution"],
+            f"{label}.reference_solution",
+        )
         self._require_integer(problem["order"], f"{label}.order", minimum=0)
         if not isinstance(problem["is_active"], bool):
             raise CommandError(f"{label}.is_active must be a boolean.")

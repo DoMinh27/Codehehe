@@ -1,6 +1,13 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Kết quả {{ match.room_code }} | CodeHehe{% endblock %}
+
+{% block extra_head %}
+    {% if ai_review_config %}
+        <link rel="stylesheet" href="{% static 'matches/dist/result.bundle.css' %}">
+    {% endif %}
+{% endblock %}
 
 {% block content %}
     <h1>Kết quả trận {{ match.room_code }}</h1>
@@ -48,5 +55,26 @@
         </ul>
     </section>
 
+    {% if ai_review_config %}
+        <section id="ai-review-section" class="ai-review-section">
+            <h2>Phân tích bài làm bằng AI</h2>
+            <p>
+                Phân tích chỉ xuất hiện sau trận và không ảnh hưởng đến điểm số.
+            </p>
+            <p id="ai-review-notice" role="status"></p>
+            <div id="ai-review-list"></div>
+        </section>
+        {{ ai_review_config|json_script:"ai-review-config" }}
+    {% endif %}
+
     <p><a href="{% url 'lobby' %}">Về Lobby</a></p>
+{% endblock %}
+
+{% block extra_scripts %}
+    {% if ai_review_config %}
+        <script
+            src="{% static 'matches/dist/result-main.bundle.js' %}"
+            defer
+        ></script>
+    {% endif %}
 {% endblock %}

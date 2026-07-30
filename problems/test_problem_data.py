@@ -1,4 +1,6 @@
 import json
+import subprocess
+import sys
 
 from django.test import SimpleTestCase
 
@@ -123,6 +125,32 @@ class ProblemDataAuditTests(SimpleTestCase):
                 ):
                     self.assertEqual(
                         solver(test_case["input_data"]),
+                        test_case["expected_output"],
+                    )
+
+    def test_every_reference_solution_passes_all_seed_tests(self):
+        for problem in self.problems:
+            for test_case in problem["test_cases"]:
+                with self.subTest(
+                    problem=problem["slug"],
+                    test_case=test_case["order"],
+                ):
+                    completed = subprocess.run(
+                        [
+                            sys.executable,
+                            "-I",
+                            "-c",
+                            problem["reference_solution"],
+                        ],
+                        input=test_case["input_data"],
+                        capture_output=True,
+                        text=True,
+                        timeout=2,
+                        check=False,
+                    )
+                    self.assertEqual(completed.returncode, 0, completed.stderr)
+                    self.assertEqual(
+                        completed.stdout.rstrip("\r\n"),
                         test_case["expected_output"],
                     )
 

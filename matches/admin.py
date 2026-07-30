@@ -11,6 +11,7 @@ from .models import (
     SkillEffect,
     SkillUse,
     Submission,
+    SubmissionAIReview,
     TypingChallenge,
 )
 
@@ -31,6 +32,7 @@ class MatchAdmin(admin.ModelAdmin):
         "room_code",
         "host",
         "status",
+        "ai_review_enabled",
         "ruleset_version",
         "is_draw",
         "winner",
@@ -41,6 +43,7 @@ class MatchAdmin(admin.ModelAdmin):
     readonly_fields = (
         "ruleset_version",
         "rules_snapshot",
+        "ai_review_enabled",
         "created_at",
         "updated_at",
     )
@@ -184,6 +187,43 @@ class SubmissionAdmin(admin.ModelAdmin):
     list_filter = ("verdict", "language", "is_score_processed")
     search_fields = ("match__room_code", "player__user__username")
     readonly_fields = ("received_at", "completed_at")
+
+
+@admin.register(SubmissionAIReview)
+class SubmissionAIReviewAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "submission",
+        "status",
+        "provider",
+        "model",
+        "attempt_count",
+        "created_at",
+        "completed_at",
+    )
+    list_filter = ("status", "provider", "model", "prompt_version")
+    search_fields = (
+        "submission__match__room_code",
+        "submission__player__user__username",
+    )
+    readonly_fields = (
+        "submission",
+        "prompt_version",
+        "status",
+        "provider",
+        "model",
+        "result",
+        "attempt_count",
+        "next_attempt_at",
+        "processing_started_at",
+        "completed_at",
+        "input_tokens",
+        "output_tokens",
+        "reasoning_tokens",
+        "error_code",
+        "created_at",
+        "updated_at",
+    )
 
 
 @admin.register(PlayerProblemProgress)

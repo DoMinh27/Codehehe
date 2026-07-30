@@ -55,6 +55,7 @@ class Match(models.Model):
         default=CURRENT_RULESET_VERSION,
     )
     rules_snapshot = models.JSONField(default=default_v3_rules_snapshot)
+    ai_review_enabled = models.BooleanField(default=False)
     winner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
@@ -357,6 +358,7 @@ class MatchProblem(models.Model):
     title_snapshot = models.CharField(max_length=200)
     statement_snapshot = models.TextField()
     starter_code_snapshot = models.TextField(blank=True)
+    reference_solution_snapshot = models.TextField(blank=True)
     difficulty_snapshot = models.CharField(max_length=20)
     sample_tests_snapshot = models.JSONField(default=list)
     hidden_tests_snapshot = models.JSONField(default=list)
@@ -465,6 +467,58 @@ class Submission(models.Model):
 
     def __str__(self):
         return f"Submission #{self.pk} ({self.verdict})"
+
+
+class SubmissionAIReview(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        PROCESSING = "PROCESSING", "Processing"
+        COMPLETED = "COMPLETED", "Completed"
+        FAILED = "FAILED", "Failed"
+
+    submission = models.ForeignKey(
+        Submission,
+        on_delete=models.CASCADE,
+        related_name="ai_reviews",
+    )
+    prompt_version = models.CharField(max_length=40)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+        db_index=True,
+    )
+    provider = models.CharField(max_length=40, default="groq")
+    model = models.CharField(max_length=100)
+    result = models.JSONField(default=dict, blank=True)
+    attempt_count = models.PositiveSmallIntegerField(default=0)
+    next_attempt_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    processing_started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    input_tokens = models.PositiveIntegerField(null=True, blank=True)
+    output_tokens = models.PositiveIntegerField(null=True, blank=True)
+    reasoning_tokens = models.PositiveIntegerField(null=True, blank=True)
+    error_code = models.CharField(max_length=60, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["created_at", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["submission", "prompt_version"],
+                name="ai_review_submission_prompt_unique",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["status", "next_attempt_at"],
+                name="ai_review_due_idx",
+            ),
+        ]
+
+    def __str__(self):
+        return f"AI review #{self.pk} ({self.status})"
 
 
 class PlayerProblemProgress(models.Model):

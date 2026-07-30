@@ -1,6 +1,7 @@
 """Match start and finish lifecycle services."""
 
 from dataclasses import dataclass, field
+import logging
 from random import SystemRandom
 from typing import Callable
 
@@ -20,8 +21,23 @@ from matches.models import (
 from matches.rules import rules_for_match
 from problems.models import Problem
 
-from .scoring import ScoringService
+from .ai_review import AIReviewQueueService
 from .db import retry_transient_db_lock
+from .scoring import ScoringService
+
+logger = logging.getLogger(__name__)
+
+
+def schedule_ai_reviews(*, match_id: int, queue_service) -> None:
+    """Enqueue after commit without allowing AI work to break match finalization."""
+
+    def enqueue_safely():
+        try:
+            queue_service.enqueue_match(match_id=match_id)
+        except Exception:
+            logger.exception("Could not enqueue AI reviews for match %s", match_id)
+
+    transaction.on_commit(enqueue_safely)
 
 
 class MatchLifecycleError(Exception):
@@ -111,7 +127,10 @@ class StartMatchService:
                     "test_cases",
                     filter=Q(test_cases__is_sample=False),
                 )
-            ).filter(is_active=True, hidden_test_count__gt=0)
+            ).filter(
+                is_active=True,
+                hidden_test_count__gt=0,
+            ).exclude(reference_solution="")
             selected_problems = []
             for difficulty, required_count in rules.problem_counts.items():
                 if required_count == 0:
@@ -154,6 +173,7 @@ class StartMatchService:
                         title_snapshot=problem.title,
                         statement_snapshot=problem.statement,
                         starter_code_snapshot=problem.starter_code,
+                        reference_solution_snapshot=problem.reference_solution,
                         difficulty_snapshot=problem.difficulty,
                         sample_tests_snapshot=sample_tests,
                         hidden_tests_snapshot=hidden_tests,
@@ -199,6 +219,9 @@ class FinishMatchService:
     """Idempotently finalize an eligible match and persist its result."""
 
     scoring_service: ScoringService = field(default_factory=ScoringService)
+    review_queue_service: AIReviewQueueService = field(
+        default_factory=AIReviewQueueService
+    )
 
     def finalize(self, *, match_id: int, now=None) -> Match:
         return retry_transient_db_lock(
@@ -321,6 +344,10 @@ class FinishMatchService:
                 ]
             )
             MatchPlayer.objects.filter(match=match).update(is_active=False)
+            schedule_ai_reviews(
+                match_id=match.pk,
+                queue_service=self.review_queue_service,
+            )
             return match
 
     def try_finalize(self, *, match_id: int, now=None) -> Match | None:
@@ -339,13 +366,16 @@ class FinishMatchService:
 class SurrenderMatchService:
     """Immediately finish a playing match in favor of the opponent."""
 
+    review_queue_service: AIReviewQueueService = field(
+        default_factory=AIReviewQueueService
+    )
+
     def surrender(self, *, user, match_id: int, now=None) -> Match:
         return retry_transient_db_lock(
             lambda: self._surrender_once(user=user, match_id=match_id, now=now)
         )
 
-    @staticmethod
-    def _surrender_once(*, user, match_id: int, now=None) -> Match:
+    def _surrender_once(self, *, user, match_id: int, now=None) -> Match:
         with transaction.atomic():
             try:
                 match = Match.objects.select_for_update().get(pk=match_id)
@@ -398,4 +428,8 @@ class SurrenderMatchService:
                 ]
             )
             MatchPlayer.objects.filter(match=match).update(is_active=False)
+            schedule_ai_reviews(
+                match_id=match.pk,
+                queue_service=self.review_queue_service,
+            )
             return match

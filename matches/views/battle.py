@@ -12,7 +12,9 @@ from matches.models import (
     MatchPlayer,
     MatchProblem,
     PlayerProblemProgress,
+    SubmissionAIReview,
 )
+from matches.services.ai_review_state import AIReviewStateService
 from matches.services.gameplay import (
     FinishMatchService,
     InsufficientProblemsError,
@@ -311,5 +313,24 @@ def match_result(request, match_id):
                 for player in players
             ],
             "match_problems": match_problems,
+            "ai_review_config": (
+                {
+                    "stateUrl": reverse(
+                        "match-ai-review-state",
+                        kwargs={"match_id": match.pk},
+                    ),
+                    "initialState": AIReviewStateService().get(
+                        user=request.user,
+                        match_id=match.pk,
+                    ),
+                }
+                if (
+                    match.ai_review_enabled
+                    or SubmissionAIReview.objects.filter(
+                        submission__match=match
+                    ).exists()
+                )
+                else None
+            ),
         },
     )

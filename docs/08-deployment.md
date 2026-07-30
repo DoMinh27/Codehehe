@@ -68,6 +68,11 @@ DJANGO_SECURE_SSL_REDIRECT=False
 DJANGO_SECURE_COOKIES=False
 DJANGO_HSTS_SECONDS=0
 DJANGO_HSTS_PRELOAD=False
+AI_REVIEW_ENABLED=True
+GROQ_API_KEY=<GROQ_API_KEY>
+AI_REVIEW_MODEL=openai/gpt-oss-120b
+AI_REVIEW_REASONING_EFFORT=low
+AI_REVIEW_PROMPT_VERSION=v2
 DJANGO_LOG_LEVEL=INFO
 MATCH_PENDING_SUBMISSION_TIMEOUT_SECONDS=120
 MATCH_DURATION_SECONDS=300
@@ -93,6 +98,8 @@ Install the tracked service and Nginx templates:
 sudo cp /opt/codehehe/app/deploy/codehehe.service /etc/systemd/system/codehehe.service
 sudo cp /opt/codehehe/app/deploy/codehehe-sweep.service /etc/systemd/system/codehehe-sweep.service
 sudo cp /opt/codehehe/app/deploy/codehehe-sweep.timer /etc/systemd/system/codehehe-sweep.timer
+sudo cp /opt/codehehe/app/deploy/codehehe-ai-review.service /etc/systemd/system/codehehe-ai-review.service
+sudo cp /opt/codehehe/app/deploy/codehehe-ai-review.timer /etc/systemd/system/codehehe-ai-review.timer
 sed "s/CODEHEHE_FQDN/<CODEHEHE_FQDN>/g" \
   /opt/codehehe/app/deploy/nginx-codehehe.conf \
   | sudo tee /etc/nginx/sites-available/codehehe >/dev/null
@@ -118,6 +125,7 @@ sudo -u codehehe /opt/codehehe/venv/bin/python manage.py judge0_spike
 
 sudo systemctl enable --now codehehe
 sudo systemctl enable --now codehehe-sweep.timer
+sudo systemctl enable --now codehehe-ai-review.timer
 sudo systemctl enable --now nginx
 curl --fail http://127.0.0.1:8000/health/
 curl --fail http://127.0.0.1:8000/health/ready/
@@ -142,6 +150,7 @@ DJANGO_HSTS_PRELOAD=False
 ```bash
 sudo systemctl restart codehehe
 sudo systemctl restart codehehe-sweep.timer
+sudo systemctl restart codehehe-ai-review.timer
 curl --fail https://<CODEHEHE_FQDN>/health/
 curl --fail https://<CODEHEHE_FQDN>/health/ready/
 ```
@@ -212,6 +221,7 @@ sudo systemctl start codehehe
 ```bash
 sudo systemctl status codehehe --no-pager
 sudo systemctl status codehehe-sweep.timer --no-pager
+sudo systemctl status codehehe-ai-review.timer --no-pager
 sudo journalctl -u codehehe -n 100 --no-pager
 sudo nginx -t
 sudo certbot certificates

@@ -17,6 +17,7 @@ class Problem(models.Model):
     )
     points = models.PositiveIntegerField()
     starter_code = models.TextField(blank=True)
+    reference_solution = models.TextField(blank=True)
     order = models.PositiveIntegerField(default=0, db_index=True)
     is_active = models.BooleanField(default=True, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)

@@ -350,7 +350,7 @@ class SubmissionViewTests(TestCase):
             content_type="application/json",
         )
 
-    @patch("matches.views.Judge0Service.from_environment")
+    @patch("matches.views.submissions.Judge0Service.from_environment")
     def test_authenticated_json_submit_returns_safe_contract(self, judge_factory):
         judge_factory.return_value = FakeJudgeService(
             result=JudgeResult(
@@ -386,7 +386,10 @@ class SubmissionViewTests(TestCase):
         self.match.save()
         self.assertEqual(self.post('{"source_code": "print(1)"}').status_code, 409)
 
-    @patch("matches.views.Judge0Service.from_environment", return_value=FakeJudgeService())
+    @patch(
+        "matches.views.submissions.Judge0Service.from_environment",
+        return_value=FakeJudgeService(),
+    )
     def test_view_requires_csrf_for_session_submit(self, judge_factory):
         csrf_client = Client(enforce_csrf_checks=True)
         csrf_client.force_login(self.user)
@@ -394,7 +397,7 @@ class SubmissionViewTests(TestCase):
         self.assertEqual(response.status_code, 403)
 
     @patch(
-        "matches.views.Judge0Service.from_environment",
+        "matches.views.submissions.Judge0Service.from_environment",
         side_effect=Judge0ConfigurationError("missing JUDGE0_BASE_URL"),
     )
     def test_judge_configuration_error_is_persisted_as_internal_error(self, judge_factory):

@@ -20,6 +20,7 @@ from matches.models import (
 from matches.rules import rules_for_match
 from problems.models import Problem
 
+from .ai_review import AIReviewQueueService
 from .scoring import ScoringService
 from .db import retry_transient_db_lock
 
@@ -203,6 +204,9 @@ class FinishMatchService:
     """Idempotently finalize an eligible match and persist its result."""
 
     scoring_service: ScoringService = field(default_factory=ScoringService)
+    review_queue_service: AIReviewQueueService = field(
+        default_factory=AIReviewQueueService
+    )
 
     def finalize(self, *, match_id: int, now=None) -> Match:
         return retry_transient_db_lock(
@@ -325,6 +329,7 @@ class FinishMatchService:
                 ]
             )
             MatchPlayer.objects.filter(match=match).update(is_active=False)
+            self.review_queue_service.enqueue_match(match_id=match.pk)
             return match
 
     def try_finalize(self, *, match_id: int, now=None) -> Match | None:
@@ -343,13 +348,16 @@ class FinishMatchService:
 class SurrenderMatchService:
     """Immediately finish a playing match in favor of the opponent."""
 
+    review_queue_service: AIReviewQueueService = field(
+        default_factory=AIReviewQueueService
+    )
+
     def surrender(self, *, user, match_id: int, now=None) -> Match:
         return retry_transient_db_lock(
             lambda: self._surrender_once(user=user, match_id=match_id, now=now)
         )
 
-    @staticmethod
-    def _surrender_once(*, user, match_id: int, now=None) -> Match:
+    def _surrender_once(self, *, user, match_id: int, now=None) -> Match:
         with transaction.atomic():
             try:
                 match = Match.objects.select_for_update().get(pk=match_id)
@@ -402,4 +410,5 @@ class SurrenderMatchService:
                 ]
             )
             MatchPlayer.objects.filter(match=match).update(is_active=False)
+            self.review_queue_service.enqueue_match(match_id=match.pk)
             return match

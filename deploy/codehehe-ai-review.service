@@ -1,0 +1,11 @@
+[Unit]
+Description=CodeHehe queued AI review processor
+After=codehehe.service
+
+[Service]
+Type=oneshot
+Group=codehehe
+User=codehehe
+WorkingDirectory=/opt/codehehe/app
+EnvironmentFile=/etc/codehehe/codehehe.env
+ExecStart=/opt/codehehe/venv/bin/python manage.py process_ai_reviews --limit 1

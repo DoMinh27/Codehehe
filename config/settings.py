@@ -201,3 +201,32 @@ MATCH_RATE_LIMIT_WINDOW_SECONDS = int(
     os.getenv("MATCH_RATE_LIMIT_WINDOW_SECONDS", "60")
 )
 READINESS_CHECK_JUDGE0 = env_bool("READINESS_CHECK_JUDGE0")
+
+AI_REVIEW_ENABLED = env_bool("AI_REVIEW_ENABLED")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
+AI_REVIEW_MODEL = os.getenv("AI_REVIEW_MODEL", "openai/gpt-oss-120b").strip()
+AI_REVIEW_REASONING_EFFORT = os.getenv(
+    "AI_REVIEW_REASONING_EFFORT",
+    "low",
+).strip()
+if AI_REVIEW_REASONING_EFFORT not in {"low", "medium", "high"}:
+    raise ImproperlyConfigured(
+        "AI_REVIEW_REASONING_EFFORT must be low, medium, or high."
+    )
+AI_REVIEW_PROMPT_VERSION = os.getenv("AI_REVIEW_PROMPT_VERSION", "v1").strip()
+AI_REVIEW_MAX_OUTPUT_TOKENS = int(
+    os.getenv("AI_REVIEW_MAX_OUTPUT_TOKENS", "800")
+)
+AI_REVIEW_MAX_ATTEMPTS = int(os.getenv("AI_REVIEW_MAX_ATTEMPTS", "5"))
+AI_REVIEW_STALE_SECONDS = int(os.getenv("AI_REVIEW_STALE_SECONDS", "300"))
+AI_REVIEW_MAX_SOURCE_CHARS = int(
+    os.getenv("AI_REVIEW_MAX_SOURCE_CHARS", "16000")
+)
+for setting_name in (
+    "AI_REVIEW_MAX_OUTPUT_TOKENS",
+    "AI_REVIEW_MAX_ATTEMPTS",
+    "AI_REVIEW_STALE_SECONDS",
+    "AI_REVIEW_MAX_SOURCE_CHARS",
+):
+    if globals()[setting_name] <= 0:
+        raise ImproperlyConfigured(f"{setting_name} must be greater than zero.")

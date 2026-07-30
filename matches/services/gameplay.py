@@ -1,6 +1,7 @@
 """Match start and finish lifecycle services."""
 
 from dataclasses import dataclass, field
+import logging
 from random import SystemRandom
 from typing import Callable
 
@@ -21,8 +22,22 @@ from matches.rules import rules_for_match
 from problems.models import Problem
 
 from .ai_review import AIReviewQueueService
-from .scoring import ScoringService
 from .db import retry_transient_db_lock
+from .scoring import ScoringService
+
+logger = logging.getLogger(__name__)
+
+
+def schedule_ai_reviews(*, match_id: int, queue_service) -> None:
+    """Enqueue after commit without allowing AI work to break match finalization."""
+
+    def enqueue_safely():
+        try:
+            queue_service.enqueue_match(match_id=match_id)
+        except Exception:
+            logger.exception("Could not enqueue AI reviews for match %s", match_id)
+
+    transaction.on_commit(enqueue_safely)
 
 
 class MatchLifecycleError(Exception):
@@ -329,7 +344,10 @@ class FinishMatchService:
                 ]
             )
             MatchPlayer.objects.filter(match=match).update(is_active=False)
-            self.review_queue_service.enqueue_match(match_id=match.pk)
+            schedule_ai_reviews(
+                match_id=match.pk,
+                queue_service=self.review_queue_service,
+            )
             return match
 
     def try_finalize(self, *, match_id: int, now=None) -> Match | None:
@@ -410,5 +428,8 @@ class SurrenderMatchService:
                 ]
             )
             MatchPlayer.objects.filter(match=match).update(is_active=False)
-            self.review_queue_service.enqueue_match(match_id=match.pk)
+            schedule_ai_reviews(
+                match_id=match.pk,
+                queue_service=self.review_queue_service,
+            )
             return match

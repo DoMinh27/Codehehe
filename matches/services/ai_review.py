@@ -271,6 +271,7 @@ class AIReviewQueueService:
         match = Match.objects.filter(
             pk=match_id,
             status=Match.Status.FINISHED,
+            ai_review_enabled=True,
         ).first()
         if match is None:
             return 0

@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from django.test import Client, TestCase
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 from .models import Match, MatchPlayer
@@ -38,6 +38,14 @@ class RoomServiceTests(TestCase):
                 is_host=True,
             ).exists()
         )
+
+    @override_settings(AI_REVIEW_ENABLED=True)
+    def test_create_room_snapshots_ai_review_feature_flag(self):
+        match = CreateRoomService(code_generator=lambda: "AI0001").create(
+            user=self.host
+        )
+
+        self.assertTrue(match.ai_review_enabled)
 
     def test_create_room_retries_after_code_collision(self):
         Match.objects.create(room_code="ABC123", host=self.host)

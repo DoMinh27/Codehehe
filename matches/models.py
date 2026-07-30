@@ -55,6 +55,7 @@ class Match(models.Model):
         default=CURRENT_RULESET_VERSION,
     )
     rules_snapshot = models.JSONField(default=default_v3_rules_snapshot)
+    ai_review_enabled = models.BooleanField(default=False)
     winner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,

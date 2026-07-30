@@ -5,6 +5,7 @@ from dataclasses import dataclass
 import secrets
 import string
 
+from django.conf import settings
 from django.db import IntegrityError, transaction
 
 from matches.models import Match, MatchPlayer
@@ -133,6 +134,7 @@ class CreateRoomService:
                 duration_seconds=rules.match_duration_seconds,
                 ruleset_version=rules.version,
                 rules_snapshot=rules.to_snapshot(),
+                ai_review_enabled=settings.AI_REVIEW_ENABLED,
             )
             MatchPlayer.objects.create(
                 match=match,

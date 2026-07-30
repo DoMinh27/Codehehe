@@ -32,6 +32,7 @@ class MatchAdmin(admin.ModelAdmin):
         "room_code",
         "host",
         "status",
+        "ai_review_enabled",
         "ruleset_version",
         "is_draw",
         "winner",
@@ -42,6 +43,7 @@ class MatchAdmin(admin.ModelAdmin):
     readonly_fields = (
         "ruleset_version",
         "rules_snapshot",
+        "ai_review_enabled",
         "created_at",
         "updated_at",
     )

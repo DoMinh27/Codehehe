@@ -2,8 +2,8 @@
   "name": "codehehe-frontend",
   "private": true,
   "scripts": {
-    "build": "esbuild ./frontend/battle/main.js ./frontend/battle/battle.css --bundle --minify --outdir=./matches/static/matches/dist --entry-names=[name].bundle --sourcemap",
-    "dev": "esbuild ./frontend/battle/main.js ./frontend/battle/battle.css --bundle --outdir=./matches/static/matches/dist --entry-names=[name].bundle --sourcemap --watch",
+    "build": "esbuild ./frontend/battle/main.js ./frontend/battle/battle.css ./frontend/result/result-main.js ./frontend/result/result.css --bundle --minify --outdir=./matches/static/matches/dist --entry-names=[name].bundle --sourcemap",
+    "dev": "esbuild ./frontend/battle/main.js ./frontend/battle/battle.css ./frontend/result/result-main.js ./frontend/result/result.css --bundle --outdir=./matches/static/matches/dist --entry-names=[name].bundle --sourcemap --watch",
     "test": "vitest run --environment jsdom"
   },
   "dependencies": {

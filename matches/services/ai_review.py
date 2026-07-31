@@ -292,7 +292,14 @@ class GeminiAIReviewProvider:
                     "role": "user",
                     "parts": [
                         {
-                            "text": GroqAIReviewProvider._build_prompt(review_input),
+                            "text": (
+                                GroqAIReviewProvider._build_prompt(review_input)
+                                + "\n\nReturn only one valid JSON object with exactly "
+                                "these keys: approach_summary, time_complexity, "
+                                "space_complexity, strengths, improvements, "
+                                "better_approach. strengths and improvements must be "
+                                "arrays of strings. Do not include markdown fences."
+                            ),
                         }
                     ],
                 }
@@ -300,7 +307,6 @@ class GeminiAIReviewProvider:
             "generationConfig": {
                 "maxOutputTokens": self.max_output_tokens,
                 "responseMimeType": "application/json",
-                "responseJsonSchema": REVIEW_JSON_SCHEMA,
             },
         }
         try:

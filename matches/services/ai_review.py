@@ -7,7 +7,9 @@ import logging
 from dataclasses import dataclass, field
 from datetime import timedelta
 from typing import Protocol
+from urllib.parse import quote
 
+import httpx
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
@@ -255,6 +257,114 @@ class GroqAIReviewProvider:
             return None
 
 
+class GeminiAIReviewProvider:
+    def __init__(
+        self,
+        *,
+        api_key: str,
+        model: str,
+        max_output_tokens: int,
+        client=None,
+    ):
+        self.api_key = api_key
+        self.model = model.removeprefix("models/")
+        self.max_output_tokens = max_output_tokens
+        self.client = client or httpx.Client(timeout=60)
+
+    @classmethod
+    def from_environment(cls):
+        if not settings.GEMINI_API_KEY:
+            raise AIReviewConfigurationError("GEMINI_API_KEY is not configured.")
+        return cls(
+            api_key=settings.GEMINI_API_KEY,
+            model=settings.AI_REVIEW_MODEL,
+            max_output_tokens=settings.AI_REVIEW_MAX_OUTPUT_TOKENS,
+        )
+
+    def review(self, review_input: AIReviewInput) -> AIReviewResult:
+        url = (
+            "https://generativelanguage.googleapis.com/v1beta/models/"
+            f"{quote(self.model, safe='')}:generateContent"
+        )
+        payload = {
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [
+                        {
+                            "text": GroqAIReviewProvider._build_prompt(review_input),
+                        }
+                    ],
+                }
+            ],
+            "generationConfig": {
+                "maxOutputTokens": self.max_output_tokens,
+                "responseMimeType": "application/json",
+                "responseJsonSchema": REVIEW_JSON_SCHEMA,
+            },
+        }
+        try:
+            response = self.client.post(
+                url,
+                headers={
+                    "Content-Type": "application/json",
+                    "x-goog-api-key": self.api_key,
+                },
+                json=payload,
+            )
+            response.raise_for_status()
+        except httpx.HTTPStatusError as error:
+            status_code = error.response.status_code
+            raise AIReviewProviderError(
+                "RATE_LIMITED" if status_code == 429 else f"PROVIDER_HTTP_{status_code}",
+                retryable=status_code == 429 or status_code >= 500,
+                retry_after_seconds=self._retry_after(error.response),
+            ) from error
+        except (httpx.RequestError, httpx.TimeoutException) as error:
+            raise AIReviewProviderError(
+                "PROVIDER_UNAVAILABLE",
+                retryable=True,
+            ) from error
+
+        try:
+            data = response.json()
+            content = data["candidates"][0]["content"]["parts"][0]["text"]
+            analysis = json.loads(content)
+        except (KeyError, IndexError, TypeError, json.JSONDecodeError) as error:
+            raise AIReviewProviderError(
+                "INVALID_PROVIDER_RESPONSE",
+                retryable=True,
+            ) from error
+        validate_review_result(analysis)
+
+        usage = data.get("usageMetadata", {})
+        return AIReviewResult(
+            analysis=analysis,
+            input_tokens=usage.get("promptTokenCount"),
+            output_tokens=usage.get("candidatesTokenCount"),
+            reasoning_tokens=usage.get("thoughtsTokenCount"),
+        )
+
+    @staticmethod
+    def _retry_after(response) -> int | None:
+        value = response.headers.get("retry-after")
+        try:
+            return max(1, int(float(value)))
+        except (TypeError, ValueError):
+            return None
+
+
+def ai_review_provider_from_environment() -> AIReviewProvider:
+    provider = settings.AI_REVIEW_PROVIDER
+    if provider == "groq":
+        return GroqAIReviewProvider.from_environment()
+    if provider == "gemini":
+        return GeminiAIReviewProvider.from_environment()
+    raise AIReviewConfigurationError(
+        "AI_REVIEW_PROVIDER must be groq or gemini."
+    )
+
+
 def validate_review_result(analysis) -> None:
     if not isinstance(analysis, dict) or set(analysis) != REVIEW_RESULT_KEYS:
         raise AIReviewProviderError(
@@ -326,7 +436,7 @@ class AIReviewQueueService:
                 SubmissionAIReview(
                     submission=submission,
                     prompt_version=settings.AI_REVIEW_PROMPT_VERSION,
-                    provider="groq",
+                    provider=settings.AI_REVIEW_PROVIDER,
                     model=settings.AI_REVIEW_MODEL,
                 )
                 for submission in latest

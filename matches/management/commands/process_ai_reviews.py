@@ -4,7 +4,7 @@ from django.core.management.base import BaseCommand, CommandError
 from matches.services.ai_review import (
     AIReviewConfigurationError,
     AIReviewProcessor,
-    GroqAIReviewProvider,
+    ai_review_provider_from_environment,
 )
 
 
@@ -22,7 +22,7 @@ class Command(BaseCommand):
             self.stdout.write("AI review processing is disabled.")
             return
         try:
-            provider = GroqAIReviewProvider.from_environment()
+            provider = ai_review_provider_from_environment()
         except AIReviewConfigurationError as error:
             raise CommandError(str(error)) from error
         processed = AIReviewProcessor(provider).process_due(limit=limit)

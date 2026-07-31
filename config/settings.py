@@ -203,8 +203,18 @@ MATCH_RATE_LIMIT_WINDOW_SECONDS = int(
 READINESS_CHECK_JUDGE0 = env_bool("READINESS_CHECK_JUDGE0")
 
 AI_REVIEW_ENABLED = env_bool("AI_REVIEW_ENABLED")
+AI_REVIEW_PROVIDER = os.getenv("AI_REVIEW_PROVIDER", "groq").strip().lower()
+if AI_REVIEW_PROVIDER not in {"groq", "gemini"}:
+    raise ImproperlyConfigured("AI_REVIEW_PROVIDER must be groq or gemini.")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
-AI_REVIEW_MODEL = os.getenv("AI_REVIEW_MODEL", "openai/gpt-oss-120b").strip()
+GEMINI_API_KEY = (
+    os.getenv("GEMINI_API_KEY", "") or os.getenv("GOOGLE_API_KEY", "")
+).strip()
+default_ai_review_model = {
+    "groq": "openai/gpt-oss-120b",
+    "gemini": "gemini-2.5-flash-lite",
+}[AI_REVIEW_PROVIDER]
+AI_REVIEW_MODEL = os.getenv("AI_REVIEW_MODEL", default_ai_review_model).strip()
 AI_REVIEW_REASONING_EFFORT = os.getenv(
     "AI_REVIEW_REASONING_EFFORT",
     "low",

@@ -1,47 +1,33 @@
 {% extends "base.html" %}
-{% load static %}
 
 {% block title %}Bài tập | CodeHehe{% endblock %}
 
 {% block content %}
 <header class="page-heading">
-  <span class="page-heading__icon" aria-hidden="true">
-    <svg><use href="{% static 'matches/ui/icons.svg' %}#icon-code"></use></svg>
-  </span>
   <div>
     <h1>Ngân hàng bài tập</h1>
-    <p>Xem trước các dạng bài và luyện cách đọc đề trước khi vào trận.</p>
+    <p>Danh sách bài đang được sử dụng trong các trận đấu.</p>
   </div>
 </header>
 
 {% if problems %}
-  <ol class="problem-grid">
+  <ol class="panel problem-list">
     {% for problem in problems %}
       <li>
-        <a class="card problem-card" href="{% url 'problem-detail' problem.slug %}">
-          <div class="problem-card__top">
-            <span class="problem-number" aria-hidden="true">{{ forloop.counter }}</span>
-            <span class="badge badge--{{ problem.difficulty|lower }}">{{ problem.get_difficulty_display }}</span>
-          </div>
-          <div>
-            <h2>{{ problem.title }}</h2>
-            <p>{{ problem.statement|truncatewords:20 }}</p>
-          </div>
-          <div class="problem-card__meta">
-            <span>{{ problem.points }} điểm</span>
-            <span aria-hidden="true">→</span>
-          </div>
+        <a class="problem-row" href="{% url 'problem-detail' problem.slug %}">
+          <span class="problem-number" aria-hidden="true">{{ forloop.counter }}</span>
+          <strong>{{ problem.title }}</strong>
+          <span class="badge badge--{{ problem.difficulty|lower }}">{{ problem.get_difficulty_display }}</span>
+          <span class="problem-row__points">{{ problem.points }} điểm</span>
+          <span aria-hidden="true">→</span>
         </a>
       </li>
     {% endfor %}
   </ol>
 {% else %}
-  <div class="card empty-state">
-    <span class="empty-state__icon" aria-hidden="true">
-      <svg><use href="{% static 'matches/ui/icons.svg' %}#icon-code"></use></svg>
-    </span>
+  <div class="panel empty-state">
     <h2>Chưa có bài tập</h2>
-    <p>Ngân hàng bài tập đang được cập nhật.</p>
+    <p>Hiện chưa có bài tập nào.</p>
   </div>
 {% endif %}
 {% endblock %}

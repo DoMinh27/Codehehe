@@ -5,50 +5,38 @@
 
 {% block content %}
 <header class="page-heading">
-  <span class="page-heading__icon" aria-hidden="true">
-    <svg><use href="{% static 'matches/ui/icons.svg' %}#icon-users"></use></svg>
-  </span>
   <div>
     <h1>Phòng chờ</h1>
     <p>{% if current_player.is_host %}Chia sẻ mã phòng và bắt đầu khi đủ người.{% else %}Đợi host bắt đầu trận đấu.{% endif %}</p>
   </div>
 </header>
 
-<div class="room-summary">
-  <section class="card room-summary__card" aria-label="Mã phòng">
-    <span class="room-summary__icon" aria-hidden="true">
-      <svg><use href="{% static 'matches/ui/icons.svg' %}#icon-hash"></use></svg>
-    </span>
-    <div>
-      <span class="eyebrow">Mã phòng</span>
-      <strong class="room-code" id="room-code">{{ match.room_code }}</strong>
-      <span id="copy-status" class="copy-status" role="status"></span>
-    </div>
-    <button class="button button--quiet" type="button" data-copy-target="#room-code" data-copy-status="#copy-status">
-      <svg aria-hidden="true"><use href="{% static 'matches/ui/icons.svg' %}#icon-copy"></use></svg>
-      Sao chép
-    </button>
-  </section>
+<section class="panel room-summary" aria-label="Thông tin phòng">
+  <div class="room-summary__item">
+    <span class="eyebrow">Mã phòng</span>
+    <strong class="room-code" id="room-code">{{ match.room_code }}</strong>
+    <span id="copy-status" class="copy-status" role="status"></span>
+  </div>
+  <button class="button button-secondary button-small" type="button" data-copy-target="#room-code" data-copy-status="#copy-status">
+    <svg aria-hidden="true"><use href="{% static 'matches/ui/icons.svg' %}#icon-copy"></use></svg>
+    Sao chép
+  </button>
+  <div class="room-summary__item">
+    <span class="eyebrow">Trạng thái</span>
+    <strong class="room-status" id="room-status">{{ match.get_status_display }}</strong>
+  </div>
+  <div class="room-summary__item">
+    <span class="eyebrow">Người chơi</span>
+    <strong id="player-count">{{ players|length }} / 2</strong>
+  </div>
+</section>
 
-  <section class="card room-summary__card" aria-label="Trạng thái phòng">
-    <span class="room-summary__icon room-summary__icon--blue" aria-hidden="true">
-      <svg><use href="{% static 'matches/ui/icons.svg' %}#icon-clock"></use></svg>
-    </span>
-    <div>
-      <span class="eyebrow">Trạng thái</span>
-      <strong class="room-status" id="room-status">{{ match.get_status_display }}</strong>
-      <span class="muted">Hệ thống tự cập nhật khi có người tham gia.</span>
-    </div>
-  </section>
-</div>
-
-<section class="card player-panel" aria-labelledby="players-heading">
+<section class="panel player-panel" aria-labelledby="players-heading">
   <header class="section-heading">
     <div>
-      <h2 id="players-heading">Người chơi trong phòng</h2>
-      <p>Sẵn sàng cho trận đấu 1 đối 1.</p>
+      <h2 id="players-heading">Người chơi</h2>
+      <p>Trận đấu bắt đầu khi đủ hai người.</p>
     </div>
-    <span class="badge badge--neutral" id="player-count">{{ players|length }} / 2</span>
   </header>
   <ol id="player-list" class="player-list">
     {% for player in players %}
@@ -74,7 +62,7 @@
   {% if current_player.is_host %}
     <form method="post" action="{% url 'match-start' match_id=match.id %}">
       {% csrf_token %}
-      <button class="button button--primary button--wide" id="start-match" type="submit" {% if players|length != 2 %}disabled{% endif %}>
+      <button class="button button-primary" id="start-match" type="submit" {% if players|length != 2 %}disabled{% endif %}>
         <svg aria-hidden="true"><use href="{% static 'matches/ui/icons.svg' %}#icon-play"></use></svg>
         Bắt đầu trận
       </button>
@@ -83,7 +71,7 @@
 
   <form method="post" action="{% url 'room-leave' room_code=match.room_code %}">
     {% csrf_token %}
-    <button class="button button--danger-outline button--wide" type="submit">
+    <button class="button button-danger" type="submit">
       <svg aria-hidden="true"><use href="{% static 'matches/ui/icons.svg' %}#{% if current_player.is_host %}icon-trash{% else %}icon-logout{% endif %}"></use></svg>
       {% if current_player.is_host %}Hủy phòng{% else %}Rời phòng{% endif %}
     </button>

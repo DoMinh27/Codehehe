@@ -100,6 +100,15 @@ export function createStateRenderer({
         ) {
             workspace.insertBefore(typingPanel, submissionForm);
         }
+        visibleProblem.classList.add("mobile-show-editor");
+        for (const button of visibleProblem.querySelectorAll(
+            "[data-mobile-pane]",
+        )) {
+            button.setAttribute(
+                "aria-pressed",
+                String(button.dataset.mobilePane === "editor"),
+            );
+        }
     }
 
     function renderTypingChallenge(payload) {

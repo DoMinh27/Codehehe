@@ -114,7 +114,7 @@ export function createReviewRenderer({documentRoot = document} = {}) {
 
             for (const player of payload.players) {
                 const playerSection = documentRoot.createElement("section");
-                playerSection.className = "ai-review-player card";
+                playerSection.className = "ai-review-player";
                 playerSection.appendChild(
                     createPlayerHeading(documentRoot, player.username),
                 );
@@ -122,11 +122,11 @@ export function createReviewRenderer({documentRoot = document} = {}) {
                 const reviewGrid = documentRoot.createElement("div");
                 reviewGrid.className = "ai-review-grid";
                 for (const review of player.reviews) {
-                    const card = documentRoot.createElement("article");
+                    const card = documentRoot.createElement("details");
                     card.className = "ai-review-card";
                     card.dataset.status = review.status;
 
-                    const cardHeading = documentRoot.createElement("header");
+                    const cardHeading = documentRoot.createElement("summary");
                     cardHeading.className = "ai-review-card__heading";
                     const title = documentRoot.createElement("h4");
                     title.textContent = review.title;

@@ -8,21 +8,10 @@
 {% endblock %}
 
 {% block content %}
-<section class="result-hero card">
-  <span class="result-hero__icon" aria-hidden="true">
-    <svg><use href="{% static 'matches/ui/icons.svg' %}#icon-trophy"></use></svg>
-  </span>
-  <div class="result-hero__main">
-    <span class="badge badge-primary">{{ match.room_code }}</span>
-    <h1>Kết quả trận đấu</h1>
-    {% if match.is_draw %}
-      <p class="result-outcome">Hai người chơi hòa nhau</p>
-    {% else %}
-      <p class="result-outcome result-outcome--winner">
-        <svg aria-hidden="true"><use href="{% static 'matches/ui/icons.svg' %}#icon-trophy"></use></svg>
-        Người thắng: <strong>{{ match.winner.username }}</strong>
-      </p>
-    {% endif %}
+<header class="result-summary">
+  <div class="result-summary__outcome">
+    <span class="eyebrow">Kết quả · {{ match.room_code }}</span>
+    <h1>{% if match.is_draw %}Hòa{% else %}{{ match.winner.username }} chiến thắng{% endif %}</h1>
   </div>
   <dl class="result-meta">
     <div>
@@ -42,27 +31,30 @@
       </div>
     {% endif %}
   </dl>
-</section>
+  <a class="button button-secondary" href="{% url 'lobby' %}">Về Lobby</a>
+</header>
 
 <section class="result-section" aria-labelledby="score-heading">
   <div class="section-heading">
     <div>
-      <h2 id="score-heading">Điểm số</h2>
-      <p>Tổng kết thành tích của hai người chơi.</p>
+      <h2 id="score-heading">Bảng điểm</h2>
+      <p>Kết quả chung cuộc của trận đấu.</p>
     </div>
   </div>
-  <div class="card result-table-wrap">
+  <div class="panel result-table-wrap">
     <table class="result-table">
       <thead>
         <tr>
+          <th>Hạng</th>
           <th>Người chơi</th>
           <th>Điểm</th>
-          <th>Số bài đã AC</th>
+          <th>Bài AC</th>
         </tr>
       </thead>
       <tbody>
         {% for result in player_results %}
           <tr{% if match.winner_id == result.player.user_id %} class="result-table__winner"{% endif %}>
+            <td>{{ forloop.counter }}</td>
             <td>
               <span class="avatar" aria-hidden="true">{{ result.player.user.username|slice:":1"|upper }}</span>
               <strong>{{ result.player.user.username }}</strong>
@@ -86,16 +78,13 @@
       <p>Người hoàn thành đầu tiên ở từng bài.</p>
     </div>
   </div>
-  <ol class="card first-solve-list">
+  <ol class="panel first-solve-list">
     {% for match_problem in match_problems %}
       <li>
         <span class="problem-number" aria-hidden="true">{{ match_problem.order }}</span>
         <strong>{{ match_problem.title_snapshot }}</strong>
         {% if match_problem.first_solver %}
-          <span class="first-solve-winner">
-            <svg aria-hidden="true"><use href="{% static 'matches/ui/icons.svg' %}#icon-trophy"></use></svg>
-            {{ match_problem.first_solver.user.username }}
-          </span>
+          <span class="first-solve-winner">{{ match_problem.first_solver.user.username }}</span>
         {% else %}
           <span class="muted">Không có</span>
         {% endif %}
@@ -108,11 +97,8 @@
   <section id="ai-review-section" class="result-section ai-review-section" aria-labelledby="ai-review-heading">
     <div class="section-heading">
       <div>
-        <h2 id="ai-review-heading">
-          <svg aria-hidden="true"><use href="{% static 'matches/ui/icons.svg' %}#icon-bot"></use></svg>
-          Phân tích bài làm bằng AI
-        </h2>
-        <p>Nhận xét xuất hiện sau trận và không ảnh hưởng đến điểm số.</p>
+        <h2 id="ai-review-heading">Phân tích bài làm bằng AI</h2>
+        <p>Nhận xét sau trận, không ảnh hưởng đến điểm số.</p>
       </div>
       <p id="ai-review-notice" class="ai-review-notice" role="status"></p>
     </div>
@@ -120,17 +106,6 @@
   </section>
   {{ ai_review_config|json_script:"ai-review-config" }}
 {% endif %}
-
-<aside class="result-cta">
-  <div>
-    <strong>Trận đấu đã kết thúc</strong>
-    <p>Quay lại sảnh để tạo phòng mới hoặc tham gia trận khác.</p>
-  </div>
-  <a class="button button-primary" href="{% url 'lobby' %}">
-    <svg aria-hidden="true"><use href="{% static 'matches/ui/icons.svg' %}#icon-login"></use></svg>
-    Về Lobby
-  </a>
-</aside>
 {% endblock %}
 
 {% block extra_scripts %}

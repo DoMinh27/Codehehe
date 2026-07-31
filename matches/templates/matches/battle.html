@@ -9,46 +9,41 @@
 {% endblock %}
 
 {% block content %}
-<header class="battle-heading">
-  <div>
-    <span class="eyebrow">Battle · {{ match.room_code }}</span>
-    <h1>Đấu trường lập trình</h1>
+<section class="battle-scoreboard" aria-label="Trạng thái trận đấu">
+  <div class="match-code">
+    <span class="eyebrow">Mã trận</span>
+    <strong>{{ match.room_code }}</strong>
   </div>
-  <span class="battle-live"><span aria-hidden="true"></span>Đang diễn ra</span>
-</header>
 
-<section class="battle-scoreboard card" aria-label="Trạng thái trận đấu">
-  <div class="score-player score-player--mine">
-    <span class="avatar" aria-hidden="true">{{ current_player.user.username|slice:":1"|upper }}</span>
-    <div>
-      <span class="eyebrow">Bạn</span>
-      <strong>{{ current_player.user.username }}</strong>
+  <div class="battle-duel" aria-label="Tỉ số đối đầu">
+    <div class="duel-player duel-player--mine">
+      <span class="avatar" aria-hidden="true">{{ current_player.user.username|slice:":1"|upper }}</span>
+      <div class="duel-player__details">
+        <span class="eyebrow">Bạn</span>
+        <strong class="duel-player__name">{{ current_player.user.username }}</strong>
+        <span class="duel-timer">
+          <svg aria-hidden="true"><use href="{% static 'matches/ui/icons.svg' %}#icon-clock"></use></svg>
+          <strong id="match-timer">--:--</strong>
+        </span>
+      </div>
     </div>
-    <span class="score-value" id="my-score">{{ current_player.score }}</span>
-  </div>
 
-  <div class="score-timer">
-    <svg aria-hidden="true"><use href="{% static 'matches/ui/icons.svg' %}#icon-clock"></use></svg>
-    <div>
-      <strong id="match-timer">--:--</strong>
-      <span>Thời gian của bạn</span>
+    <div class="duel-score">
+      <strong id="my-score">{{ current_player.score }}</strong>
+      <span aria-hidden="true">VS</span>
+      <strong id="opponent-score">{{ opponent.score }}</strong>
     </div>
-  </div>
 
-  <div class="score-player score-player--opponent">
-    <span class="score-value" id="opponent-score">{{ opponent.score }}</span>
-    <span class="avatar avatar--blue" aria-hidden="true">{{ opponent.user.username|slice:":1"|upper }}</span>
-    <div>
-      <span class="eyebrow">Đối thủ</span>
-      <strong>{{ opponent.user.username }}</strong>
-    </div>
-  </div>
-
-  <div class="score-timer score-timer--opponent">
-    <svg aria-hidden="true"><use href="{% static 'matches/ui/icons.svg' %}#icon-timer"></use></svg>
-    <div>
-      <strong id="opponent-timer">--:--</strong>
-      <span>Thời gian đối thủ</span>
+    <div class="duel-player duel-player--opponent">
+      <div class="duel-player__details">
+        <span class="eyebrow">Đối thủ</span>
+        <strong class="duel-player__name">{{ opponent.user.username }}</strong>
+        <span class="duel-timer duel-timer--opponent">
+          <strong id="opponent-timer">--:--</strong>
+          <svg aria-hidden="true"><use href="{% static 'matches/ui/icons.svg' %}#icon-timer"></use></svg>
+        </span>
+      </div>
+      <span class="avatar avatar--blue" aria-hidden="true">{{ opponent.user.username|slice:":1"|upper }}</span>
     </div>
   </div>
 
@@ -68,19 +63,16 @@
   </form>
 </section>
 
-<section class="skill-panel card-flat" aria-labelledby="skill-heading">
+<section class="skill-panel" aria-labelledby="skill-heading">
   <div class="skill-panel__heading">
-    <div>
-      <h2 id="skill-heading">Skill Battle</h2>
-      <p>Di chuột để xem mô tả, bấm icon để dùng ngay.</p>
-    </div>
-    <p id="skill-notice" class="skill-notice" role="status"></p>
+    <h2 id="skill-heading">Skills</h2>
   </div>
   <div
     id="skill-list"
     class="skill-toolbar"
     data-icon-sprite-url="{% static 'matches/ui/icons.svg' %}"
   ></div>
+  <p id="skill-notice" class="skill-notice" role="status"></p>
 </section>
 
 <section id="typing-challenge" class="typing-challenge" aria-label="Thử thách gõ chữ" hidden>
@@ -128,7 +120,11 @@
 <div id="battle-problems">
   {% for match_problem in match_problems %}
     <article id="problem-{{ match_problem.id }}" class="battle-problem" {% if not forloop.first %}hidden{% endif %}>
-      <section class="problem-content card-flat">
+      <div class="mobile-workspace-tabs" aria-label="Khu vực làm bài">
+        <button type="button" data-mobile-pane="problem" aria-pressed="true">Đề bài</button>
+        <button type="button" data-mobile-pane="editor" aria-pressed="false">Code</button>
+      </div>
+      <section class="problem-content panel">
         <div class="problem-content__heading">
           <div>
             <span class="badge badge--{{ match_problem.difficulty_snapshot|lower }}">
@@ -162,7 +158,7 @@
 
       <div class="workspace-column">
         <form
-          class="submission-form card-flat"
+          class="submission-form panel"
           data-submit-url="{% url 'submission-create' match_id=match.id match_problem_id=match_problem.id %}"
         >
         {% csrf_token %}
@@ -188,7 +184,7 @@
         </form>
 
         <form
-          class="run-form card-flat"
+          class="run-form panel"
           data-run-url="{% url 'code-run' match_id=match.id match_problem_id=match_problem.id %}"
         >
         {% csrf_token %}

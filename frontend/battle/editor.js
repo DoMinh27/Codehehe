@@ -3,6 +3,7 @@ import {Compartment, EditorState} from "@codemirror/state";
 import {EditorView, keymap} from "@codemirror/view";
 import {basicSetup} from "codemirror";
 import {indentWithTab} from "@codemirror/commands";
+import {githubLight} from "@uiw/codemirror-theme-github";
 
 import {loadDraft, saveDraft} from "./storage.js";
 
@@ -32,6 +33,7 @@ export function createEditors({textareas, storage, identity}) {
                     extensions: [
                         basicSetup,
                         python(),
+                        githubLight,
                         keymap.of([indentWithTab]),
                         mirrorCompartment.of([]),
                         editableCompartment.of([]),

@@ -15,6 +15,27 @@ function defaultRandomUUID(windowObject) {
 }
 
 
+export function bindMobileWorkspaceTabs({documentRoot = document} = {}) {
+    for (const paneButton of documentRoot.querySelectorAll(
+        "[data-mobile-pane]",
+    )) {
+        paneButton.addEventListener("click", () => {
+            const problem = paneButton.closest(".battle-problem");
+            const showEditor = paneButton.dataset.mobilePane === "editor";
+            problem.classList.toggle("mobile-show-editor", showEditor);
+            for (const button of problem.querySelectorAll(
+                "[data-mobile-pane]",
+            )) {
+                button.setAttribute(
+                    "aria-pressed",
+                    String(button === paneButton),
+                );
+            }
+        });
+    }
+}
+
+
 export function bootstrapBattle({
     documentRoot = document,
     windowObject = window,
@@ -153,6 +174,8 @@ export function bootstrapBattle({
             }
         });
     }
+
+    bindMobileWorkspaceTabs({documentRoot});
 
     const surrenderForm = documentRoot.getElementById("surrender-form");
     surrenderForm.addEventListener("submit", async (event) => {

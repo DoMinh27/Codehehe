@@ -89,13 +89,9 @@ function renderCompleted(documentRoot, card, analysis) {
 function createPlayerHeading(documentRoot, username) {
     const heading = documentRoot.createElement("header");
     heading.className = "ai-review-player__heading";
-    const avatar = documentRoot.createElement("span");
-    avatar.className = "avatar";
-    avatar.setAttribute("aria-hidden", "true");
-    avatar.textContent = username.slice(0, 1).toUpperCase();
     const title = documentRoot.createElement("h3");
     title.textContent = username;
-    heading.append(avatar, title);
+    heading.appendChild(title);
     return heading;
 }
 

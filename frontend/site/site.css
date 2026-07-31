@@ -70,6 +70,53 @@ body {
     min-height: 100vh;
 }
 
+body:not(.auth-page) {
+    --bg-page: #f7f7f3;
+    --bg-surface: #fffefa;
+    --bg-subtle: #f1f2fa;
+    --bg-hover: #e9ebf5;
+    --text-primary: #111936;
+    --text-secondary: #46506a;
+    --text-muted: #778198;
+    --border-default: #cbd1de;
+    --border-strong: #8f99af;
+    --primary: #6169df;
+    --primary-hover: #4f56c7;
+    --primary-soft: #eceeff;
+
+    font-size: 0.9375rem;
+}
+
+body:not(.auth-page) h1,
+body:not(.auth-page) h2,
+body:not(.auth-page) h3,
+body:not(.auth-page) h4 {
+    color: var(--text-primary);
+    font-weight: 750;
+}
+
+body:not(.auth-page) .avatar {
+    border-color: #cfd3f4;
+}
+
+body:not(.auth-page) input:focus,
+body:not(.auth-page) textarea:focus,
+body:not(.auth-page) select:focus,
+body:not(.auth-page) button:focus-visible,
+body:not(.auth-page) a:focus-visible,
+body:not(.auth-page) summary:focus-visible {
+    outline-color: rgb(97 105 223 / 24%);
+}
+
+body:not(.auth-page) .button-secondary:hover,
+body:not(.auth-page) .button--secondary:hover,
+body:not(.auth-page) .button--quiet:hover,
+body:not(.auth-page) input:hover,
+body:not(.auth-page) textarea:hover,
+body:not(.auth-page) select:hover {
+    border-color: var(--border-strong);
+}
+
 button,
 input,
 textarea,

@@ -300,18 +300,25 @@ def match_result(request, match_id):
         .select_related("first_solver__user")
         .order_by("order", "id")
     )
+    if match.winner_id is not None:
+        players.sort(
+            key=lambda player: player.user_id != match.winner_id
+        )
+    player_results = [
+        {
+            "player": player,
+            "solved_count": solved_counts.get(player.id, 0),
+        }
+        for player in players
+    ]
     return render(
         request,
         "matches/result.html",
         {
             "match": match,
-            "player_results": [
-                {
-                    "player": player,
-                    "solved_count": solved_counts.get(player.id, 0),
-                }
-                for player in players
-            ],
+            "player_results": player_results,
+            "result_left": player_results[0],
+            "result_right": player_results[1],
             "match_problems": match_problems,
             "ai_review_config": (
                 {

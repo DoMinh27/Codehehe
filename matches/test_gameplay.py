@@ -875,6 +875,40 @@ class MatchLifecycleViewTests(LifecycleFixtureMixin, TestCase):
         self.assertTemplateUsed(response, "matches/result.html")
         self.assertContains(response, self.host.username)
         self.assertContains(response, "3 điểm")
+        self.assertEqual(
+            response.context["player_results"][0]["player"].user,
+            self.host,
+        )
+        self.assertEqual(response.context["result_left"]["player"].user, self.host)
+        self.assertEqual(
+            response.context["result_right"]["player"].user,
+            self.opponent,
+        )
+
+    def test_draw_result_keeps_stable_player_order_and_natural_copy(self):
+        self.expire_match()
+        FinishMatchService().finalize(match_id=self.match.pk)
+        self.client.force_login(self.host)
+
+        response = self.client.get(
+            reverse("match-result", args=[self.match.pk])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.context["player_results"][0]["player"].user,
+            self.host,
+        )
+        self.assertEqual(
+            response.context["player_results"][1]["player"].user,
+            self.opponent,
+        )
+        self.assertContains(
+            response,
+            "Trận đấu kết thúc với tỷ số hòa.",
+        )
+        self.assertContains(response, "Người giải đầu tiên")
+        self.assertNotContains(response, "First-solve")
 
     def test_battle_redirects_to_result_after_finish(self):
         self.expire_match()

@@ -1,45 +1,77 @@
 .result-summary {
-    align-items: center;
     border-bottom: 1px solid var(--border-default);
+    padding: 0.25rem 0 1rem;
+}
+
+.result-summary > .eyebrow {
+    letter-spacing: 0;
+    margin-bottom: 0.65rem;
+    text-transform: none;
+}
+
+.result-matchup {
+    align-items: center;
     display: grid;
-    gap: 1.5rem;
-    grid-template-columns: minmax(14rem, 1fr) auto auto;
-    padding-bottom: 1.25rem;
+    gap: clamp(0.75rem, 3vw, 2rem);
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    margin-inline: auto;
+    max-width: 44rem;
 }
 
-.result-summary h1 {
-    font-size: clamp(1.6rem, 3vw, 2rem);
-    margin: 0;
+.result-contestant {
+    font-size: clamp(1.35rem, 3vw, 2rem);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.result-meta {
+.result-contestant--left {
+    text-align: right;
+}
+
+.result-contestant--right {
+    text-align: left;
+}
+
+.result-scoreline {
+    align-items: center;
     display: grid;
-    gap: 0.35rem;
-    margin: 0;
-    min-width: 15rem;
+    gap: 0.7rem;
+    grid-template-columns: minmax(1.5rem, auto) auto minmax(1.5rem, auto);
+    text-align: center;
 }
 
-.result-meta > div {
-    align-items: baseline;
-    display: flex;
-    gap: 1rem;
-    justify-content: space-between;
+.result-scoreline strong {
+    font-family: "JetBrains Mono", Consolas, monospace;
+    font-size: clamp(1.5rem, 3vw, 2rem);
 }
 
-.result-meta dt {
+.result-scoreline span {
     color: var(--text-muted);
-    font-size: 0.72rem;
+    font-size: 1.25rem;
 }
 
-.result-meta dd {
+.result-outcome {
     color: var(--text-secondary);
-    font-size: 0.8rem;
-    font-weight: 600;
-    margin: 0;
+    font-size: 0.875rem;
+    margin: 0.45rem 0 0;
+    text-align: center;
+}
+
+.result-summary__footer {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.85rem;
+}
+
+.result-summary__footer time {
+    color: var(--text-muted);
+    font-size: 0.75rem;
 }
 
 .result-section {
-    margin-top: 1.75rem;
+    margin-top: 1.5rem;
 }
 
 .result-section > .section-heading {
@@ -60,21 +92,35 @@
 .result-table th,
 .result-table td {
     border-bottom: 1px solid var(--border-default);
-    padding: 0.7rem 1rem;
+    padding: 0.58rem 0.85rem;
     text-align: center;
 }
 
 .result-table th {
     background: var(--bg-subtle);
-    color: var(--text-muted);
-    font-size: 0.7rem;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
     font-weight: 700;
-    text-transform: uppercase;
 }
 
 .result-table th:nth-child(2),
 .result-table td:nth-child(2) {
     text-align: left;
+}
+
+.result-table th:first-child,
+.result-table td:first-child {
+    width: 5rem;
+}
+
+.result-table th:nth-child(3),
+.result-table td:nth-child(3) {
+    width: 8rem;
+}
+
+.result-table th:last-child,
+.result-table td:last-child {
+    width: 9rem;
 }
 
 .result-table td {
@@ -91,8 +137,14 @@
     border-bottom: 0;
 }
 
-.result-table__winner {
-    background: var(--success-soft);
+.result-rank {
+    color: var(--text-muted);
+    font-family: "JetBrains Mono", Consolas, monospace;
+    font-weight: 700;
+}
+
+.result-table__winner td:nth-child(2) > strong {
+    color: var(--text-primary);
 }
 
 .first-solve-list {
@@ -107,8 +159,8 @@
     display: grid;
     gap: 0.65rem;
     grid-template-columns: auto minmax(0, 1fr) auto;
-    min-height: 3.25rem;
-    padding: 0.55rem 1rem;
+    min-height: 3rem;
+    padding: 0.5rem 0.85rem;
 }
 
 .first-solve-list li:last-child {
@@ -126,9 +178,9 @@
 }
 
 .ai-review-notice {
-    background: #eff6ff;
+    background: var(--primary-soft);
     border-radius: 999px;
-    color: #1e4f91;
+    color: var(--primary-hover);
     font-size: 0.7rem;
     font-weight: 650;
     margin: 0;
@@ -155,7 +207,6 @@
     background: var(--bg-subtle);
     border-bottom: 1px solid var(--border-default);
     display: flex;
-    gap: 0.65rem;
     padding: 0.65rem 0.8rem;
 }
 
@@ -231,9 +282,9 @@
 
 .ai-status--pending,
 .ai-status--processing {
-    background: #eff6ff;
-    border-color: #bfdbfe;
-    color: #1e4f91;
+    background: var(--primary-soft);
+    border-color: #cfd3f4;
+    color: var(--primary-hover);
 }
 
 .ai-status--failed {
@@ -321,16 +372,12 @@
 }
 
 @media (max-width: 48rem) {
-    .result-summary {
-        align-items: start;
-        grid-template-columns: 1fr auto;
+    .result-matchup {
+        gap: 0.65rem;
     }
 
-    .result-meta {
+    .result-summary__footer {
         border-top: 1px solid var(--border-default);
-        grid-column: 1 / 3;
-        grid-row: 2;
-        min-width: 0;
         padding-top: 0.75rem;
     }
 
@@ -341,13 +388,23 @@
 }
 
 @media (max-width: 30rem) {
-    .result-summary {
-        grid-template-columns: 1fr;
+    .result-summary > .eyebrow {
+        text-align: center;
     }
 
-    .result-summary > .button,
-    .result-meta {
-        grid-column: 1;
+    .result-contestant,
+    .result-scoreline strong {
+        font-size: 1.05rem;
+    }
+
+    .result-scoreline {
+        gap: 0.35rem;
+    }
+
+    .result-summary__footer {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 0.65rem;
     }
 
     .first-solve-list li {

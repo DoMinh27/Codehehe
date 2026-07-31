@@ -37,6 +37,7 @@ describe("AI review renderer", () => {
         expect(document.body.textContent).toContain("Độ phức tạp");
         expect(document.body.textContent).not.toContain("reference_solution");
         expect(document.querySelector("[data-status='COMPLETED']")).not.toBeNull();
+        expect(document.querySelector(".ai-review-player .avatar")).toBeNull();
     });
 
     it("renders pending, failed, and not eligible statuses", () => {

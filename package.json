@@ -2,15 +2,17 @@
   "name": "codehehe-frontend",
   "private": true,
   "scripts": {
-    "build": "esbuild ./frontend/battle/main.js ./frontend/battle/battle.css ./frontend/result/result-main.js ./frontend/result/result.css --bundle --minify --outdir=./matches/static/matches/dist --entry-names=[name].bundle --sourcemap",
-    "dev": "esbuild ./frontend/battle/main.js ./frontend/battle/battle.css ./frontend/result/result-main.js ./frontend/result/result.css --bundle --outdir=./matches/static/matches/dist --entry-names=[name].bundle --sourcemap --watch",
+    "build": "esbuild ./frontend/site/site-main.js ./frontend/site/site.css ./frontend/battle/main.js ./frontend/battle/battle.css ./frontend/result/result-main.js ./frontend/result/result.css --bundle --minify --outdir=./matches/static/matches/dist --entry-names=[name].bundle --sourcemap",
+    "dev": "esbuild ./frontend/site/site-main.js ./frontend/site/site.css ./frontend/battle/main.js ./frontend/battle/battle.css ./frontend/result/result-main.js ./frontend/result/result.css --bundle --outdir=./matches/static/matches/dist --entry-names=[name].bundle --sourcemap --watch",
     "test": "vitest run --environment jsdom"
   },
   "dependencies": {
+    "@babel/runtime": "^8.0.0",
     "@codemirror/commands": "^6.8.0",
     "@codemirror/lang-python": "^6.2.1",
     "@codemirror/state": "^6.5.0",
     "@codemirror/view": "^6.36.0",
+    "@uiw/codemirror-theme-github": "^4.25.11",
     "codemirror": "^6.0.2"
   },
   "devDependencies": {

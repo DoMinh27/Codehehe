@@ -1,17 +1,38 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Đăng ký | CodeHehe{% endblock %}
+{% block body_class %}auth-page{% endblock %}
+{% block main_class %}site-main--narrow{% endblock %}
 
 {% block content %}
-    <h1>Đăng ký</h1>
+<div class="auth-shell">
+  <section class="card auth-card" aria-labelledby="register-title">
+    <div class="auth-card__icon" aria-hidden="true">
+      <svg><use href="{% static 'matches/ui/icons.svg' %}#icon-users"></use></svg>
+    </div>
+    <div class="auth-card__heading">
+      <h1 id="register-title">Tạo tài khoản</h1>
+      <p>Đăng ký nhanh để bắt đầu một trận đấu CodeHehe.</p>
+    </div>
 
-    <form method="post">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">Tạo tài khoản</button>
+    <form method="post" class="stack">
+      {% csrf_token %}
+      {% for field in form %}
+        <div class="form-field{% if field.errors %} form-field--error{% endif %}">
+          {{ field.label_tag }}
+          {{ field }}
+          {% if field.help_text %}<span class="form-help">{{ field.help_text|safe }}</span>{% endif %}
+          {% for error in field.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+        </div>
+      {% endfor %}
+      <button class="button button--primary button--block" type="submit">
+        <svg aria-hidden="true"><use href="{% static 'matches/ui/icons.svg' %}#icon-plus"></use></svg>
+        Tạo tài khoản
+      </button>
     </form>
 
-    <p>
-        <a href="{% url 'login' %}">Đã có tài khoản? Đăng nhập</a>
-    </p>
+    <p class="auth-card__switch">Đã có tài khoản? <a href="{% url 'login' %}">Đăng nhập</a></p>
+  </section>
+</div>
 {% endblock %}

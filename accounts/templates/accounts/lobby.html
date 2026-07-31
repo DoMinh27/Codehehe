@@ -1,36 +1,50 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Lobby | CodeHehe{% endblock %}
 
 {% block content %}
+<header class="page-heading">
+  <div>
     <h1>Lobby</h1>
-    <p>Xin chào {{ user.username }}.</p>
+    <p>Xin chào {{ user.username }}. Tạo một trận 1v1 hoặc vào phòng bằng mã mời.</p>
+  </div>
+</header>
 
-    <section>
-        <h2>Tạo phòng</h2>
-        <form method="post" action="{% url 'room-create' %}">
-            {% csrf_token %}
-            <button type="submit">Tạo phòng mới</button>
-        </form>
-    </section>
+<div class="lobby-actions">
+  <section class="panel lobby-panel" aria-labelledby="create-room-title">
+    <div class="lobby-panel__copy">
+      <h2 id="create-room-title">Tạo phòng</h2>
+      <p>Tạo phòng mới và gửi mã cho đối thủ.</p>
+    </div>
+    <form method="post" action="{% url 'room-create' %}">
+      {% csrf_token %}
+      <button class="button button-primary" type="submit">
+        <svg aria-hidden="true"><use href="{% static 'matches/ui/icons.svg' %}#icon-plus"></use></svg>
+        Tạo phòng mới
+      </button>
+    </form>
+  </section>
 
-    <section>
-        <h2>Tham gia phòng</h2>
-        <form method="post" action="{% url 'room-join' %}">
-            {% csrf_token %}
-            <label for="room-code">Mã phòng</label>
-            <input
-                id="room-code"
-                name="room_code"
-                type="text"
-                minlength="6"
-                maxlength="6"
-                pattern="[A-Za-z0-9]{6}"
-                autocomplete="off"
-                required
-            >
-            <button type="submit">Tham gia</button>
-        </form>
-    </section>
-
+  <section class="panel lobby-panel" aria-labelledby="join-room-title">
+    <div class="lobby-panel__copy">
+      <h2 id="join-room-title">Tham gia phòng</h2>
+      <p>Nhập mã phòng gồm 6 ký tự.</p>
+    </div>
+    <form method="post" action="{% url 'room-join' %}" class="join-room-form">
+      {% csrf_token %}
+      <div class="form-field">
+        <label class="sr-only" for="room-code">Mã phòng</label>
+        <div class="input-with-icon">
+          <svg aria-hidden="true"><use href="{% static 'matches/ui/icons.svg' %}#icon-hash"></use></svg>
+          <input id="room-code" name="room_code" type="text" minlength="6" maxlength="6" pattern="[A-Za-z0-9]{6}" autocomplete="off" placeholder="Mã phòng" required>
+        </div>
+      </div>
+      <button class="button button-secondary" type="submit">
+        <svg aria-hidden="true"><use href="{% static 'matches/ui/icons.svg' %}#icon-login"></use></svg>
+        Tham gia
+      </button>
+    </form>
+  </section>
+</div>
 {% endblock %}

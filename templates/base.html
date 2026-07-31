@@ -1,89 +1,105 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}CodeHehe{% endblock %}</title>
-    {% block extra_head %}{% endblock %}
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}CodeHehe{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'matches/dist/site.bundle.css' %}">
+  {% block extra_head %}{% endblock %}
 </head>
-<body>
-    <header>
-        <nav>
-            <a href="{% url 'lobby' %}">CodeHehe</a>
+<body class="{% block body_class %}{% endblock %}">
+  <header class="site-header">
+    <nav class="site-nav" aria-label="Điều hướng chính">
+      <a class="brand" href="{% url 'lobby' %}" aria-label="CodeHehe">
+        <span class="brand-mark" aria-hidden="true">
+          <svg><use href="{% static 'matches/ui/icons.svg' %}#icon-code"></use></svg>
+        </span>
+        <span class="brand-name">Code<span>Hehe</span></span>
+      </a>
 
-            {% if user.is_authenticated %}
-                <span>Xin chào, {{ user.username }}</span>
-                <form method="post" action="{% url 'logout' %}">
-                    {% csrf_token %}
-                    <button type="submit">Đăng xuất</button>
-                </form>
-            {% else %}
-                <a href="{% url 'login' %}">Đăng nhập</a>
-                <a href="{% url 'register' %}">Đăng ký</a>
-            {% endif %}
-        </nav>
-    </header>
+      {% if user.is_authenticated %}
+        <div class="nav-actions">
+          <a class="nav-link" href="{% url 'problem-list' %}">Bài tập</a>
+          <span class="user-chip">
+            <span class="avatar" aria-hidden="true">{{ user.username|first|upper }}</span>
+            <span>{{ user.username }}</span>
+          </span>
+          <form class="inline-form" method="post" action="{% url 'logout' %}">
+            {% csrf_token %}
+            <button class="button button-secondary button-small" type="submit">
+              <svg aria-hidden="true"><use href="{% static 'matches/ui/icons.svg' %}#icon-logout"></use></svg>
+              Đăng xuất
+            </button>
+          </form>
+        </div>
+      {% else %}
+        <div class="nav-actions">
+          <a class="nav-link" href="{% url 'login' %}">Đăng nhập</a>
+          <a class="button button-primary button-small" href="{% url 'register' %}">Đăng ký</a>
+        </div>
+      {% endif %}
+    </nav>
+  </header>
 
-    <main>
-        {% if messages %}
-            <section aria-label="Thông báo">
-                {% for message in messages %}
-                    <p role="alert">{{ message }}</p>
-                {% endfor %}
-            </section>
-        {% endif %}
-        {% block content %}{% endblock %}
-    </main>
-    {% if user.is_authenticated %}
-        <script>
-            (() => {
-                const activeStateUrl = "{% url 'active-match-state' %}";
-                let activePollHandle = null;
-                let activePollInFlight = false;
-
-                async function pollActiveMatch() {
-                    if (activePollInFlight) {
-                        scheduleActivePoll();
-                        return;
-                    }
-                    activePollInFlight = true;
-                    try {
-                        const response = await fetch(activeStateUrl, {
-                            headers: {"Accept": "application/json"},
-                        });
-                        if (!response.ok) {
-                            return;
-                        }
-                        const state = await response.json();
-                        if (
-                            state.active
-                            && state.url
-                            && window.location.pathname !== state.url
-                        ) {
-                            window.location.assign(state.url);
-                            return;
-                        }
-                    } catch (pollError) {
-                        // A later poll will retry without disrupting the current page.
-                    } finally {
-                        activePollInFlight = false;
-                        scheduleActivePoll();
-                    }
-                }
-
-                function scheduleActivePoll() {
-                    window.clearTimeout(activePollHandle);
-                    activePollHandle = window.setTimeout(
-                        pollActiveMatch,
-                        document.hidden ? 10000 : 3000,
-                    );
-                }
-
-                scheduleActivePoll();
-                document.addEventListener("visibilitychange", scheduleActivePoll);
-            })();
-        </script>
+  <main class="site-main {% block main_class %}{% endblock %}">
+    {% if messages %}
+      <section class="message-stack" aria-label="Thông báo">
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags|default:'info' }}" role="alert">
+            <span>{{ message }}</span>
+            <button class="icon-button" type="button" data-dismiss-alert aria-label="Đóng thông báo">×</button>
+          </div>
+        {% endfor %}
+      </section>
     {% endif %}
-    {% block extra_scripts %}{% endblock %}
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    <span>© 2026 CodeHehe. Chơi vui, lập trình hăng say!</span>
+  </footer>
+
+  {% if user.is_authenticated %}
+    <script>
+      (() => {
+        const activeStateUrl = "{% url 'active-match-state' %}";
+        let activePollHandle = null;
+        let activePollInFlight = false;
+
+        async function pollActiveMatch() {
+          if (activePollInFlight) {
+            scheduleActivePoll();
+            return;
+          }
+          activePollInFlight = true;
+          try {
+            const response = await fetch(activeStateUrl, {headers: {"Accept": "application/json"}});
+            if (!response.ok) return;
+            const state = await response.json();
+            if (state.active && state.url && window.location.pathname !== state.url) {
+              window.location.assign(state.url);
+              return;
+            }
+          } catch (pollError) {
+            // A later poll will retry without disrupting the current page.
+          } finally {
+            activePollInFlight = false;
+            scheduleActivePoll();
+          }
+        }
+
+        function scheduleActivePoll() {
+          window.clearTimeout(activePollHandle);
+          activePollHandle = window.setTimeout(pollActiveMatch, document.hidden ? 10000 : 3000);
+        }
+
+        scheduleActivePoll();
+        document.addEventListener("visibilitychange", scheduleActivePoll);
+      })();
+    </script>
+  {% endif %}
+  <script src="{% static 'matches/dist/site-main.bundle.js' %}" defer></script>
+  {% block extra_scripts %}{% endblock %}
 </body>
 </html>

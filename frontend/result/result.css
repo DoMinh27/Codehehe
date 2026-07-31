@@ -1,23 +1,417 @@
-.ai-review-section {
-    margin-top: 2rem;
+.result-summary {
+    border-bottom: 1px solid var(--border-default);
+    padding: 0.25rem 0 1rem;
 }
 
-.ai-review-player {
+.result-summary > .eyebrow {
+    letter-spacing: 0;
+    margin-bottom: 0.65rem;
+    text-transform: none;
+}
+
+.result-matchup {
+    align-items: center;
     display: grid;
-    gap: 1rem;
-    margin-top: 1rem;
+    gap: clamp(0.75rem, 3vw, 2rem);
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    margin-inline: auto;
+    max-width: 44rem;
+}
+
+.result-contestant {
+    font-size: clamp(1.35rem, 3vw, 2rem);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.result-contestant--left {
+    text-align: right;
+}
+
+.result-contestant--right {
+    text-align: left;
+}
+
+.result-scoreline {
+    align-items: center;
+    display: grid;
+    gap: 0.7rem;
+    grid-template-columns: minmax(1.5rem, auto) auto minmax(1.5rem, auto);
+    text-align: center;
+}
+
+.result-scoreline strong {
+    font-family: "JetBrains Mono", Consolas, monospace;
+    font-size: clamp(1.5rem, 3vw, 2rem);
+}
+
+.result-scoreline span {
+    color: var(--text-muted);
+    font-size: 1.25rem;
+}
+
+.result-outcome {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    margin: 0.45rem 0 0;
+    text-align: center;
+}
+
+.result-summary__footer {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.85rem;
+}
+
+.result-summary__footer time {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+}
+
+.result-section {
+    margin-top: 1.5rem;
+}
+
+.result-section > .section-heading {
+    margin-bottom: 0.65rem;
+}
+
+.result-table-wrap {
+    overflow-x: auto;
+    padding: 0;
+}
+
+.result-table {
+    border-collapse: collapse;
+    min-width: 36rem;
+    width: 100%;
+}
+
+.result-table th,
+.result-table td {
+    border-bottom: 1px solid var(--border-default);
+    padding: 0.58rem 0.85rem;
+    text-align: center;
+}
+
+.result-table th {
+    background: var(--bg-subtle);
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.result-table th:nth-child(2),
+.result-table td:nth-child(2) {
+    text-align: left;
+}
+
+.result-table th:first-child,
+.result-table td:first-child {
+    width: 5rem;
+}
+
+.result-table th:nth-child(3),
+.result-table td:nth-child(3) {
+    width: 8rem;
+}
+
+.result-table th:last-child,
+.result-table td:last-child {
+    width: 9rem;
+}
+
+.result-table td {
+    font-size: 0.85rem;
+}
+
+.result-table td:nth-child(2) {
+    align-items: center;
+    display: flex;
+    gap: 0.65rem;
+}
+
+.result-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.result-rank {
+    color: var(--text-muted);
+    font-family: "JetBrains Mono", Consolas, monospace;
+    font-weight: 700;
+}
+
+.result-table__winner td:nth-child(2) > strong {
+    color: var(--text-primary);
+}
+
+.first-solve-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.first-solve-list li {
+    align-items: center;
+    border-bottom: 1px solid var(--border-default);
+    display: grid;
+    gap: 0.65rem;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    min-height: 3rem;
+    padding: 0.5rem 0.85rem;
+}
+
+.first-solve-list li:last-child {
+    border-bottom: 0;
+}
+
+.first-solve-list strong {
+    font-size: 0.85rem;
+}
+
+.first-solve-winner {
+    color: var(--success);
+    font-size: 0.8rem;
+    font-weight: 650;
+}
+
+.ai-review-notice {
+    background: var(--primary-soft);
+    border-radius: 999px;
+    color: var(--primary-hover);
+    font-size: 0.7rem;
+    font-weight: 650;
+    margin: 0;
+    padding: 0.3rem 0.55rem;
+}
+
+.ai-review-notice[data-terminal="true"] {
+    background: var(--success-soft);
+    color: var(--success);
+}
+
+#ai-review-list {
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-medium);
+    overflow: hidden;
+}
+
+.ai-review-player + .ai-review-player {
+    border-top: 1px solid var(--border-strong);
+}
+
+.ai-review-player__heading {
+    align-items: center;
+    background: var(--bg-subtle);
+    border-bottom: 1px solid var(--border-default);
+    display: flex;
+    padding: 0.65rem 0.8rem;
+}
+
+.ai-review-player__heading h3 {
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+.ai-review-grid {
+    display: grid;
 }
 
 .ai-review-card {
-    border: 1px solid #d7dce2;
-    border-radius: 0.5rem;
-    padding: 1rem;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-default);
 }
 
-.ai-review-card[data-status="COMPLETED"] {
-    border-color: #4d9b67;
+.ai-review-card:last-child {
+    border-bottom: 0;
 }
 
-.ai-review-card h4 {
+.ai-review-card__heading {
+    align-items: center;
+    cursor: pointer;
+    display: flex;
+    gap: 0.75rem;
+    justify-content: space-between;
+    list-style: none;
+    min-height: 3.25rem;
+    padding: 0.6rem 0.85rem;
+}
+
+.ai-review-card__heading::-webkit-details-marker {
+    display: none;
+}
+
+.ai-review-card__heading::after {
+    color: var(--text-muted);
+    content: "+";
+    font-size: 1rem;
+    order: 3;
+}
+
+.ai-review-card[open] > .ai-review-card__heading::after {
+    content: "−";
+}
+
+.ai-review-card__heading:hover {
+    background: var(--bg-hover);
+}
+
+.ai-review-card__heading h4 {
+    flex: 1;
+    font-size: 0.825rem;
+    margin: 0;
+}
+
+.ai-status {
+    border: 1px solid var(--border-default);
+    border-radius: 999px;
+    color: var(--text-muted);
+    flex: 0 0 auto;
+    font-size: 0.62rem;
+    font-weight: 700;
+    padding: 0.2rem 0.4rem;
+}
+
+.ai-status--completed {
+    background: var(--success-soft);
+    border-color: #bce6d3;
+    color: var(--success);
+}
+
+.ai-status--pending,
+.ai-status--processing {
+    background: var(--primary-soft);
+    border-color: #cfd3f4;
+    color: var(--primary-hover);
+}
+
+.ai-status--failed {
+    background: var(--danger-soft);
+    border-color: #f2c0c6;
+    color: var(--danger);
+}
+
+.ai-review-card > :not(summary) {
+    margin-left: 0.85rem;
+    margin-right: 0.85rem;
+}
+
+.ai-review-card > :last-child {
+    margin-bottom: 0.85rem;
+}
+
+.ai-review-card__message {
+    color: var(--text-muted);
+    font-size: 0.8rem;
     margin-top: 0;
+}
+
+.review-summary,
+.review-detail {
+    border-top: 1px solid var(--border-default);
+    margin-top: 0;
+    padding-top: 0.75rem;
+}
+
+.review-summary h4,
+.review-detail h4,
+.complexity-heading {
+    font-size: 0.8rem;
+    margin-bottom: 0.3rem;
+}
+
+.review-summary p,
+.review-detail p,
+.review-detail li {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+}
+
+.review-summary p,
+.review-detail p {
+    margin-bottom: 0;
+}
+
+.review-detail ul {
+    margin: 0;
+    padding-left: 1.1rem;
+}
+
+.review-detail li + li {
+    margin-top: 0.25rem;
+}
+
+.review-detail--better {
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-small);
+    padding: 0.65rem;
+}
+
+.complexity-heading {
+    margin-top: 0.75rem;
+}
+
+.complexity-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.35rem;
+}
+
+.complexity-badges span {
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-default);
+    border-radius: 999px;
+    color: var(--text-secondary);
+    font-family: "JetBrains Mono", Consolas, monospace;
+    font-size: 0.65rem;
+    padding: 0.25rem 0.4rem;
+}
+
+@media (max-width: 48rem) {
+    .result-matchup {
+        gap: 0.65rem;
+    }
+
+    .result-summary__footer {
+        border-top: 1px solid var(--border-default);
+        padding-top: 0.75rem;
+    }
+
+    .ai-review-section > .section-heading {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 30rem) {
+    .result-summary > .eyebrow {
+        text-align: center;
+    }
+
+    .result-contestant,
+    .result-scoreline strong {
+        font-size: 1.05rem;
+    }
+
+    .result-scoreline {
+        gap: 0.35rem;
+    }
+
+    .result-summary__footer {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 0.65rem;
+    }
+
+    .first-solve-list li {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .first-solve-list li > :last-child {
+        grid-column: 2;
+    }
 }

@@ -397,8 +397,22 @@ class Gate35ViewTests(Gate35FixtureMixin, TestCase):
 
         self.assertEqual(response.status_code, 200)
         result = self.client.get(response.json()["result_url"])
-        self.assertContains(result, "Đầu hàng")
-        self.assertContains(result, f"{self.host.username} đã đầu hàng")
+        self.assertEqual(
+            result.context["player_results"][0]["player"].user,
+            self.opponent,
+        )
+        self.assertEqual(
+            result.context["player_results"][1]["player"].user,
+            self.host,
+        )
+        self.assertContains(
+            result,
+            (
+                f"{self.opponent.username} thắng do "
+                f"{self.host.username} đã đầu hàng."
+            ),
+            count=1,
+        )
 
     def test_surrender_endpoint_statuses(self):
         url = reverse("match-surrender", args=[self.match.pk])

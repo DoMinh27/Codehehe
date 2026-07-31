@@ -28,7 +28,6 @@ from .services.ai_review import (
     FakeAIReviewProvider,
     GeminiAIReviewProvider,
     GroqAIReviewProvider,
-    REVIEW_JSON_SCHEMA,
 )
 from .services.gameplay import FinishMatchService, SurrenderMatchService
 
@@ -516,10 +515,12 @@ class GeminiAIReviewProviderTests(TestCase):
         self.assertEqual(kwargs["headers"]["x-goog-api-key"], "gemini-key")
         config = kwargs["json"]["generationConfig"]
         self.assertEqual(config["responseMimeType"], "application/json")
-        self.assertEqual(config["responseJsonSchema"], REVIEW_JSON_SCHEMA)
+        self.assertNotIn("responseJsonSchema", config)
         prompt = kwargs["json"]["contents"][0]["parts"][0]["text"]
         self.assertIn("<player_code>", prompt)
         self.assertIn("<reference_solution>", prompt)
+        self.assertIn("approach_summary", prompt)
+        self.assertIn("Do not include markdown fences.", prompt)
         self.assertNotIn("username", prompt)
         self.assertNotIn("hidden", prompt.lower().replace("test áº©n", ""))
 

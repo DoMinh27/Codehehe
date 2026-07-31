@@ -1,7 +1,7 @@
 [Unit]
 Description=CodeHehe Django application
-After=network.target docker.service
-Wants=docker.service
+After=network-online.target docker.service
+Wants=network-online.target docker.service
 
 [Service]
 Type=simple
@@ -15,6 +15,7 @@ Restart=on-failure
 RestartSec=5
 TimeoutStopSec=30
 KillSignal=SIGQUIT
+UMask=0077
 PrivateTmp=true
 NoNewPrivileges=true
 ProtectSystem=full

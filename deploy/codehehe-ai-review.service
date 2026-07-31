@@ -1,6 +1,7 @@
 [Unit]
 Description=CodeHehe queued AI review processor
-After=codehehe.service
+After=network-online.target codehehe.service
+Wants=network-online.target
 
 [Service]
 Type=oneshot
@@ -9,3 +10,5 @@ User=codehehe
 WorkingDirectory=/opt/codehehe/app
 EnvironmentFile=/etc/codehehe/codehehe.env
 ExecStart=/opt/codehehe/venv/bin/python manage.py process_ai_reviews --limit 1
+TimeoutStartSec=120
+UMask=0077

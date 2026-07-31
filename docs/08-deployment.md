@@ -2,7 +2,8 @@
 
 This runbook deploys Django on the same Ubuntu 22.04 Azure VM as Judge0.
 Judge0 remains private on `127.0.0.1:2358`; only SSH, HTTP, and HTTPS are
-public.
+public. The local SSH tunnel and `.pem` file are not used after the app is
+deployed on that VM.
 
 Replace every value wrapped in `<...>` before running a command.
 
@@ -33,7 +34,7 @@ https://learn.microsoft.com/azure/virtual-network/ip-services/public-ip-addresse
 
 ```bash
 sudo apt update
-sudo apt install -y python3-venv nginx certbot python3-certbot-nginx sqlite3 nodejs npm
+sudo apt install -y git python3-venv nginx certbot python3-certbot-nginx sqlite3 nodejs npm
 
 sudo adduser --system --group --home /opt/codehehe codehehe
 sudo usermod -a -G codehehe azureuser
@@ -53,7 +54,18 @@ python3 -m venv /opt/codehehe/venv
 /opt/codehehe/venv/bin/pip install -r /opt/codehehe/app/requirements-prod.txt
 ```
 
-Create `/etc/codehehe/codehehe.env` as root:
+Create `/etc/codehehe/codehehe.env` from the tracked production template. The
+file must stay outside the repository:
+
+```bash
+sudo cp /opt/codehehe/app/deploy/codehehe.env.example /etc/codehehe/codehehe.env
+sudo chown root:codehehe /etc/codehehe/codehehe.env
+sudo chmod 640 /etc/codehehe/codehehe.env
+sudoedit /etc/codehehe/codehehe.env
+```
+
+Replace every `<...>` placeholder before starting the services. The resulting
+file must contain:
 
 ```text
 DJANGO_SECRET_KEY=<RANDOM_SECRET>
@@ -73,6 +85,10 @@ GROQ_API_KEY=<GROQ_API_KEY>
 AI_REVIEW_MODEL=openai/gpt-oss-120b
 AI_REVIEW_REASONING_EFFORT=low
 AI_REVIEW_PROMPT_VERSION=v2
+AI_REVIEW_MAX_OUTPUT_TOKENS=800
+AI_REVIEW_MAX_ATTEMPTS=5
+AI_REVIEW_STALE_SECONDS=300
+AI_REVIEW_MAX_SOURCE_CHARS=16000
 DJANGO_LOG_LEVEL=INFO
 MATCH_PENDING_SUBMISSION_TIMEOUT_SECONDS=120
 MATCH_DURATION_SECONDS=300
@@ -88,8 +104,6 @@ Generate `DJANGO_SECRET_KEY` with:
 
 ```bash
 /opt/codehehe/venv/bin/python -c "from secrets import token_urlsafe; print(token_urlsafe(50))"
-sudo chown root:codehehe /etc/codehehe/codehehe.env
-sudo chmod 640 /etc/codehehe/codehehe.env
 ```
 
 Install the tracked service and Nginx templates:
@@ -109,6 +123,14 @@ sudo nginx -t
 sudo systemctl daemon-reload
 ```
 
+Verify Judge0 is bound only to loopback before exposing the web service:
+
+```bash
+sudo ss -ltnp | grep ':2358'
+```
+
+The output must show `127.0.0.1:2358` (or `[::1]:2358`), not `0.0.0.0:2358`.
+
 ## 3. First release
 
 ```bash
@@ -127,6 +149,9 @@ sudo systemctl enable --now codehehe
 sudo systemctl enable --now codehehe-sweep.timer
 sudo systemctl enable --now codehehe-ai-review.timer
 sudo systemctl enable --now nginx
+sudo systemctl status codehehe --no-pager
+sudo systemctl status codehehe-sweep.timer --no-pager
+sudo systemctl status codehehe-ai-review.timer --no-pager
 curl --fail http://127.0.0.1:8000/health/
 curl --fail http://127.0.0.1:8000/health/ready/
 ```

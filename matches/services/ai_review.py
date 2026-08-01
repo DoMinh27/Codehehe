@@ -360,14 +360,120 @@ class GeminiAIReviewProvider:
             return None
 
 
+class OpenRouterAIReviewProvider:
+    def __init__(
+        self,
+        *,
+        api_key: str,
+        model: str,
+        max_output_tokens: int,
+        http_referer: str,
+        app_title: str,
+        client=None,
+    ):
+        self.api_key = api_key
+        self.model = model
+        self.max_output_tokens = max_output_tokens
+        self.http_referer = http_referer
+        self.app_title = app_title
+        self.client = client or httpx.Client(timeout=60)
+
+    @classmethod
+    def from_environment(cls):
+        if not settings.OPENROUTER_API_KEY:
+            raise AIReviewConfigurationError(
+                "OPENROUTER_API_KEY is not configured."
+            )
+        return cls(
+            api_key=settings.OPENROUTER_API_KEY,
+            model=settings.AI_REVIEW_MODEL,
+            max_output_tokens=settings.AI_REVIEW_MAX_OUTPUT_TOKENS,
+            http_referer=settings.OPENROUTER_HTTP_REFERER,
+            app_title=settings.OPENROUTER_APP_TITLE,
+        )
+
+    def review(self, review_input: AIReviewInput) -> AIReviewResult:
+        payload = {
+            "model": self.model,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": (
+                        GroqAIReviewProvider._build_prompt(review_input)
+                        + "\n\nReturn only one valid JSON object with exactly "
+                        "these keys: approach_summary, time_complexity, "
+                        "space_complexity, strengths, improvements, "
+                        "better_approach. strengths and improvements must be "
+                        "arrays of strings. Do not include markdown fences."
+                    ),
+                }
+            ],
+            "max_tokens": self.max_output_tokens,
+            "response_format": {"type": "json_object"},
+            "provider": {
+                "allow_fallbacks": True,
+            },
+        }
+        try:
+            response = self.client.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": self.http_referer,
+                    "X-Title": self.app_title,
+                },
+                json=payload,
+            )
+            response.raise_for_status()
+        except httpx.HTTPStatusError as error:
+            status_code = error.response.status_code
+            raise AIReviewProviderError(
+                "RATE_LIMITED" if status_code == 429 else f"PROVIDER_HTTP_{status_code}",
+                retryable=status_code == 429 or status_code >= 500,
+                retry_after_seconds=GeminiAIReviewProvider._retry_after(
+                    error.response
+                ),
+            ) from error
+        except (httpx.RequestError, httpx.TimeoutException) as error:
+            raise AIReviewProviderError(
+                "PROVIDER_UNAVAILABLE",
+                retryable=True,
+            ) from error
+
+        try:
+            data = response.json()
+            choice = data["choices"][0]
+            message = choice["message"]
+            content = message.get("content") or message.get("reasoning")
+            analysis = json.loads(content)
+        except (KeyError, IndexError, TypeError, json.JSONDecodeError) as error:
+            raise AIReviewProviderError(
+                "INVALID_PROVIDER_RESPONSE",
+                retryable=True,
+            ) from error
+        validate_review_result(analysis)
+
+        usage = data.get("usage", {})
+        details = usage.get("completion_tokens_details", {})
+        return AIReviewResult(
+            analysis=analysis,
+            input_tokens=usage.get("prompt_tokens"),
+            output_tokens=usage.get("completion_tokens"),
+            reasoning_tokens=details.get("reasoning_tokens"),
+        )
+
+
 def ai_review_provider_from_environment() -> AIReviewProvider:
     provider = settings.AI_REVIEW_PROVIDER
     if provider == "groq":
         return GroqAIReviewProvider.from_environment()
     if provider == "gemini":
         return GeminiAIReviewProvider.from_environment()
+    if provider == "openrouter":
+        return OpenRouterAIReviewProvider.from_environment()
     raise AIReviewConfigurationError(
-        "AI_REVIEW_PROVIDER must be groq or gemini."
+        "AI_REVIEW_PROVIDER must be groq, gemini, or openrouter."
     )
 
 

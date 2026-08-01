@@ -204,15 +204,24 @@ READINESS_CHECK_JUDGE0 = env_bool("READINESS_CHECK_JUDGE0")
 
 AI_REVIEW_ENABLED = env_bool("AI_REVIEW_ENABLED")
 AI_REVIEW_PROVIDER = os.getenv("AI_REVIEW_PROVIDER", "groq").strip().lower()
-if AI_REVIEW_PROVIDER not in {"groq", "gemini"}:
-    raise ImproperlyConfigured("AI_REVIEW_PROVIDER must be groq or gemini.")
+if AI_REVIEW_PROVIDER not in {"groq", "gemini", "openrouter"}:
+    raise ImproperlyConfigured(
+        "AI_REVIEW_PROVIDER must be groq, gemini, or openrouter."
+    )
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
 GEMINI_API_KEY = (
     os.getenv("GEMINI_API_KEY", "") or os.getenv("GOOGLE_API_KEY", "")
 ).strip()
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "").strip()
+OPENROUTER_HTTP_REFERER = os.getenv(
+    "OPENROUTER_HTTP_REFERER",
+    "https://codehehe.eastasia.cloudapp.azure.com",
+).strip()
+OPENROUTER_APP_TITLE = os.getenv("OPENROUTER_APP_TITLE", "CodeHehe").strip()
 default_ai_review_model = {
     "groq": "openai/gpt-oss-120b",
     "gemini": "gemini-2.5-flash-lite",
+    "openrouter": "openrouter/free",
 }[AI_REVIEW_PROVIDER]
 AI_REVIEW_MODEL = os.getenv("AI_REVIEW_MODEL", default_ai_review_model).strip()
 AI_REVIEW_REASONING_EFFORT = os.getenv(

@@ -54,9 +54,10 @@ describe("AI review renderer", () => {
             }],
         });
 
-        expect(document.body.textContent).toContain("Đang chờ phân tích AI");
-        expect(document.body.textContent).toContain("Chưa thể phân tích");
+        expect(document.body.textContent).toContain("Đang chờ đến lượt phân tích AI");
+        expect(document.body.textContent).toContain("Không thể phân tích");
         expect(document.body.textContent).toContain("Chưa có bài Accepted");
+        expect(document.querySelectorAll("button:disabled")).toHaveLength(3);
     });
 
     it("renders a clear message when there are no improvements", () => {
@@ -84,5 +85,40 @@ describe("AI review renderer", () => {
             "Không có điểm cần cải thiện đáng kể.",
         );
         expect(document.querySelectorAll("ul")).toHaveLength(1);
+    });
+
+    it("renders request and retry controls for eligible states", () => {
+        const renderer = createReviewRenderer({documentRoot: document});
+        renderer.render({
+            terminal: true,
+            players: [{
+                username: "player",
+                reviews: [
+                    {
+                        title: "Accepted",
+                        status: "ELIGIBLE",
+                        can_request: true,
+                        can_retry: false,
+                        request_url: "/first",
+                        analysis: null,
+                    },
+                    {
+                        title: "Retry",
+                        status: "FAILED",
+                        can_request: false,
+                        can_retry: true,
+                        request_url: "/retry",
+                        analysis: null,
+                    },
+                ],
+            }],
+        });
+
+        const buttons = document.querySelectorAll("[data-ai-review-request]");
+        expect(buttons).toHaveLength(2);
+        expect(buttons[0].textContent).toBe("Phân tích AI");
+        expect(buttons[1].textContent).toBe("Thử lại");
+        expect(buttons[0].disabled).toBe(false);
+        expect(buttons[1].disabled).toBe(false);
     });
 });

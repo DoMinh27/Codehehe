@@ -1,11 +1,13 @@
 const STATUS_MESSAGES = {
+    ELIGIBLE: "Bài Accepted đã sẵn sàng để phân tích.",
     NOT_ELIGIBLE: "Chưa có bài Accepted để phân tích.",
-    PENDING: "Đang chờ phân tích AI.",
-    PROCESSING: "AI đang phân tích.",
-    FAILED: "Chưa thể phân tích bài này.",
+    PENDING: "Đang chờ đến lượt phân tích AI.",
+    PROCESSING: "AI đang phân tích bài làm.",
+    FAILED: "Phân tích chưa thành công.",
 };
 
 const STATUS_LABELS = {
+    ELIGIBLE: "Accepted",
     NOT_ELIGIBLE: "Chưa đủ điều kiện",
     PENDING: "Đang chờ",
     PROCESSING: "Đang xử lý",
@@ -39,7 +41,7 @@ function addList(documentRoot, parent, headingText, items, emptyText) {
 }
 
 
-function renderCompleted(documentRoot, card, analysis) {
+function renderCompleted(documentRoot, detail, analysis) {
     const summarySection = documentRoot.createElement("section");
     summarySection.className = "review-summary";
     const summaryHeading = documentRoot.createElement("h4");
@@ -58,22 +60,12 @@ function renderCompleted(documentRoot, card, analysis) {
     const space = documentRoot.createElement("span");
     space.textContent = `Bộ nhớ ${analysis.space_complexity}`;
     complexity.append(time, space);
-    card.append(summarySection, complexityHeading, complexity);
+    detail.append(summarySection, complexityHeading, complexity);
 
-    addList(
-        documentRoot,
-        card,
-        "Điểm tốt",
-        analysis.strengths,
-        "Không có điểm nổi bật được ghi nhận.",
-    );
-    addList(
-        documentRoot,
-        card,
-        "Điểm cần cải thiện",
-        analysis.improvements,
-        "Không có điểm cần cải thiện đáng kể.",
-    );
+    addList(documentRoot, detail, "Điểm tốt", analysis.strengths,
+        "Không có điểm nổi bật được ghi nhận.");
+    addList(documentRoot, detail, "Điểm cần cải thiện", analysis.improvements,
+        "Không có điểm cần cải thiện đáng kể.");
 
     const betterSection = documentRoot.createElement("section");
     betterSection.className = "review-detail review-detail--better";
@@ -82,17 +74,40 @@ function renderCompleted(documentRoot, card, analysis) {
     const betterApproach = documentRoot.createElement("p");
     betterApproach.textContent = analysis.better_approach;
     betterSection.append(betterHeading, betterApproach);
-    card.appendChild(betterSection);
+    detail.appendChild(betterSection);
 }
 
 
-function createPlayerHeading(documentRoot, username) {
-    const heading = documentRoot.createElement("header");
-    heading.className = "ai-review-player__heading";
-    const title = documentRoot.createElement("h3");
-    title.textContent = username;
-    heading.appendChild(title);
-    return heading;
+function createActionButton(documentRoot, review) {
+    const button = documentRoot.createElement("button");
+    button.type = "button";
+    button.className = "ai-review-action";
+
+    if (review.status === "COMPLETED") {
+        button.textContent = "Xem phân tích";
+        button.dataset.aiReviewToggle = "true";
+        button.setAttribute("aria-expanded", "false");
+        return button;
+    }
+    if (review.status === "ELIGIBLE") {
+        button.textContent = "Phân tích AI";
+        button.disabled = !review.can_request;
+    } else if (review.status === "FAILED" && review.can_retry) {
+        button.textContent = "Thử lại";
+    } else if (review.status === "FAILED") {
+        button.textContent = "Không thể phân tích";
+        button.disabled = true;
+    } else {
+        button.textContent = review.status === "PROCESSING"
+            ? "Đang xử lý"
+            : review.status === "PENDING" ? "Đang chờ" : "Phân tích AI";
+        button.disabled = true;
+    }
+
+    if (!button.disabled && review.request_url) {
+        button.dataset.aiReviewRequest = review.request_url;
+    }
+    return button;
 }
 
 
@@ -111,41 +126,49 @@ export function createReviewRenderer({documentRoot = document} = {}) {
             for (const player of payload.players) {
                 const playerSection = documentRoot.createElement("section");
                 playerSection.className = "ai-review-player";
-                playerSection.appendChild(
-                    createPlayerHeading(documentRoot, player.username),
-                );
+                const playerHeading = documentRoot.createElement("header");
+                playerHeading.className = "ai-review-player__heading";
+                const playerName = documentRoot.createElement("h3");
+                playerName.textContent = player.username;
+                playerHeading.appendChild(playerName);
+                playerSection.appendChild(playerHeading);
 
                 const reviewGrid = documentRoot.createElement("div");
                 reviewGrid.className = "ai-review-grid";
                 for (const review of player.reviews) {
-                    const card = documentRoot.createElement("details");
+                    const card = documentRoot.createElement("article");
                     card.className = "ai-review-card";
                     card.dataset.status = review.status;
 
-                    const cardHeading = documentRoot.createElement("summary");
-                    cardHeading.className = "ai-review-card__heading";
+                    const heading = documentRoot.createElement("div");
+                    heading.className = "ai-review-card__heading";
                     const title = documentRoot.createElement("h4");
                     title.textContent = review.title;
-                    const statusBadge = documentRoot.createElement("span");
-                    statusBadge.className = (
-                        `ai-status ai-status--${review.status.toLowerCase()}`
+                    const controls = documentRoot.createElement("div");
+                    controls.className = "ai-review-card__controls";
+                    const badge = documentRoot.createElement("span");
+                    badge.className = `ai-status ai-status--${review.status.toLowerCase()}`;
+                    badge.textContent = (
+                        review.status === "FAILED" && !review.can_retry
+                            ? "Không thể phân tích"
+                            : STATUS_LABELS[review.status] || "Chưa xác định"
                     );
-                    statusBadge.textContent = (
-                        STATUS_LABELS[review.status] || "Chưa xác định"
-                    );
-                    cardHeading.append(title, statusBadge);
-                    card.appendChild(cardHeading);
+                    controls.append(badge, createActionButton(documentRoot, review));
+                    heading.append(title, controls);
+                    card.appendChild(heading);
 
                     if (review.status === "COMPLETED" && review.analysis) {
-                        renderCompleted(documentRoot, card, review.analysis);
+                        const detail = documentRoot.createElement("div");
+                        detail.className = "ai-review-card__detail";
+                        detail.hidden = true;
+                        renderCompleted(documentRoot, detail, review.analysis);
+                        card.appendChild(detail);
                     } else {
-                        const status = documentRoot.createElement("p");
-                        status.className = "ai-review-card__message";
-                        status.textContent = (
-                            STATUS_MESSAGES[review.status]
-                            || "Trạng thái phân tích chưa xác định."
-                        );
-                        card.appendChild(status);
+                        const message = documentRoot.createElement("p");
+                        message.className = "ai-review-card__message";
+                        message.textContent = STATUS_MESSAGES[review.status]
+                            || "Trạng thái phân tích chưa xác định.";
+                        card.appendChild(message);
                     }
                     reviewGrid.appendChild(card);
                 }

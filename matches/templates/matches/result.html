@@ -106,6 +106,7 @@
       <p id="ai-review-notice" class="ai-review-notice" role="status"></p>
     </div>
     <div id="ai-review-list"></div>
+    <form id="ai-review-csrf" hidden>{% csrf_token %}</form>
   </section>
   {{ ai_review_config|json_script:"ai-review-config" }}
 {% endif %}

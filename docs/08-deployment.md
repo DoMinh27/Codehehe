@@ -88,10 +88,12 @@ OPENROUTER_API_KEY=
 OPENROUTER_HTTP_REFERER=https://<CODEHEHE_FQDN>
 OPENROUTER_APP_TITLE=CodeHehe
 AI_REVIEW_MODEL=openai/gpt-oss-120b
-AI_REVIEW_REASONING_EFFORT=low
+AI_REVIEW_REASONING_EFFORT=none
 AI_REVIEW_PROMPT_VERSION=v2
-AI_REVIEW_MAX_OUTPUT_TOKENS=800
+AI_REVIEW_MAX_OUTPUT_TOKENS=2048
 AI_REVIEW_MAX_ATTEMPTS=5
+AI_REVIEW_MAX_MANUAL_RETRIES=1
+AI_REVIEW_REQUESTS_PER_MINUTE=15
 AI_REVIEW_STALE_SECONDS=300
 AI_REVIEW_MAX_SOURCE_CHARS=16000
 DJANGO_LOG_LEVEL=INFO
@@ -200,6 +202,7 @@ Record the current commit and make a consistent database backup:
 ```bash
 cd /opt/codehehe/app
 git rev-parse HEAD
+sudo systemctl stop codehehe-ai-review.timer
 sudo systemctl stop codehehe
 sudo mkdir -p /var/backups/codehehe
 sudo cp --preserve=all \
@@ -220,7 +223,11 @@ npm run build
 sudo -u codehehe /opt/codehehe/venv/bin/python manage.py migrate
 sudo -u codehehe /opt/codehehe/venv/bin/python manage.py collectstatic --noinput
 sudo -u codehehe /opt/codehehe/venv/bin/python manage.py check
+sudo cp deploy/codehehe-ai-review.service /etc/systemd/system/codehehe-ai-review.service
+sudo cp deploy/codehehe-ai-review.timer /etc/systemd/system/codehehe-ai-review.timer
+sudo systemctl daemon-reload
 sudo systemctl restart codehehe
+sudo systemctl start codehehe-ai-review.timer
 sudo systemctl reload nginx
 curl --fail https://<CODEHEHE_FQDN>/health/ready/
 ```

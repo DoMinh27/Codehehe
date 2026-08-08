@@ -47,6 +47,11 @@ urlpatterns = [
         name="match-ai-review-state",
     ),
     path(
+        "<int:match_id>/problems/<int:match_problem_id>/ai-review/",
+        reviews.request_ai_review,
+        name="match-ai-review-request",
+    ),
+    path(
         "<int:match_id>/problems/<int:match_problem_id>/run/",
         submissions.run_code,
         name="code-run",

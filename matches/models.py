@@ -481,6 +481,13 @@ class SubmissionAIReview(models.Model):
         on_delete=models.CASCADE,
         related_name="ai_reviews",
     )
+    progress = models.OneToOneField(
+        "PlayerProblemProgress",
+        on_delete=models.SET_NULL,
+        related_name="ai_review",
+        null=True,
+        blank=True,
+    )
     prompt_version = models.CharField(max_length=40)
     status = models.CharField(
         max_length=20,
@@ -492,6 +499,8 @@ class SubmissionAIReview(models.Model):
     model = models.CharField(max_length=100)
     result = models.JSONField(default=dict, blank=True)
     attempt_count = models.PositiveSmallIntegerField(default=0)
+    manual_retry_count = models.PositiveSmallIntegerField(default=0)
+    failure_retryable = models.BooleanField(default=False)
     next_attempt_at = models.DateTimeField(null=True, blank=True, db_index=True)
     processing_started_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
@@ -504,12 +513,6 @@ class SubmissionAIReview(models.Model):
 
     class Meta:
         ordering = ["created_at", "id"]
-        constraints = [
-            models.UniqueConstraint(
-                fields=["submission", "prompt_version"],
-                name="ai_review_submission_prompt_unique",
-            ),
-        ]
         indexes = [
             models.Index(
                 fields=["status", "next_attempt_at"],
@@ -519,6 +522,15 @@ class SubmissionAIReview(models.Model):
 
     def __str__(self):
         return f"AI review #{self.pk} ({self.status})"
+
+
+class AIReviewProviderThrottle(models.Model):
+    provider = models.CharField(max_length=40, unique=True)
+    next_allowed_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"AI throttle for {self.provider}"
 
 
 class PlayerProblemProgress(models.Model):

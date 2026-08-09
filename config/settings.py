@@ -226,17 +226,23 @@ default_ai_review_model = {
 AI_REVIEW_MODEL = os.getenv("AI_REVIEW_MODEL", default_ai_review_model).strip()
 AI_REVIEW_REASONING_EFFORT = os.getenv(
     "AI_REVIEW_REASONING_EFFORT",
-    "low",
+    "none",
 ).strip()
-if AI_REVIEW_REASONING_EFFORT not in {"low", "medium", "high"}:
+if AI_REVIEW_REASONING_EFFORT not in {"none", "low", "medium", "high"}:
     raise ImproperlyConfigured(
-        "AI_REVIEW_REASONING_EFFORT must be low, medium, or high."
+        "AI_REVIEW_REASONING_EFFORT must be none, low, medium, or high."
     )
 AI_REVIEW_PROMPT_VERSION = os.getenv("AI_REVIEW_PROMPT_VERSION", "v2").strip()
 AI_REVIEW_MAX_OUTPUT_TOKENS = int(
-    os.getenv("AI_REVIEW_MAX_OUTPUT_TOKENS", "800")
+    os.getenv("AI_REVIEW_MAX_OUTPUT_TOKENS", "2048")
 )
 AI_REVIEW_MAX_ATTEMPTS = int(os.getenv("AI_REVIEW_MAX_ATTEMPTS", "5"))
+AI_REVIEW_MAX_MANUAL_RETRIES = int(
+    os.getenv("AI_REVIEW_MAX_MANUAL_RETRIES", "1")
+)
+AI_REVIEW_REQUESTS_PER_MINUTE = int(
+    os.getenv("AI_REVIEW_REQUESTS_PER_MINUTE", "15")
+)
 AI_REVIEW_STALE_SECONDS = int(os.getenv("AI_REVIEW_STALE_SECONDS", "300"))
 AI_REVIEW_MAX_SOURCE_CHARS = int(
     os.getenv("AI_REVIEW_MAX_SOURCE_CHARS", "16000")
@@ -244,8 +250,13 @@ AI_REVIEW_MAX_SOURCE_CHARS = int(
 for setting_name in (
     "AI_REVIEW_MAX_OUTPUT_TOKENS",
     "AI_REVIEW_MAX_ATTEMPTS",
+    "AI_REVIEW_REQUESTS_PER_MINUTE",
     "AI_REVIEW_STALE_SECONDS",
     "AI_REVIEW_MAX_SOURCE_CHARS",
 ):
     if globals()[setting_name] <= 0:
         raise ImproperlyConfigured(f"{setting_name} must be greater than zero.")
+if AI_REVIEW_MAX_MANUAL_RETRIES < 0:
+    raise ImproperlyConfigured(
+        "AI_REVIEW_MAX_MANUAL_RETRIES must be zero or greater."
+    )

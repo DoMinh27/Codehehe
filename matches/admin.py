@@ -1,6 +1,7 @@
 from django.contrib import admin
 
 from .models import (
+    AIReviewProviderThrottle,
     Match,
     MatchPlayer,
     MatchPlayerSkill,
@@ -194,10 +195,13 @@ class SubmissionAIReviewAdmin(admin.ModelAdmin):
     list_display = (
         "id",
         "submission",
+        "progress",
         "status",
         "provider",
         "model",
         "attempt_count",
+        "manual_retry_count",
+        "failure_retryable",
         "created_at",
         "completed_at",
     )
@@ -208,12 +212,15 @@ class SubmissionAIReviewAdmin(admin.ModelAdmin):
     )
     readonly_fields = (
         "submission",
+        "progress",
         "prompt_version",
         "status",
         "provider",
         "model",
         "result",
         "attempt_count",
+        "manual_retry_count",
+        "failure_retryable",
         "next_attempt_at",
         "processing_started_at",
         "completed_at",
@@ -224,6 +231,12 @@ class SubmissionAIReviewAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
     )
+
+
+@admin.register(AIReviewProviderThrottle)
+class AIReviewProviderThrottleAdmin(admin.ModelAdmin):
+    list_display = ("provider", "next_allowed_at", "updated_at")
+    readonly_fields = ("provider", "next_allowed_at", "updated_at")
 
 
 @admin.register(PlayerProblemProgress)

@@ -11,7 +11,7 @@ from urllib.parse import quote
 
 import httpx
 from django.conf import settings
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.utils import timezone
 from groq import (
@@ -23,7 +23,17 @@ from groq import (
     RateLimitError,
 )
 
-from matches.models import Match, Submission, SubmissionAIReview
+from matches.models import (
+    AIReviewProviderThrottle,
+    Match,
+    MatchPlayer,
+    MatchProblem,
+    PlayerProblemProgress,
+    Submission,
+    SubmissionAIReview,
+)
+
+from .db import retry_transient_db_lock
 
 logger = logging.getLogger(__name__)
 
@@ -155,27 +165,31 @@ class GroqAIReviewProvider:
         )
 
     def review(self, review_input: AIReviewInput) -> AIReviewResult:
-        try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": self._build_prompt(review_input),
-                    }
-                ],
+        request_options = {
+            "model": self.model,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": self._build_prompt(review_input),
+                }
+            ],
+            "max_completion_tokens": self.max_output_tokens,
+            "response_format": {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "submission_review",
+                    "strict": True,
+                    "schema": REVIEW_JSON_SCHEMA,
+                },
+            },
+        }
+        if self.reasoning_effort != "none":
+            request_options.update(
                 reasoning_effort=self.reasoning_effort,
                 reasoning_format="hidden",
-                max_completion_tokens=self.max_output_tokens,
-                response_format={
-                    "type": "json_schema",
-                    "json_schema": {
-                        "name": "submission_review",
-                        "strict": True,
-                        "schema": REVIEW_JSON_SCHEMA,
-                    },
-                },
             )
+        try:
+            response = self.client.chat.completions.create(**request_options)
         except RateLimitError as error:
             raise AIReviewProviderError(
                 "RATE_LIMITED",
@@ -366,6 +380,7 @@ class OpenRouterAIReviewProvider:
         *,
         api_key: str,
         model: str,
+        reasoning_effort: str,
         max_output_tokens: int,
         http_referer: str,
         app_title: str,
@@ -373,6 +388,7 @@ class OpenRouterAIReviewProvider:
     ):
         self.api_key = api_key
         self.model = model
+        self.reasoning_effort = reasoning_effort
         self.max_output_tokens = max_output_tokens
         self.http_referer = http_referer
         self.app_title = app_title
@@ -387,6 +403,7 @@ class OpenRouterAIReviewProvider:
         return cls(
             api_key=settings.OPENROUTER_API_KEY,
             model=settings.AI_REVIEW_MODEL,
+            reasoning_effort=settings.AI_REVIEW_REASONING_EFFORT,
             max_output_tokens=settings.AI_REVIEW_MAX_OUTPUT_TOKENS,
             http_referer=settings.OPENROUTER_HTTP_REFERER,
             app_title=settings.OPENROUTER_APP_TITLE,
@@ -409,6 +426,7 @@ class OpenRouterAIReviewProvider:
                 }
             ],
             "max_tokens": self.max_output_tokens,
+            "reasoning": {"effort": self.reasoning_effort},
             "response_format": {"type": "json_object"},
             "provider": {
                 "allow_fallbacks": True,
@@ -505,61 +523,171 @@ def validate_review_result(analysis) -> None:
             )
 
 
-class AIReviewQueueService:
-    def enqueue_match(self, *, match_id: int) -> int:
-        if not settings.AI_REVIEW_ENABLED:
-            return 0
-        match = Match.objects.filter(
-            pk=match_id,
-            status=Match.Status.FINISHED,
-            ai_review_enabled=True,
-        ).first()
-        if match is None:
-            return 0
+class AIReviewRequestError(Exception):
+    code = "AI_REVIEW_REQUEST_FAILED"
 
-        submissions = (
+
+class AIReviewRequestNotFoundError(AIReviewRequestError):
+    code = "MATCH_NOT_FOUND"
+
+
+class AIReviewRequestPermissionError(AIReviewRequestError):
+    code = "MATCH_FORBIDDEN"
+
+
+class AIReviewRequestConflictError(AIReviewRequestError):
+    pass
+
+
+@dataclass
+class AIReviewRequestService:
+    """Create one canonical on-demand review for a player and problem."""
+
+    def request(self, *, user, match_id: int, match_problem_id: int):
+        match = Match.objects.filter(pk=match_id).first()
+        if match is None:
+            raise AIReviewRequestNotFoundError("Không tìm thấy trận đấu.")
+        player = MatchPlayer.objects.filter(match=match, user=user).first()
+        if player is None:
+            raise AIReviewRequestPermissionError("Bạn không thuộc trận đấu này.")
+        match_problem = MatchProblem.objects.filter(
+            pk=match_problem_id,
+            match=match,
+        ).first()
+        if match_problem is None:
+            raise AIReviewRequestNotFoundError("Không tìm thấy câu hỏi trong trận.")
+        if match.status != Match.Status.FINISHED:
+            self._conflict(
+                "MATCH_NOT_FINISHED",
+                "Chỉ có thể phân tích sau khi trận đấu kết thúc.",
+            )
+        if not settings.AI_REVIEW_ENABLED or not match.ai_review_enabled:
+            self._conflict(
+                "AI_REVIEW_DISABLED",
+                "Phân tích AI không được bật cho trận đấu này.",
+            )
+
+        progress = PlayerProblemProgress.objects.filter(
+            player=player,
+            match_problem=match_problem,
+            is_solved=True,
+        ).first()
+        submission = (
             Submission.objects.filter(
                 match=match,
+                player=player,
+                match_problem=match_problem,
                 verdict=Submission.Verdict.ACCEPTED,
             )
-            .exclude(match_problem__reference_solution_snapshot="")
-            .order_by(
-                "player_id",
-                "match_problem_id",
-                "-received_at",
-                "-id",
+            .order_by("-received_at", "-id")
+            .first()
+        )
+        if (
+            progress is None
+            or submission is None
+            or not match_problem.reference_solution_snapshot
+        ):
+            self._conflict(
+                "AI_REVIEW_NOT_ELIGIBLE",
+                "Câu hỏi chưa có bài Accepted đủ điều kiện phân tích.",
             )
-        )
-        latest = []
-        seen = set()
-        for submission in submissions:
-            key = (submission.player_id, submission.match_problem_id)
-            if key in seen:
-                continue
-            seen.add(key)
-            latest.append(submission)
 
-        before = SubmissionAIReview.objects.filter(
-            submission__in=latest,
-            prompt_version=settings.AI_REVIEW_PROMPT_VERSION,
-        ).count()
-        SubmissionAIReview.objects.bulk_create(
-            [
-                SubmissionAIReview(
+        try:
+            return retry_transient_db_lock(
+                lambda: self._request_once(
+                    progress_id=progress.id,
                     submission=submission,
-                    prompt_version=settings.AI_REVIEW_PROMPT_VERSION,
-                    provider=settings.AI_REVIEW_PROVIDER,
-                    model=settings.AI_REVIEW_MODEL,
                 )
-                for submission in latest
-            ],
-            ignore_conflicts=True,
+            )
+        except IntegrityError:
+            # A concurrent request won the one-to-one insert race.
+            review = SubmissionAIReview.objects.get(progress_id=progress.id)
+            return review, False
+
+    @staticmethod
+    def _conflict(code, message):
+        error = AIReviewRequestConflictError(message)
+        error.code = code
+        raise error
+
+    def _request_once(self, *, progress_id: int, submission: Submission):
+        with transaction.atomic():
+            progress = PlayerProblemProgress.objects.select_for_update().get(
+                pk=progress_id
+            )
+            review = SubmissionAIReview.objects.filter(progress=progress).first()
+            if review is not None:
+                if review.status in {
+                    SubmissionAIReview.Status.COMPLETED,
+                    SubmissionAIReview.Status.PENDING,
+                    SubmissionAIReview.Status.PROCESSING,
+                }:
+                    return review, False
+                can_retry = (
+                    review.failure_retryable
+                    and review.manual_retry_count
+                    < settings.AI_REVIEW_MAX_MANUAL_RETRIES
+                )
+                if not can_retry:
+                    self._conflict(
+                        "AI_REVIEW_RETRY_NOT_ALLOWED",
+                        "Không còn lượt thử lại cho phân tích này.",
+                    )
+                review.submission = submission
+                review.prompt_version = settings.AI_REVIEW_PROMPT_VERSION
+                review.provider = settings.AI_REVIEW_PROVIDER
+                review.model = settings.AI_REVIEW_MODEL
+                review.status = SubmissionAIReview.Status.PENDING
+                review.result = {}
+                review.attempt_count = 0
+                review.manual_retry_count += 1
+                review.failure_retryable = False
+                review.next_attempt_at = timezone.now()
+                review.processing_started_at = None
+                review.completed_at = None
+                review.input_tokens = None
+                review.output_tokens = None
+                review.reasoning_tokens = None
+                review.error_code = ""
+                review.save()
+                return review, True
+
+            review = SubmissionAIReview.objects.create(
+                progress=progress,
+                submission=submission,
+                prompt_version=settings.AI_REVIEW_PROMPT_VERSION,
+                provider=settings.AI_REVIEW_PROVIDER,
+                model=settings.AI_REVIEW_MODEL,
+                next_attempt_at=timezone.now(),
+            )
+            return review, True
+
+
+class AIReviewThrottle:
+    @staticmethod
+    def reserve(*, provider: str, now) -> bool:
+        interval = timedelta(
+            seconds=60 / settings.AI_REVIEW_REQUESTS_PER_MINUTE
         )
-        after = SubmissionAIReview.objects.filter(
-            submission__in=latest,
-            prompt_version=settings.AI_REVIEW_PROMPT_VERSION,
-        ).count()
-        return after - before
+        with transaction.atomic():
+            throttle, _ = AIReviewProviderThrottle.objects.select_for_update().get_or_create(
+                provider=provider
+            )
+            if throttle.next_allowed_at and throttle.next_allowed_at > now:
+                return False
+            throttle.next_allowed_at = now + interval
+            throttle.save(update_fields=["next_allowed_at", "updated_at"])
+            return True
+
+    @staticmethod
+    def defer(*, provider: str, until) -> None:
+        with transaction.atomic():
+            throttle, _ = AIReviewProviderThrottle.objects.select_for_update().get_or_create(
+                provider=provider
+            )
+            if throttle.next_allowed_at is None or throttle.next_allowed_at < until:
+                throttle.next_allowed_at = until
+                throttle.save(update_fields=["next_allowed_at", "updated_at"])
 
 
 @dataclass
@@ -571,6 +699,13 @@ class AIReviewProcessor:
         self.recover_stale(now=evaluation_time)
         processed = 0
         for _ in range(max(0, limit)):
+            if not self._has_due(now=evaluation_time):
+                break
+            if not AIReviewThrottle.reserve(
+                provider=settings.AI_REVIEW_PROVIDER,
+                now=evaluation_time,
+            ):
+                break
             review = self._claim_next(now=evaluation_time)
             if review is None:
                 break
@@ -591,7 +726,18 @@ class AIReviewProcessor:
             status=SubmissionAIReview.Status.PENDING,
             next_attempt_at=evaluation_time,
             processing_started_at=None,
+            failure_retryable=False,
             error_code="STALE_PROCESSING",
+        )
+
+    @staticmethod
+    def _has_due(*, now):
+        return (
+            SubmissionAIReview.objects.filter(
+                status=SubmissionAIReview.Status.PENDING
+            )
+            .filter(Q(next_attempt_at__isnull=True) | Q(next_attempt_at__lte=now))
+            .exists()
         )
 
     @staticmethod
@@ -671,6 +817,7 @@ class AIReviewProcessor:
             input_tokens=result.input_tokens,
             output_tokens=result.output_tokens,
             reasoning_tokens=result.reasoning_tokens,
+            failure_retryable=False,
             error_code="",
         )
 
@@ -684,17 +831,35 @@ class AIReviewProcessor:
                 status=SubmissionAIReview.Status.PENDING,
                 next_attempt_at=now + timedelta(seconds=delay),
                 processing_started_at=None,
+                failure_retryable=False,
                 error_code=error.code,
             )
+            if error.code == "RATE_LIMITED":
+                AIReviewThrottle.defer(
+                    provider=settings.AI_REVIEW_PROVIDER,
+                    until=now + timedelta(seconds=delay),
+                )
             return
-        self._fail(review, code=error.code, now=now)
+        if error.code == "RATE_LIMITED":
+            delay = error.retry_after_seconds or 60
+            AIReviewThrottle.defer(
+                provider=settings.AI_REVIEW_PROVIDER,
+                until=now + timedelta(seconds=delay),
+            )
+        self._fail(
+            review,
+            code=error.code,
+            now=now,
+            retryable=error.retryable,
+        )
 
     @staticmethod
-    def _fail(review, *, code, now):
+    def _fail(review, *, code, now, retryable=False):
         SubmissionAIReview.objects.filter(pk=review.pk).update(
             status=SubmissionAIReview.Status.FAILED,
             next_attempt_at=None,
             processing_started_at=None,
             completed_at=now,
+            failure_retryable=retryable,
             error_code=code,
         )

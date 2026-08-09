@@ -2,10 +2,16 @@
 
 from dataclasses import dataclass
 
+from django.conf import settings
+from django.db.models import Q
+from django.urls import reverse
+
 from matches.models import (
     Match,
     MatchPlayer,
     MatchProblem,
+    PlayerProblemProgress,
+    Submission,
     SubmissionAIReview,
 )
 
@@ -33,7 +39,7 @@ class AIReviewStateService:
             ) from error
         if match.status != Match.Status.FINISHED:
             raise AIReviewStateConflictError(
-                "AI review chỉ khả dụng sau khi trận đấu kết thúc."
+                "Phân tích AI chỉ khả dụng sau khi trận đấu kết thúc."
             )
 
         players = list(
@@ -55,40 +61,88 @@ class AIReviewStateService:
         match_problems = list(
             MatchProblem.objects.filter(match=match).order_by("order", "id")
         )
+        progress_by_key = {
+            (progress.player_id, progress.match_problem_id): progress
+            for progress in PlayerProblemProgress.objects.filter(
+                match=match,
+                player__in=visible_players,
+            )
+        }
+        accepted_keys = set(
+            Submission.objects.filter(
+                match=match,
+                player__in=visible_players,
+                verdict=Submission.Verdict.ACCEPTED,
+            ).values_list("player_id", "match_problem_id")
+        )
         reviews = {}
         review_queryset = (
-            SubmissionAIReview.objects.filter(submission__match=match)
-            .select_related("submission")
-            .order_by("submission_id", "-created_at", "-id")
+            SubmissionAIReview.objects.filter(
+                Q(progress__match=match) | Q(submission__match=match)
+            )
+            .exclude(error_code="DUPLICATE_SUPERSEDED")
+            .select_related("progress", "submission")
+            .order_by("-created_at", "-id")
         )
         for review in review_queryset:
             key = (
-                review.submission.player_id,
-                review.submission.match_problem_id,
+                (review.progress.player_id, review.progress.match_problem_id)
+                if review.progress_id
+                else (
+                    review.submission.player_id,
+                    review.submission.match_problem_id,
+                )
             )
             reviews.setdefault(key, review)
 
         player_payloads = []
         all_terminal = True
+        feature_enabled = settings.AI_REVIEW_ENABLED and match.ai_review_enabled
         for player in visible_players:
             review_payloads = []
+            owns_row = current_player is not None and player.id == current_player.id
             for match_problem in match_problems:
-                review = reviews.get((player.id, match_problem.id))
-                status = (
-                    review.status
-                    if review is not None
-                    else "NOT_ELIGIBLE"
+                key = (player.id, match_problem.id)
+                progress = progress_by_key.get(key)
+                eligible = (
+                    progress is not None
+                    and progress.is_solved
+                    and key in accepted_keys
+                    and bool(match_problem.reference_solution_snapshot)
+                )
+                review = reviews.get(key)
+                status = review.status if review is not None else (
+                    "ELIGIBLE" if eligible else "NOT_ELIGIBLE"
                 )
                 if status in {
                     SubmissionAIReview.Status.PENDING,
                     SubmissionAIReview.Status.PROCESSING,
                 }:
                     all_terminal = False
+                can_request = status == "ELIGIBLE" and owns_row and feature_enabled
+                can_retry = (
+                    review is not None
+                    and status == SubmissionAIReview.Status.FAILED
+                    and review.failure_retryable
+                    and review.manual_retry_count
+                    < settings.AI_REVIEW_MAX_MANUAL_RETRIES
+                    and owns_row
+                    and feature_enabled
+                )
+                request_url = None
+                if owns_row:
+                    request_url = reverse(
+                        "match-ai-review-request",
+                        args=[match.id, match_problem.id],
+                    )
                 review_payloads.append(
                     {
                         "match_problem_id": match_problem.id,
                         "title": match_problem.title_snapshot,
                         "status": status,
+                        "can_request": can_request,
+                        "can_retry": can_retry,
+                        "request_url": request_url,
                         "analysis": (
                             review.result
                             if review is not None

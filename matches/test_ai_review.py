@@ -13,9 +13,11 @@ from groq import APIStatusError, APITimeoutError, RateLimitError
 from problems.models import Problem
 
 from .models import (
+    AIReviewProviderThrottle,
     Match,
     MatchPlayer,
     MatchProblem,
+    PlayerProblemProgress,
     Submission,
     SubmissionAIReview,
 )
@@ -23,7 +25,7 @@ from .services.ai_review import (
     AIReviewInput,
     AIReviewProcessor,
     AIReviewProviderError,
-    AIReviewQueueService,
+    AIReviewRequestService,
     AIReviewResult,
     FakeAIReviewProvider,
     GeminiAIReviewProvider,
@@ -84,6 +86,16 @@ class AIReviewFixtureMixin:
             reference_solution_snapshot=self.problem.reference_solution,
             difficulty_snapshot=self.problem.difficulty,
         )
+        self.host_progress = PlayerProblemProgress.objects.create(
+            match=self.match,
+            player=self.host_player,
+            match_problem=self.match_problem,
+        )
+        self.opponent_progress = PlayerProblemProgress.objects.create(
+            match=self.match,
+            player=self.opponent_player,
+            match_problem=self.match_problem,
+        )
 
     def submission(
         self,
@@ -107,6 +119,22 @@ class AIReviewFixtureMixin:
                 received_at=received_at
             )
             submission.refresh_from_db()
+        if verdict == Submission.Verdict.ACCEPTED:
+            progress = PlayerProblemProgress.objects.get(
+                player=submission.player,
+                match_problem=submission.match_problem,
+            )
+            progress.is_solved = True
+            progress.accepted_submission = submission
+            progress.solved_at = submission.completed_at
+            progress.save(
+                update_fields=[
+                    "is_solved",
+                    "accepted_submission",
+                    "solved_at",
+                    "updated_at",
+                ]
+            )
         return submission
 
 
@@ -115,8 +143,8 @@ class AIReviewFixtureMixin:
     AI_REVIEW_MODEL="openai/gpt-oss-120b",
     AI_REVIEW_PROMPT_VERSION="v1",
 )
-class AIReviewQueueTests(AIReviewFixtureMixin, TestCase):
-    def test_enqueue_uses_latest_accepted_per_player_and_is_idempotent(self):
+class AIReviewRequestTests(AIReviewFixtureMixin, TestCase):
+    def test_request_uses_latest_accepted_and_is_idempotent(self):
         now = timezone.now()
         first = self.submission(
             source_code="print('first')",
@@ -126,38 +154,161 @@ class AIReviewQueueTests(AIReviewFixtureMixin, TestCase):
             source_code="print('latest')",
             received_at=now - timedelta(seconds=1),
         )
-        opponent = self.submission(player=self.opponent_player)
         self.submission(verdict=Submission.Verdict.WRONG_ANSWER)
 
-        service = AIReviewQueueService()
-        self.assertEqual(service.enqueue_match(match_id=self.match.pk), 2)
-        self.assertEqual(service.enqueue_match(match_id=self.match.pk), 0)
-
-        reviewed_ids = set(
-            SubmissionAIReview.objects.values_list("submission_id", flat=True)
+        review, queued = AIReviewRequestService().request(
+            user=self.host,
+            match_id=self.match.pk,
+            match_problem_id=self.match_problem.pk,
         )
-        self.assertEqual(reviewed_ids, {latest.pk, opponent.pk})
-        self.assertNotIn(first.pk, reviewed_ids)
+        duplicate, duplicate_queued = AIReviewRequestService().request(
+            user=self.host,
+            match_id=self.match.pk,
+            match_problem_id=self.match_problem.pk,
+        )
 
-    def test_enqueue_skips_old_match_without_reference_snapshot(self):
+        self.assertTrue(queued)
+        self.assertFalse(duplicate_queued)
+        self.assertEqual(review.pk, duplicate.pk)
+        self.assertEqual(review.submission_id, latest.pk)
+        self.assertNotEqual(review.submission_id, first.pk)
+        self.assertEqual(SubmissionAIReview.objects.count(), 1)
+
+    def test_post_returns_202_then_200_for_duplicate_request(self):
+        self.submission()
+        url = reverse(
+            "match-ai-review-request",
+            args=[self.match.pk, self.match_problem.pk],
+        )
+        self.client.force_login(self.host)
+
+        first = self.client.post(url)
+        second = self.client.post(url)
+
+        self.assertEqual(first.status_code, 202)
+        self.assertEqual(second.status_code, 200)
+        self.assertEqual(SubmissionAIReview.objects.count(), 1)
+
+    def test_state_marks_accepted_problem_as_requestable(self):
+        self.submission()
+        self.client.force_login(self.host)
+
+        response = self.client.get(
+            reverse("match-ai-review-state", args=[self.match.pk])
+        )
+
+        review = response.json()["players"][0]["reviews"][0]
+        self.assertEqual(review["status"], "ELIGIBLE")
+        self.assertTrue(review["can_request"])
+        self.assertFalse(review["can_retry"])
+        self.assertEqual(
+            review["request_url"],
+            reverse(
+                "match-ai-review-request",
+                args=[self.match.pk, self.match_problem.pk],
+            ),
+        )
+
+    def test_outsider_cannot_request_review(self):
+        self.submission()
+        outsider = User.objects.create_user(username="outsider-request")
+        self.client.force_login(outsider)
+
+        response = self.client.post(
+            reverse(
+                "match-ai-review-request",
+                args=[self.match.pk, self.match_problem.pk],
+            )
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()["code"], "MATCH_FORBIDDEN")
+
+    def test_request_rejects_problem_without_reference_snapshot(self):
         self.match_problem.reference_solution_snapshot = ""
         self.match_problem.save(update_fields=["reference_solution_snapshot"])
         self.submission()
 
-        created = AIReviewQueueService().enqueue_match(match_id=self.match.pk)
+        url = reverse(
+            "match-ai-review-request",
+            args=[self.match.pk, self.match_problem.pk],
+        )
+        self.client.force_login(self.host)
+        response = self.client.post(url)
 
-        self.assertEqual(created, 0)
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json()["code"], "AI_REVIEW_NOT_ELIGIBLE")
         self.assertFalse(SubmissionAIReview.objects.exists())
 
     @override_settings(AI_REVIEW_ENABLED=False)
-    def test_enqueue_skips_match_created_while_feature_was_disabled(self):
-        self.match.ai_review_enabled = False
-        self.match.save(update_fields=["ai_review_enabled"])
+    def test_request_rejects_when_feature_is_disabled(self):
         self.submission()
+        url = reverse(
+            "match-ai-review-request",
+            args=[self.match.pk, self.match_problem.pk],
+        )
+        self.client.force_login(self.host)
 
+        response = self.client.post(url)
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json()["code"], "AI_REVIEW_DISABLED")
+
+    def test_completed_review_is_immutable_across_prompt_versions(self):
+        self.submission()
+        review, _ = AIReviewRequestService().request(
+            user=self.host,
+            match_id=self.match.pk,
+            match_problem_id=self.match_problem.pk,
+        )
+        review.status = SubmissionAIReview.Status.COMPLETED
+        review.save(update_fields=["status", "updated_at"])
+
+        with override_settings(AI_REVIEW_PROMPT_VERSION="v99"):
+            same_review, queued = AIReviewRequestService().request(
+                user=self.host,
+                match_id=self.match.pk,
+                match_problem_id=self.match_problem.pk,
+            )
+
+        self.assertFalse(queued)
+        self.assertEqual(same_review.pk, review.pk)
+        self.assertEqual(same_review.prompt_version, "v1")
+
+    @override_settings(AI_REVIEW_MAX_MANUAL_RETRIES=1)
+    def test_failed_review_allows_exactly_one_manual_retry(self):
+        self.submission()
+        review, _ = AIReviewRequestService().request(
+            user=self.host,
+            match_id=self.match.pk,
+            match_problem_id=self.match_problem.pk,
+        )
+        SubmissionAIReview.objects.filter(pk=review.pk).update(
+            status=SubmissionAIReview.Status.FAILED,
+            failure_retryable=True,
+        )
+
+        retried, queued = AIReviewRequestService().request(
+            user=self.host,
+            match_id=self.match.pk,
+            match_problem_id=self.match_problem.pk,
+        )
+        self.assertTrue(queued)
+        self.assertEqual(retried.manual_retry_count, 1)
+        SubmissionAIReview.objects.filter(pk=review.pk).update(
+            status=SubmissionAIReview.Status.FAILED,
+            failure_retryable=True,
+        )
+        url = reverse(
+            "match-ai-review-request",
+            args=[self.match.pk, self.match_problem.pk],
+        )
+        self.client.force_login(self.host)
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 409)
         self.assertEqual(
-            AIReviewQueueService().enqueue_match(match_id=self.match.pk),
-            0,
+            response.json()["code"],
+            "AI_REVIEW_RETRY_NOT_ALLOWED",
         )
 
 
@@ -183,42 +334,25 @@ class AIReviewFinishIntegrationTests(AIReviewFixtureMixin, TestCase):
             ]
         )
 
-    def test_timeout_finish_enqueues_once(self):
+    def test_timeout_finish_does_not_enqueue_reviews(self):
         self.submission()
         self._make_playing(expired=True)
 
         service = FinishMatchService()
-        with self.captureOnCommitCallbacks(execute=True):
-            service.finalize(match_id=self.match.pk)
+        service.finalize(match_id=self.match.pk)
         service.finalize(match_id=self.match.pk)
 
-        self.assertEqual(SubmissionAIReview.objects.count(), 1)
+        self.assertFalse(SubmissionAIReview.objects.exists())
 
-    def test_surrender_enqueues_once(self):
+    def test_surrender_does_not_enqueue_reviews(self):
         self.submission()
         self._make_playing(expired=False)
 
         service = SurrenderMatchService()
-        with self.captureOnCommitCallbacks(execute=True):
-            service.surrender(user=self.host, match_id=self.match.pk)
+        service.surrender(user=self.host, match_id=self.match.pk)
         service.surrender(user=self.host, match_id=self.match.pk)
 
-        self.assertEqual(SubmissionAIReview.objects.count(), 1)
-
-    def test_queue_failure_does_not_break_finalization(self):
-        self._make_playing(expired=True)
-        queue_service = Mock()
-        queue_service.enqueue_match.side_effect = RuntimeError("queue unavailable")
-
-        with self.assertLogs("matches.services.gameplay", level="ERROR"):
-            with self.captureOnCommitCallbacks(execute=True):
-                finished = FinishMatchService(
-                    review_queue_service=queue_service
-                ).finalize(match_id=self.match.pk)
-
-        self.assertEqual(finished.status, Match.Status.FINISHED)
-        self.match.refresh_from_db()
-        self.assertEqual(self.match.status, Match.Status.FINISHED)
+        self.assertFalse(SubmissionAIReview.objects.exists())
 
 
 @override_settings(
@@ -233,8 +367,11 @@ class AIReviewProcessorTests(AIReviewFixtureMixin, TestCase):
     def setUp(self):
         super().setUp()
         self.accepted = self.submission(source_code="print(input())")
-        AIReviewQueueService().enqueue_match(match_id=self.match.pk)
-        self.review = SubmissionAIReview.objects.get()
+        self.review, _ = AIReviewRequestService().request(
+            user=self.host,
+            match_id=self.match.pk,
+            match_problem_id=self.match_problem.pk,
+        )
 
     def test_success_persists_structured_result_and_usage(self):
         provider = FakeAIReviewProvider(
@@ -283,6 +420,20 @@ class AIReviewProcessorTests(AIReviewFixtureMixin, TestCase):
             self.review.next_attempt_at,
             now + timedelta(seconds=90),
         )
+        throttle = AIReviewProviderThrottle.objects.get(provider="groq")
+        self.assertEqual(throttle.next_allowed_at, now + timedelta(seconds=90))
+
+        SubmissionAIReview.objects.create(
+            submission=self.accepted,
+            prompt_version="another",
+            provider="groq",
+            model="model",
+        )
+        processed = AIReviewProcessor(provider).process_due(
+            now=now + timedelta(seconds=89)
+        )
+        self.assertEqual(processed, 0)
+        self.assertEqual(len(provider.calls), 1)
 
     def test_permanent_error_fails_immediately(self):
         provider = FakeAIReviewProvider(
@@ -337,14 +488,41 @@ class AIReviewProcessorTests(AIReviewFixtureMixin, TestCase):
         self.assertEqual(self.review.error_code, "INPUT_TOO_LARGE")
         self.assertEqual(provider.calls, [])
 
+    @override_settings(AI_REVIEW_REQUESTS_PER_MINUTE=15)
+    def test_twenty_five_jobs_never_exceed_fifteen_calls_per_minute(self):
+        SubmissionAIReview.objects.bulk_create(
+            [
+                SubmissionAIReview(
+                    submission=self.accepted,
+                    prompt_version=f"load-{index}",
+                    provider="groq",
+                    model="model",
+                )
+                for index in range(24)
+            ]
+        )
+        self.assertEqual(SubmissionAIReview.objects.count(), 25)
+        provider = FakeAIReviewProvider(
+            result=AIReviewResult(analysis=VALID_ANALYSIS)
+        )
+        processor = AIReviewProcessor(provider)
+        start = timezone.now()
+
+        for second in range(60):
+            processor.process_due(now=start + timedelta(seconds=second))
+
+        self.assertEqual(len(provider.calls), 15)
+        processor.process_due(now=start + timedelta(seconds=60))
+        self.assertEqual(len(provider.calls), 16)
+
 
 class GroqAIReviewProviderTests(TestCase):
     @staticmethod
-    def provider(client):
+    def provider(client, *, reasoning_effort="low"):
         return GroqAIReviewProvider(
             client=client,
             model="openai/gpt-oss-120b",
-            reasoning_effort="low",
+            reasoning_effort=reasoning_effort,
             max_output_tokens=800,
         )
 
@@ -402,6 +580,26 @@ class GroqAIReviewProviderTests(TestCase):
 
         self.assertEqual(raised.exception.code, "INVALID_PROVIDER_RESPONSE")
         self.assertTrue(raised.exception.retryable)
+
+    def test_none_reasoning_omits_groq_reasoning_parameters(self):
+        message = SimpleNamespace(content=json.dumps(VALID_ANALYSIS))
+        client = Mock()
+        client.chat.completions.create.return_value = SimpleNamespace(
+            choices=[SimpleNamespace(message=message)],
+            usage=SimpleNamespace(
+                prompt_tokens=1,
+                completion_tokens=1,
+                completion_tokens_details=None,
+            ),
+        )
+
+        self.provider(client, reasoning_effort="none").review(
+            self.review_input()
+        )
+
+        kwargs = client.chat.completions.create.call_args.kwargs
+        self.assertNotIn("reasoning_effort", kwargs)
+        self.assertNotIn("reasoning_format", kwargs)
 
     def test_rate_limit_uses_retry_after_header(self):
         client = Mock()
@@ -562,6 +760,7 @@ class OpenRouterAIReviewProviderTests(TestCase):
             api_key="openrouter-key",
             client=client,
             model="openrouter/free",
+            reasoning_effort="none",
             max_output_tokens=800,
             http_referer="https://codehehe.example",
             app_title="CodeHehe",
@@ -614,6 +813,7 @@ class OpenRouterAIReviewProviderTests(TestCase):
         self.assertEqual(kwargs["headers"]["HTTP-Referer"], "https://codehehe.example")
         self.assertEqual(kwargs["headers"]["X-Title"], "CodeHehe")
         self.assertEqual(kwargs["json"]["model"], "openrouter/free")
+        self.assertEqual(kwargs["json"]["reasoning"], {"effort": "none"})
         self.assertEqual(kwargs["json"]["response_format"], {"type": "json_object"})
         prompt = kwargs["json"]["messages"][0]["content"]
         self.assertIn("<player_code>", prompt)
@@ -648,12 +848,14 @@ class AIReviewStateAPITests(AIReviewFixtureMixin, TestCase):
         )
         self.host_review = SubmissionAIReview.objects.create(
             submission=host_submission,
+            progress=self.host_progress,
             prompt_version="v1",
             status=SubmissionAIReview.Status.COMPLETED,
             result=VALID_ANALYSIS,
         )
         SubmissionAIReview.objects.create(
             submission=opponent_submission,
+            progress=self.opponent_progress,
             prompt_version="v1",
             status=SubmissionAIReview.Status.PENDING,
         )

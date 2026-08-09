@@ -11,9 +11,13 @@ if (!configElement) {
 const config = JSON.parse(configElement.textContent);
 const api = createBattleApi({fetchImpl: window.fetch.bind(window)});
 const renderer = createReviewRenderer({documentRoot: document});
+const csrfToken = document.querySelector(
+    "#ai-review-csrf input[name='csrfmiddlewaretoken']",
+)?.value;
 createReviewController({
     api,
     stateUrl: config.stateUrl,
+    csrfToken,
     renderer,
     documentRoot: document,
     windowObject: window,

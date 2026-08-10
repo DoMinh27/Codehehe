@@ -58,6 +58,7 @@ class AIReviewStateService:
             )
 
         visible_players = players if can_view_all else [current_player]
+        visible_player_ids = [player.id for player in visible_players]
         match_problems = list(
             MatchProblem.objects.filter(match=match).order_by("order", "id")
         )
@@ -78,10 +79,23 @@ class AIReviewStateService:
         reviews = {}
         review_queryset = (
             SubmissionAIReview.objects.filter(
-                Q(progress__match=match) | Q(submission__match=match)
+                Q(
+                    progress__match=match,
+                    progress__player_id__in=visible_player_ids,
+                )
+                | Q(
+                    progress__isnull=True,
+                    submission__match=match,
+                    submission__player_id__in=visible_player_ids,
+                )
             )
             .exclude(error_code="DUPLICATE_SUPERSEDED")
             .select_related("progress", "submission")
+            .defer(
+                "submission__source_code",
+                "submission__judge_message",
+                "submission__judge_token",
+            )
             .order_by("-created_at", "-id")
         )
         for review in review_queryset:

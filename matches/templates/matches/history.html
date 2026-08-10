@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Lịch sử trận | CodeHehe{% endblock %}
+
+{% block content %}
+<header class="page-heading history-heading">
+  <div>
+    <h1>Lịch sử trận</h1>
+    <p>Xem lại kết quả và các bài bạn đã nộp trong từng trận.</p>
+  </div>
+  <a class="button button-secondary button-small" href="{% url 'player-profile' %}">Hồ sơ</a>
+</header>
+
+{% if history_rows %}
+  <ol class="history-list">
+    {% for row in history_rows %}
+      <li class="panel history-item">
+        <div class="history-item__main">
+          <div class="history-item__title">
+            {% if row.outcome == "WIN" %}
+              <span class="badge badge--success">Thắng</span>
+            {% elif row.outcome == "LOSS" %}
+              <span class="badge badge-danger">Thua</span>
+            {% elif row.outcome == "DRAW" %}
+              <span class="badge badge--neutral">Hòa</span>
+            {% else %}
+              <span class="badge badge--warning">Không xác định</span>
+            {% endif %}
+            <strong>
+              vs {% if row.opponent %}{{ row.opponent.user.username }}{% else %}Không xác định{% endif %}
+            </strong>
+          </div>
+          <div class="history-item__meta">
+            <time datetime="{{ row.match.ended_at|date:'c' }}">
+              {% if row.match.ended_at %}{{ row.match.ended_at|date:"H:i · d/m/Y" }}{% else %}Chưa có thời gian kết thúc{% endif %}
+            </time>
+            <span>{{ row.finish_reason }}</span>
+            <span class="history-room-code">{{ row.match.room_code }}</span>
+          </div>
+        </div>
+
+        <dl class="history-item__numbers">
+          <div>
+            <dt>Tỷ số</dt>
+            <dd>{{ row.score }} – {% if row.opponent_score is not None %}{{ row.opponent_score }}{% else %}—{% endif %}</dd>
+          </div>
+          <div>
+            <dt>Bài AC</dt>
+            <dd>{{ row.solved_count }}/{{ row.problem_count }}</dd>
+          </div>
+        </dl>
+
+        <div class="history-item__actions">
+          <a class="button button-secondary button-small" href="{{ row.result_url }}">Kết quả</a>
+          <a class="button button-primary button-small" href="{{ row.submissions_url }}">Bài nộp của tôi</a>
+        </div>
+      </li>
+    {% endfor %}
+  </ol>
+
+  {% if page_obj.paginator.num_pages > 1 %}
+    <nav class="pagination" aria-label="Phân trang lịch sử">
+      {% if page_obj.has_previous %}
+        <a class="button button-secondary button-small" href="?page={{ page_obj.previous_page_number }}">Trang trước</a>
+      {% endif %}
+      <span>Trang {{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
+      {% if page_obj.has_next %}
+        <a class="button button-secondary button-small" href="?page={{ page_obj.next_page_number }}">Trang sau</a>
+      {% endif %}
+    </nav>
+  {% endif %}
+{% else %}
+  <section class="panel empty-state">
+    <h2>Chưa có trận đã hoàn thành</h2>
+    <p>Trận đầu tiên của bạn sẽ xuất hiện ở đây sau khi kết thúc.</p>
+    <a class="button button-primary" href="{% url 'lobby' %}">Tạo trận đầu tiên</a>
+  </section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Hồ sơ | CodeHehe{% endblock %}
+
+{% block content %}
+<header class="page-heading profile-heading">
+  <span class="avatar profile-heading__avatar" aria-hidden="true">{{ user.username|first|upper }}</span>
+  <div>
+    <h1>{{ user.username }}</h1>
+    <p>Tham gia CodeHehe từ {{ user.date_joined|date:"d/m/Y" }}.</p>
+  </div>
+</header>
+
+<section aria-labelledby="profile-stats-heading">
+  <div class="section-heading profile-section-heading">
+    <div>
+      <h2 id="profile-stats-heading">Thống kê thi đấu</h2>
+      <p>Chỉ tính các trận đã kết thúc.</p>
+    </div>
+    <a class="button button-secondary button-small" href="{% url 'match-history' %}">Xem lịch sử</a>
+  </div>
+
+  <dl class="profile-stats-grid">
+    <div class="panel profile-stat">
+      <dt>Tổng trận</dt>
+      <dd>{{ stats.total_matches }}</dd>
+    </div>
+    <div class="panel profile-stat">
+      <dt>Win rate</dt>
+      <dd>{{ stats.win_rate|floatformat:1 }}%</dd>
+    </div>
+    <div class="panel profile-stat">
+      <dt>Thắng – Thua – Hòa</dt>
+      <dd>{{ stats.wins }} – {{ stats.losses }} – {{ stats.draws }}</dd>
+    </div>
+    <div class="panel profile-stat">
+      <dt>Chuỗi hoạt động</dt>
+      <dd>{{ stats.current_streak }} ngày</dd>
+      <span class="profile-stat__note">
+        {% if stats.active_today %}Đã nộp bài hôm nay{% else %}Chưa nộp bài hôm nay{% endif %}
+      </span>
+    </div>
+  </dl>
+</section>
+{% endblock %}

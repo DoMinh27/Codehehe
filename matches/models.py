@@ -162,7 +162,7 @@ class MatchPlayer(models.Model):
     )
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="match_players",
     )
     score = models.PositiveIntegerField(default=0)
@@ -462,6 +462,10 @@ class Submission(models.Model):
             models.Index(
                 fields=["match_problem", "received_at"],
                 name="submission_problem_rcvd_idx",
+            ),
+            models.Index(
+                fields=["player", "match_problem", "-received_at", "-id"],
+                name="sub_player_prob_time_idx",
             ),
         ]
 

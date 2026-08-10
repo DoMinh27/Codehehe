@@ -10,6 +10,7 @@ from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
+from accounts.services import record_player_activity
 from matches.models import Match, MatchPlayer, MatchProblem, Submission
 from matches.skills.typing import has_active_typing_challenge
 from problems.services.judge import (
@@ -203,13 +204,18 @@ class SubmissionService:
                 if existing is not None:
                     return existing, False
 
-            return Submission.objects.create(
+            submission = Submission.objects.create(
                 match=match,
                 player=player,
                 match_problem=match_problem,
                 source_code=source_code,
                 idempotency_key=idempotency_key,
-            ), True
+            )
+            record_player_activity(
+                user=user,
+                occurred_at=submission.received_at,
+            )
+            return submission, True
 
     def _complete_submission(
         self, submission: Submission, result: JudgeResult

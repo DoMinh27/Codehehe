@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Bài nộp {{ match.room_code }} | CodeHehe{% endblock %}
+
+{% block content %}
+<header class="page-heading submission-history-heading">
+  <div>
+    <span class="eyebrow">Trận {{ match.room_code }}</span>
+    <h1>Bài nộp của tôi</h1>
+    <p>Source code chỉ hiển thị cho tài khoản của bạn.</p>
+  </div>
+  <div class="cluster">
+    <a class="button button-secondary button-small" href="{% url 'match-history' %}">Lịch sử</a>
+    <a class="button button-secondary button-small" href="{% url 'match-result' match.id %}">Kết quả</a>
+  </div>
+</header>
+
+{% if match_problems %}
+  <nav class="submission-problem-tabs" aria-label="Chọn bài">
+    {% for problem in match_problems %}
+      <a
+        href="?problem={{ problem.id }}"
+        {% if selected_problem.id == problem.id %}class="is-active" aria-current="page"{% endif %}
+      >
+        <span>{{ problem.order }}</span>
+        {{ problem.title_snapshot }}
+      </a>
+    {% endfor %}
+  </nav>
+
+  <section class="submission-history-section" aria-labelledby="submission-problem-heading">
+    <div class="section-heading">
+      <div>
+        <h2 id="submission-problem-heading">{{ selected_problem.title_snapshot }}</h2>
+        <p>{{ page_obj.paginator.count }} lần nộp.</p>
+      </div>
+    </div>
+
+    {% if page_obj.object_list %}
+      <div class="submission-attempt-list">
+        {% for submission in page_obj.object_list %}
+          <details class="panel submission-attempt"{% if forloop.first %} open{% endif %}>
+            <summary>
+              <span class="submission-attempt__summary-main">
+                <strong>Lần nộp #{{ submission.id }}</strong>
+                <time datetime="{{ submission.received_at|date:'c' }}">{{ submission.received_at|date:"H:i:s · d/m/Y" }}</time>
+              </span>
+              <span class="submission-attempt__badges">
+                {% if submission.id == accepted_submission_id %}
+                  <span class="badge badge--success">AC tính điểm</span>
+                {% elif submission.verdict == "ACCEPTED" %}
+                  <span class="badge badge--success">Accepted</span>
+                {% elif submission.verdict == "PENDING" %}
+                  <span class="badge badge--warning">Đang chấm</span>
+                {% else %}
+                  <span class="badge badge-danger">{{ submission.get_verdict_display }}</span>
+                {% endif %}
+              </span>
+            </summary>
+            <dl class="submission-attempt__meta">
+              <div><dt>Ngôn ngữ</dt><dd>{{ submission.get_language_display }}</dd></div>
+              <div><dt>Thời gian</dt><dd>{% if submission.runtime_ms is not None %}{{ submission.runtime_ms }} ms{% else %}—{% endif %}</dd></div>
+              <div><dt>Bộ nhớ</dt><dd>{% if submission.memory_kb is not None %}{{ submission.memory_kb }} KB{% else %}—{% endif %}</dd></div>
+            </dl>
+            <pre class="submission-source"><code>{{ submission.source_code }}</code></pre>
+          </details>
+        {% endfor %}
+      </div>
+
+      {% if page_obj.paginator.num_pages > 1 %}
+        <nav class="pagination" aria-label="Phân trang bài nộp">
+          {% if page_obj.has_previous %}
+            <a class="button button-secondary button-small" href="?problem={{ selected_problem.id }}&amp;page={{ page_obj.previous_page_number }}">Trang trước</a>
+          {% endif %}
+          <span>Trang {{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
+          {% if page_obj.has_next %}
+            <a class="button button-secondary button-small" href="?problem={{ selected_problem.id }}&amp;page={{ page_obj.next_page_number }}">Trang sau</a>
+          {% endif %}
+        </nav>
+      {% endif %}
+    {% else %}
+      <div class="panel empty-state">
+        <h3>Chưa có lần nộp</h3>
+        <p>Bạn chưa nộp code cho bài này trong trận đấu.</p>
+      </div>
+    {% endif %}
+  </section>
+{% else %}
+  <section class="panel empty-state">
+    <h2>Không có dữ liệu bài tập</h2>
+    <p>Trận đấu này không có snapshot bài tập để hiển thị.</p>
+  </section>
+{% endif %}
+{% endblock %}

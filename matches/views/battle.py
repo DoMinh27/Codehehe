@@ -298,6 +298,13 @@ def match_result(request, match_id):
     match_problems = list(
         MatchProblem.objects.filter(match=match)
         .select_related("first_solver__user")
+        .defer(
+            "statement_snapshot",
+            "starter_code_snapshot",
+            "reference_solution_snapshot",
+            "sample_tests_snapshot",
+            "hidden_tests_snapshot",
+        )
         .order_by("order", "id")
     )
     if match.winner_id is not None:

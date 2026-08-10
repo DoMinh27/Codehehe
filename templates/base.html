@@ -21,17 +21,23 @@
       {% if user.is_authenticated %}
         <div class="nav-actions">
           <a class="nav-link" href="{% url 'problem-list' %}">Bài tập</a>
-          <span class="user-chip">
-            <span class="avatar" aria-hidden="true">{{ user.username|first|upper }}</span>
-            <span>{{ user.username }}</span>
-          </span>
-          <form class="inline-form" method="post" action="{% url 'logout' %}">
-            {% csrf_token %}
-            <button class="button button-secondary button-small" type="submit">
-              <svg aria-hidden="true"><use href="{% static 'matches/ui/icons.svg' %}#icon-logout"></use></svg>
-              Đăng xuất
-            </button>
-          </form>
+          <details class="account-menu">
+            <summary class="user-chip" aria-label="Mở menu tài khoản của {{ user.username }}">
+              <span class="avatar" aria-hidden="true">{{ user.username|first|upper }}</span>
+              <span>{{ user.username }}</span>
+            </summary>
+            <div class="account-menu__popover">
+              <a href="{% url 'player-profile' %}">Hồ sơ</a>
+              <a href="{% url 'match-history' %}">Lịch sử</a>
+              <form method="post" action="{% url 'logout' %}">
+                {% csrf_token %}
+                <button type="submit">
+                  <svg aria-hidden="true"><use href="{% static 'matches/ui/icons.svg' %}#icon-logout"></use></svg>
+                  Đăng xuất
+                </button>
+              </form>
+            </div>
+          </details>
         </div>
       {% else %}
         <div class="nav-actions">

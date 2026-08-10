@@ -1,9 +1,10 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path
 
-from .views import register
+from .views import player_profile, register
 
 urlpatterns = [
+    path("profile/", player_profile, name="player-profile"),
     path("register/", register, name="register"),
     path(
         "login/",

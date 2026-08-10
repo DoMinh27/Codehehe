@@ -5,6 +5,7 @@ from matches.models import Match
 from matches.services.room import get_active_match_player
 
 from .forms import RegisterForm
+from .services import get_player_profile_stats
 
 
 def register(request):
@@ -31,3 +32,12 @@ def lobby(request):
             return redirect("waiting-room", room_code=active_player.match.room_code)
         return redirect("battle", match_id=active_player.match_id)
     return render(request, "accounts/lobby.html")
+
+
+@login_required
+def player_profile(request):
+    return render(
+        request,
+        "accounts/profile.html",
+        {"stats": get_player_profile_stats(user=request.user)},
+    )

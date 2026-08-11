@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 
 from .models import Match, MatchPlayer
 from .services.room import (
@@ -123,9 +124,14 @@ class RoomServiceTests(TestCase):
         self.assertFalse(match.players.filter(user=self.second).exists())
 
         JoinRoomService().join(user=self.second, room_code=match.room_code)
+        before_cancel = timezone.now()
         LeaveRoomService().leave(user=self.host, room_code=match.room_code)
+        after_cancel = timezone.now()
         match.refresh_from_db()
         self.assertEqual(match.status, Match.Status.CANCELLED)
+        self.assertIsNotNone(match.ended_at)
+        self.assertGreaterEqual(match.ended_at, before_cancel)
+        self.assertLessEqual(match.ended_at, after_cancel)
         self.assertFalse(match.players.filter(is_active=True).exists())
 
 

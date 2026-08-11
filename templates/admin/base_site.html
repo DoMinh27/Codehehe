@@ -1,0 +1,21 @@
+{% extends "admin/base.html" %}
+{% load i18n %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_("CodeHehe administration") }}{% endblock %}
+
+{% block branding %}
+<div id="site-name">
+  <a href="{% url 'admin:index' %}">{{ site_header|default:_("CodeHehe administration") }}</a>
+</div>
+{% if user.is_anonymous %}
+  {% include "admin/color_theme_toggle.html" %}
+{% endif %}
+{% endblock %}
+
+{% block userlinks %}
+  {% if perms.operations.view_operations_dashboard %}
+    <a href="{% url 'operations:dashboard' %}">Dashboard vận hành</a> /
+  {% endif %}
+  {{ block.super }}
+{% endblock %}
+

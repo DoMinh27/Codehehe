@@ -522,6 +522,14 @@ class SubmissionAIReview(models.Model):
                 fields=["status", "next_attempt_at"],
                 name="ai_review_due_idx",
             ),
+            models.Index(
+                fields=["status", "updated_at"],
+                name="ai_review_status_updated_idx",
+            ),
+            models.Index(
+                fields=["completed_at"],
+                name="ai_review_completed_idx",
+            ),
         ]
 
     def __str__(self):

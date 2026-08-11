@@ -21,6 +21,7 @@ from accounts.views import lobby
 from config.views import health, readiness
 
 urlpatterns = [
+    path("admin/dashboard/", include("operations.urls")),
     path('admin/', admin.site.urls),
     path("health/", health, name="health"),
     path("health/ready/", readiness, name="readiness"),

@@ -7,6 +7,7 @@ import string
 
 from django.conf import settings
 from django.db import IntegrityError, transaction
+from django.utils import timezone
 
 from matches.models import Match, MatchPlayer
 from matches.rules import MatchRules, current_match_rules
@@ -225,7 +226,8 @@ class LeaveRoomService:
 
             if player.is_host:
                 match.status = Match.Status.CANCELLED
-                match.save(update_fields=["status", "updated_at"])
+                match.ended_at = timezone.now()
+                match.save(update_fields=["status", "ended_at", "updated_at"])
                 MatchPlayer.objects.filter(match=match).update(is_active=False)
             else:
                 player.delete()

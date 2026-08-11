@@ -21,6 +21,10 @@ class PlayerActivityDay(models.Model):
         ]
         indexes = [
             models.Index(
+                fields=["activity_date"],
+                name="player_activity_date_idx",
+            ),
+            models.Index(
                 fields=["user", "-activity_date"],
                 name="player_activity_user_day_idx",
             ),

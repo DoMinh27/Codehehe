@@ -1,0 +1,241 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Dashboard vận hành | {{ site_title|default:"CodeHehe administration" }}{% endblock %}
+{% block bodyclass %}{{ block.super }} operations-dashboard-page{% endblock %}
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'matches/dist/dashboard.bundle.css' %}">
+{% endblock %}
+{% block extrahead %}
+  {{ block.super }}
+  <script src="{% static 'matches/dist/dashboard-main.bundle.js' %}" defer></script>
+{% endblock %}
+{% block breadcrumbs %}
+  <div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Trang quản trị</a>
+    &rsaquo; Dashboard vận hành
+  </div>
+{% endblock %}
+{% block content_title %}{% endblock %}
+
+{% block content %}
+<div
+  id="operations-dashboard"
+  class="ops-dashboard"
+  data-state-url="{% url 'operations:dashboard_state' %}"
+  data-refresh-ms="{% if refresh_ms %}{{ refresh_ms }}{% elif refresh_seconds %}{% widthratio refresh_seconds 1 1000 %}{% else %}15000{% endif %}"
+  data-hidden-refresh-ms="{% if hidden_refresh_ms %}{{ hidden_refresh_ms }}{% elif hidden_refresh_seconds %}{% widthratio hidden_refresh_seconds 1 1000 %}{% else %}60000{% endif %}"
+  data-request-timeout-ms="{% if request_timeout_seconds %}{% widthratio request_timeout_seconds 1 1000 %}{% else %}5000{% endif %}"
+>
+  <header class="ops-page-header">
+    <div>
+      <h1>Dashboard vận hành</h1>
+      <p>Theo dõi sức khỏe dịch vụ, hàng đợi và các bất thường cần xử lý.</p>
+    </div>
+    <div class="ops-page-header__actions">
+      <span id="ops-updated-at" class="ops-updated-at" aria-live="polite">Chưa có dữ liệu</span>
+      <button id="ops-refresh" class="button" type="button">Làm mới</button>
+    </div>
+  </header>
+
+  <p id="ops-stale-notice" class="ops-stale-notice" role="status" aria-live="polite" hidden>
+    Dữ liệu có thể đã cũ. Dashboard sẽ tự thử lại.
+  </p>
+
+  <section class="ops-section" aria-labelledby="ops-health-title">
+    <div class="ops-section__heading">
+      <h2 id="ops-health-title">Trạng thái hệ thống</h2>
+    </div>
+    <div id="ops-health" class="ops-health-grid">
+      {% for key, name, item in health_items %}
+        <article class="ops-health-card" data-status="{{ item.status|default:'unknown' }}">
+          <span class="ops-status-dot" aria-hidden="true"></span>
+          <div>
+            <strong>{{ name }}</strong>
+            <p>{{ item.label|default:"Chưa có dữ liệu" }}</p>
+            {% if item.detail %}<small class="ops-muted">{{ item.detail }}</small>{% endif %}
+          </div>
+        </article>
+      {% empty %}
+        <p class="ops-empty">Chưa có dữ liệu trạng thái.</p>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="ops-section" aria-labelledby="ops-counters-title">
+    <div class="ops-section__heading">
+      <h2 id="ops-counters-title">Tổng quan hiện tại</h2>
+    </div>
+    <div id="ops-counters" class="ops-counter-grid">
+      {% for label, value in counter_items %}
+        <article class="ops-counter-card">
+          <span>{{ label }}</span>
+          <strong>{{ value }}</strong>
+        </article>
+      {% empty %}
+        <p class="ops-empty">Chưa có dữ liệu tổng quan.</p>
+      {% endfor %}
+    </div>
+  </section>
+
+  <div class="ops-primary-grid">
+    <section class="ops-panel ops-panel--wide" aria-labelledby="ops-alerts-title">
+      <div class="ops-section__heading">
+        <div>
+          <h2 id="ops-alerts-title">Cảnh báo cần xử lý</h2>
+          <p>Ưu tiên các cảnh báo đỏ trước.</p>
+        </div>
+      </div>
+      <div id="ops-alerts" class="ops-list" aria-live="polite">
+        {% for alert in snapshot.alerts %}
+          {% if alert.url %}
+          <a class="ops-alert" data-severity="{{ alert.severity|default:'warning' }}" href="{{ alert.url }}">
+          {% else %}
+          <article class="ops-alert" data-severity="{{ alert.severity|default:'warning' }}">
+          {% endif %}
+            <div>
+              <strong>{{ alert.message|default:alert.code }}</strong>
+              {% if alert.checked_at %}<small class="ops-muted">{{ alert.checked_at }}</small>{% endif %}
+            </div>
+            {% if alert.count %}<span class="ops-count-badge">{{ alert.count }}</span>{% endif %}
+          {% if alert.url %}
+          </a>
+          {% else %}
+          </article>
+          {% endif %}
+        {% empty %}
+          <p class="ops-empty">Không có cảnh báo đang mở.</p>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="ops-panel" aria-labelledby="ops-live-title">
+      <div class="ops-section__heading">
+        <div>
+          <h2 id="ops-live-title">Trận đang diễn ra</h2>
+          <p>Tối đa 10 trận mới nhất.</p>
+        </div>
+      </div>
+      <div id="ops-live-matches" class="ops-list">
+        {% for match in snapshot.live_matches %}
+          {% if match.url %}
+          <a class="ops-live-match" href="{{ match.url }}">
+          {% else %}
+          <article class="ops-live-match">
+          {% endif %}
+            <div class="ops-live-match__header">
+              <strong class="ops-room-code">{{ match.room_code }}</strong>
+              <span class="ops-status-label">{{ match.status }}</span>
+            </div>
+            <div class="ops-live-match__meta">
+              <span>
+                {% for player in match.players %}
+                  {{ player.username }} {{ player.score }}{% if not forloop.last %} — {% endif %}
+                {% empty %}Chưa có dữ liệu người chơi{% endfor %}
+              </span>
+              <span>Còn {{ match.remaining_seconds|default:0 }} giây</span>
+              <span>{{ match.pending_submissions }} submission pending</span>
+            </div>
+          {% if match.url %}</a>{% else %}</article>{% endif %}
+        {% empty %}
+          <p class="ops-empty">Hiện không có trận đang diễn ra.</p>
+        {% endfor %}
+      </div>
+    </section>
+  </div>
+
+  <div class="ops-secondary-grid">
+    <section class="ops-panel" aria-labelledby="ops-submissions-title">
+      <div class="ops-section__heading">
+        <div>
+          <h2 id="ops-submissions-title">Submission và Judge0</h2>
+          <p>Thống kê trong 24 giờ gần nhất.</p>
+        </div>
+      </div>
+      <div id="ops-submissions">
+        <dl class="ops-definition-grid">
+          <div class="ops-definition"><dt>Tổng lượt nộp</dt><dd>{{ snapshot.submissions.total }}</dd></div>
+          <div class="ops-definition"><dt>Tỷ lệ AC</dt><dd>{{ snapshot.submissions.ac_rate }}%</dd></div>
+          <div class="ops-definition"><dt>Pending</dt><dd>{{ snapshot.submissions.pending }}</dd></div>
+          <div class="ops-definition"><dt>Bị treo</dt><dd>{{ snapshot.submissions.stale }}</dd></div>
+          <div class="ops-definition"><dt>Xử lý trung bình</dt><dd>{{ snapshot.submissions.average_latency_ms|default_if_none:"—" }}{% if snapshot.submissions.average_latency_ms != None %} ms{% endif %}</dd></div>
+          <div class="ops-definition"><dt>p95</dt><dd>{{ snapshot.submissions.p95_latency_ms|default_if_none:"—" }}{% if snapshot.submissions.p95_latency_ms != None %} ms{% endif %}</dd></div>
+        </dl>
+        <div class="ops-bars">
+          {% for verdict in snapshot.submissions.verdicts %}
+            <div class="ops-bar-row">
+              <div class="ops-bar-row__heading"><span>{{ verdict.label }}</span><span>{{ verdict.count }} · {{ verdict.percentage }}%</span></div>
+              <div class="ops-bar-track"><span class="ops-bar-value" style="width: {{ verdict.percentage }}%"></span></div>
+            </div>
+          {% endfor %}
+        </div>
+        <div class="ops-sublist">
+          <h3>Internal Error gần đây</h3>
+          {% for error in snapshot.submissions.internal_errors %}
+            {% if error.url %}
+            <a class="ops-sublist__item" href="{{ error.url }}">
+            {% else %}
+            <article class="ops-sublist__item">
+            {% endif %}
+              <strong>#{{ error.id }}</strong>
+              <span>{{ error.match_code }} · {{ error.player }} · {{ error.problem }}</span>
+              <time datetime="{{ error.received_at }}">{{ error.received_at }}</time>
+            {% if error.url %}</a>{% else %}</article>{% endif %}
+          {% empty %}<p class="ops-empty">Không có Internal Error gần đây.</p>{% endfor %}
+        </div>
+      </div>
+    </section>
+
+    <section class="ops-panel" aria-labelledby="ops-ai-title">
+      <div class="ops-section__heading">
+        <div>
+          <h2 id="ops-ai-title">AI Review</h2>
+          <p>Hàng đợi, độ ổn định và token usage.</p>
+        </div>
+      </div>
+      <div id="ops-ai-reviews">
+        <dl class="ops-definition-grid">
+          <div class="ops-definition"><dt>Pending</dt><dd>{{ snapshot.ai_reviews.counts.PENDING }}</dd></div>
+          <div class="ops-definition"><dt>Processing</dt><dd>{{ snapshot.ai_reviews.counts.PROCESSING }}</dd></div>
+          <div class="ops-definition"><dt>Completed</dt><dd>{{ snapshot.ai_reviews.counts.COMPLETED }}</dd></div>
+          <div class="ops-definition"><dt>Failed</dt><dd>{{ snapshot.ai_reviews.counts.FAILED }}</dd></div>
+          <div class="ops-definition"><dt>Tỷ lệ thành công</dt><dd>{{ snapshot.ai_reviews.success_rate }}%</dd></div>
+          <div class="ops-definition"><dt>Job cũ nhất</dt><dd>{{ snapshot.ai_reviews.oldest_eligible_at|default:"—" }}</dd></div>
+          <div class="ops-definition"><dt>Hoàn thành gần nhất</dt><dd>{{ snapshot.ai_reviews.last_completed_at|default:"—" }}</dd></div>
+        </dl>
+        <dl class="ops-definition-grid ops-definition-grid--compact">
+          <div class="ops-definition"><dt>Provider</dt><dd>{{ snapshot.ai_reviews.provider }}</dd></div>
+          <div class="ops-definition"><dt>Model cấu hình</dt><dd>{{ snapshot.ai_reviews.configured_model }}</dd></div>
+          <div class="ops-definition"><dt>Model thực tế</dt><dd>{{ snapshot.ai_reviews.actual_model|default:"—" }}</dd></div>
+          <div class="ops-definition"><dt>Input tokens</dt><dd>{{ snapshot.ai_reviews.tokens.input }}</dd></div>
+          <div class="ops-definition"><dt>Output tokens</dt><dd>{{ snapshot.ai_reviews.tokens.output }}</dd></div>
+          <div class="ops-definition"><dt>Reasoning tokens</dt><dd>{{ snapshot.ai_reviews.tokens.reasoning }}</dd></div>
+        </dl>
+        <div class="ops-sublist">
+          <h3>Mã lỗi phổ biến</h3>
+          {% for error in snapshot.ai_reviews.errors %}
+            <div class="ops-sublist__item">
+              <code>{{ error.code|default:"UNKNOWN" }}</code>
+              <strong>{{ error.count }}</strong>
+            </div>
+          {% empty %}<p class="ops-empty">Không có lỗi trong 24 giờ.</p>{% endfor %}
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section class="ops-section" aria-labelledby="ops-kpis-title">
+    <div class="ops-section__heading">
+      <h2 id="ops-kpis-title">Hoạt động hôm nay</h2>
+    </div>
+    <div id="ops-kpis" class="ops-counter-grid">
+      {% for label, value in kpi_items %}
+        <article class="ops-counter-card"><span>{{ label }}</span><strong>{{ value }}</strong></article>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+
+{{ snapshot|json_script:"operations-dashboard-initial-state" }}
+{% endblock %}

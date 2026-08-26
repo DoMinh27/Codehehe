@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "problems": [
     {
       "slug": "sum-two-numbers",
@@ -12,14 +12,66 @@
       "order": 1,
       "is_active": true,
       "test_cases": [
-        {"input_data": "2 3", "expected_output": "5", "is_sample": true, "order": 1},
-        {"input_data": "-5 8", "expected_output": "3", "is_sample": false, "order": 2},
-        {"input_data": "0 0", "expected_output": "0", "is_sample": false, "order": 3},
-        {"input_data": "1000000 2000000", "expected_output": "3000000", "is_sample": false, "order": 4},
-        {"input_data": "-1000000000 -1000000000", "expected_output": "-2000000000", "is_sample": false, "order": 5},
-        {"input_data": "1000000000 -1000000000", "expected_output": "0", "is_sample": false, "order": 6},
-        {"input_data": "-999999999 1000000000", "expected_output": "1", "is_sample": false, "order": 7}
-      ]
+        {
+          "input_data": "2 3",
+          "expected_output": "5",
+          "is_sample": true,
+          "order": 1
+        },
+        {
+          "input_data": "-5 8",
+          "expected_output": "3",
+          "is_sample": false,
+          "order": 2
+        },
+        {
+          "input_data": "0 0",
+          "expected_output": "0",
+          "is_sample": false,
+          "order": 3
+        },
+        {
+          "input_data": "1000000 2000000",
+          "expected_output": "3000000",
+          "is_sample": false,
+          "order": 4
+        },
+        {
+          "input_data": "-1000000000 -1000000000",
+          "expected_output": "-2000000000",
+          "is_sample": false,
+          "order": 5
+        },
+        {
+          "input_data": "1000000000 -1000000000",
+          "expected_output": "0",
+          "is_sample": false,
+          "order": 6
+        },
+        {
+          "input_data": "-999999999 1000000000",
+          "expected_output": "1",
+          "is_sample": false,
+          "order": 7
+        },
+        {
+          "input_data": "42 -17",
+          "expected_output": "25",
+          "is_sample": false,
+          "order": 8
+        },
+        {
+          "input_data": "999999999 -999999998",
+          "expected_output": "1",
+          "is_sample": false,
+          "order": 9
+        }
+      ],
+      "primary_topic": "ARITHMETIC",
+      "source_type": "ORIGINAL",
+      "source_name": "CodeHehe",
+      "source_url": "",
+      "source_license": "CodeHehe original"
     },
     {
       "slug": "even-or-odd",
@@ -32,14 +84,66 @@
       "order": 2,
       "is_active": true,
       "test_cases": [
-        {"input_data": "4", "expected_output": "CHAN", "is_sample": true, "order": 1},
-        {"input_data": "-3", "expected_output": "LE", "is_sample": false, "order": 2},
-        {"input_data": "0", "expected_output": "CHAN", "is_sample": false, "order": 3},
-        {"input_data": "17", "expected_output": "LE", "is_sample": false, "order": 4},
-        {"input_data": "-1000000000", "expected_output": "CHAN", "is_sample": false, "order": 5},
-        {"input_data": "999999999", "expected_output": "LE", "is_sample": false, "order": 6},
-        {"input_data": "1000000000", "expected_output": "CHAN", "is_sample": false, "order": 7}
-      ]
+        {
+          "input_data": "4",
+          "expected_output": "CHAN",
+          "is_sample": true,
+          "order": 1
+        },
+        {
+          "input_data": "-3",
+          "expected_output": "LE",
+          "is_sample": false,
+          "order": 2
+        },
+        {
+          "input_data": "0",
+          "expected_output": "CHAN",
+          "is_sample": false,
+          "order": 3
+        },
+        {
+          "input_data": "17",
+          "expected_output": "LE",
+          "is_sample": false,
+          "order": 4
+        },
+        {
+          "input_data": "-1000000000",
+          "expected_output": "CHAN",
+          "is_sample": false,
+          "order": 5
+        },
+        {
+          "input_data": "999999999",
+          "expected_output": "LE",
+          "is_sample": false,
+          "order": 6
+        },
+        {
+          "input_data": "1000000000",
+          "expected_output": "CHAN",
+          "is_sample": false,
+          "order": 7
+        },
+        {
+          "input_data": "-1",
+          "expected_output": "LE",
+          "is_sample": false,
+          "order": 8
+        },
+        {
+          "input_data": "2",
+          "expected_output": "CHAN",
+          "is_sample": false,
+          "order": 9
+        }
+      ],
+      "primary_topic": "BASICS",
+      "source_type": "ORIGINAL",
+      "source_name": "CodeHehe",
+      "source_url": "",
+      "source_license": "CodeHehe original"
     },
     {
       "slug": "multiply-two-numbers",
@@ -52,14 +156,66 @@
       "order": 3,
       "is_active": true,
       "test_cases": [
-        {"input_data": "2 3", "expected_output": "6", "is_sample": true, "order": 1},
-        {"input_data": "-5 8", "expected_output": "-40", "is_sample": false, "order": 2},
-        {"input_data": "0 999999999", "expected_output": "0", "is_sample": false, "order": 3},
-        {"input_data": "-7 -6", "expected_output": "42", "is_sample": false, "order": 4},
-        {"input_data": "1000000000 1000000000", "expected_output": "1000000000000000000", "is_sample": false, "order": 5},
-        {"input_data": "-1000000000 1000000000", "expected_output": "-1000000000000000000", "is_sample": false, "order": 6},
-        {"input_data": "1 -1", "expected_output": "-1", "is_sample": false, "order": 7}
-      ]
+        {
+          "input_data": "2 3",
+          "expected_output": "6",
+          "is_sample": true,
+          "order": 1
+        },
+        {
+          "input_data": "-5 8",
+          "expected_output": "-40",
+          "is_sample": false,
+          "order": 2
+        },
+        {
+          "input_data": "0 999999999",
+          "expected_output": "0",
+          "is_sample": false,
+          "order": 3
+        },
+        {
+          "input_data": "-7 -6",
+          "expected_output": "42",
+          "is_sample": false,
+          "order": 4
+        },
+        {
+          "input_data": "1000000000 1000000000",
+          "expected_output": "1000000000000000000",
+          "is_sample": false,
+          "order": 5
+        },
+        {
+          "input_data": "-1000000000 1000000000",
+          "expected_output": "-1000000000000000000",
+          "is_sample": false,
+          "order": 6
+        },
+        {
+          "input_data": "1 -1",
+          "expected_output": "-1",
+          "is_sample": false,
+          "order": 7
+        },
+        {
+          "input_data": "123456 789",
+          "expected_output": "97406784",
+          "is_sample": false,
+          "order": 8
+        },
+        {
+          "input_data": "-99999 99999",
+          "expected_output": "-9999800001",
+          "is_sample": false,
+          "order": 9
+        }
+      ],
+      "primary_topic": "ARITHMETIC",
+      "source_type": "ORIGINAL",
+      "source_name": "CodeHehe",
+      "source_url": "",
+      "source_license": "CodeHehe original"
     },
     {
       "slug": "maximum-of-three",
@@ -72,14 +228,66 @@
       "order": 4,
       "is_active": true,
       "test_cases": [
-        {"input_data": "1 5 3", "expected_output": "5", "is_sample": true, "order": 1},
-        {"input_data": "-1 -5 -3", "expected_output": "-1", "is_sample": false, "order": 2},
-        {"input_data": "7 7 2", "expected_output": "7", "is_sample": false, "order": 3},
-        {"input_data": "0 0 0", "expected_output": "0", "is_sample": false, "order": 4},
-        {"input_data": "-1000000000 0 1000000000", "expected_output": "1000000000", "is_sample": false, "order": 5},
-        {"input_data": "1000000000 1000000000 999999999", "expected_output": "1000000000", "is_sample": false, "order": 6},
-        {"input_data": "-999999998 -999999999 -1000000000", "expected_output": "-999999998", "is_sample": false, "order": 7}
-      ]
+        {
+          "input_data": "1 5 3",
+          "expected_output": "5",
+          "is_sample": true,
+          "order": 1
+        },
+        {
+          "input_data": "-1 -5 -3",
+          "expected_output": "-1",
+          "is_sample": false,
+          "order": 2
+        },
+        {
+          "input_data": "7 7 2",
+          "expected_output": "7",
+          "is_sample": false,
+          "order": 3
+        },
+        {
+          "input_data": "0 0 0",
+          "expected_output": "0",
+          "is_sample": false,
+          "order": 4
+        },
+        {
+          "input_data": "-1000000000 0 1000000000",
+          "expected_output": "1000000000",
+          "is_sample": false,
+          "order": 5
+        },
+        {
+          "input_data": "1000000000 1000000000 999999999",
+          "expected_output": "1000000000",
+          "is_sample": false,
+          "order": 6
+        },
+        {
+          "input_data": "-999999998 -999999999 -1000000000",
+          "expected_output": "-999999998",
+          "is_sample": false,
+          "order": 7
+        },
+        {
+          "input_data": "5 3 5",
+          "expected_output": "5",
+          "is_sample": false,
+          "order": 8
+        },
+        {
+          "input_data": "-4 12 11",
+          "expected_output": "12",
+          "is_sample": false,
+          "order": 9
+        }
+      ],
+      "primary_topic": "BASICS",
+      "source_type": "ORIGINAL",
+      "source_name": "CodeHehe",
+      "source_url": "",
+      "source_license": "CodeHehe original"
     },
     {
       "slug": "count-vowels",
@@ -92,14 +300,66 @@
       "order": 5,
       "is_active": true,
       "test_cases": [
-        {"input_data": "Hello World", "expected_output": "3", "is_sample": true, "order": 1},
-        {"input_data": "AEIOU", "expected_output": "5", "is_sample": false, "order": 2},
-        {"input_data": "rhythm", "expected_output": "0", "is_sample": false, "order": 3},
-        {"input_data": "lap trinh python", "expected_output": "3", "is_sample": false, "order": 4},
-        {"input_data": "AaEeIiOoUu", "expected_output": "10", "is_sample": false, "order": 5},
-        {"input_data": "CodeHeHe", "expected_output": "4", "is_sample": false, "order": 6},
-        {"input_data": "a e i o u", "expected_output": "5", "is_sample": false, "order": 7}
-      ]
+        {
+          "input_data": "Hello World",
+          "expected_output": "3",
+          "is_sample": true,
+          "order": 1
+        },
+        {
+          "input_data": "AEIOU",
+          "expected_output": "5",
+          "is_sample": false,
+          "order": 2
+        },
+        {
+          "input_data": "rhythm",
+          "expected_output": "0",
+          "is_sample": false,
+          "order": 3
+        },
+        {
+          "input_data": "lap trinh python",
+          "expected_output": "3",
+          "is_sample": false,
+          "order": 4
+        },
+        {
+          "input_data": "AaEeIiOoUu",
+          "expected_output": "10",
+          "is_sample": false,
+          "order": 5
+        },
+        {
+          "input_data": "CodeHeHe",
+          "expected_output": "4",
+          "is_sample": false,
+          "order": 6
+        },
+        {
+          "input_data": "a e i o u",
+          "expected_output": "5",
+          "is_sample": false,
+          "order": 7
+        },
+        {
+          "input_data": "xyz",
+          "expected_output": "0",
+          "is_sample": false,
+          "order": 8
+        },
+        {
+          "input_data": "aeiou AEIOU",
+          "expected_output": "10",
+          "is_sample": false,
+          "order": 9
+        }
+      ],
+      "primary_topic": "STRINGS",
+      "source_type": "ORIGINAL",
+      "source_name": "CodeHehe",
+      "source_url": "",
+      "source_license": "CodeHehe original"
     },
     {
       "slug": "palindrome-check",
@@ -112,14 +372,66 @@
       "order": 6,
       "is_active": true,
       "test_cases": [
-        {"input_data": "Level", "expected_output": "YES", "is_sample": true, "order": 1},
-        {"input_data": "python", "expected_output": "NO", "is_sample": false, "order": 2},
-        {"input_data": "A", "expected_output": "YES", "is_sample": false, "order": 3},
-        {"input_data": "abba", "expected_output": "YES", "is_sample": false, "order": 4},
-        {"input_data": "RaceCar", "expected_output": "YES", "is_sample": false, "order": 5},
-        {"input_data": "AbCa", "expected_output": "NO", "is_sample": false, "order": 6},
-        {"input_data": "aBcCBa", "expected_output": "YES", "is_sample": false, "order": 7}
-      ]
+        {
+          "input_data": "Level",
+          "expected_output": "YES",
+          "is_sample": true,
+          "order": 1
+        },
+        {
+          "input_data": "python",
+          "expected_output": "NO",
+          "is_sample": false,
+          "order": 2
+        },
+        {
+          "input_data": "A",
+          "expected_output": "YES",
+          "is_sample": false,
+          "order": 3
+        },
+        {
+          "input_data": "abba",
+          "expected_output": "YES",
+          "is_sample": false,
+          "order": 4
+        },
+        {
+          "input_data": "RaceCar",
+          "expected_output": "YES",
+          "is_sample": false,
+          "order": 5
+        },
+        {
+          "input_data": "AbCa",
+          "expected_output": "NO",
+          "is_sample": false,
+          "order": 6
+        },
+        {
+          "input_data": "aBcCBa",
+          "expected_output": "YES",
+          "is_sample": false,
+          "order": 7
+        },
+        {
+          "input_data": "12321",
+          "expected_output": "YES",
+          "is_sample": false,
+          "order": 8
+        },
+        {
+          "input_data": "CodeHehe",
+          "expected_output": "NO",
+          "is_sample": false,
+          "order": 9
+        }
+      ],
+      "primary_topic": "STRINGS",
+      "source_type": "ORIGINAL",
+      "source_name": "CodeHehe",
+      "source_url": "",
+      "source_license": "CodeHehe original"
     },
     {
       "slug": "fibonacci-number",
@@ -132,14 +444,66 @@
       "order": 7,
       "is_active": true,
       "test_cases": [
-        {"input_data": "7", "expected_output": "13", "is_sample": true, "order": 1},
-        {"input_data": "0", "expected_output": "0", "is_sample": false, "order": 2},
-        {"input_data": "1", "expected_output": "1", "is_sample": false, "order": 3},
-        {"input_data": "2", "expected_output": "1", "is_sample": false, "order": 4},
-        {"input_data": "10", "expected_output": "55", "is_sample": false, "order": 5},
-        {"input_data": "25", "expected_output": "75025", "is_sample": false, "order": 6},
-        {"input_data": "50", "expected_output": "12586269025", "is_sample": false, "order": 7}
-      ]
+        {
+          "input_data": "7",
+          "expected_output": "13",
+          "is_sample": true,
+          "order": 1
+        },
+        {
+          "input_data": "0",
+          "expected_output": "0",
+          "is_sample": false,
+          "order": 2
+        },
+        {
+          "input_data": "1",
+          "expected_output": "1",
+          "is_sample": false,
+          "order": 3
+        },
+        {
+          "input_data": "2",
+          "expected_output": "1",
+          "is_sample": false,
+          "order": 4
+        },
+        {
+          "input_data": "10",
+          "expected_output": "55",
+          "is_sample": false,
+          "order": 5
+        },
+        {
+          "input_data": "25",
+          "expected_output": "75025",
+          "is_sample": false,
+          "order": 6
+        },
+        {
+          "input_data": "50",
+          "expected_output": "12586269025",
+          "is_sample": false,
+          "order": 7
+        },
+        {
+          "input_data": "2",
+          "expected_output": "1",
+          "is_sample": false,
+          "order": 8
+        },
+        {
+          "input_data": "20",
+          "expected_output": "6765",
+          "is_sample": false,
+          "order": 9
+        }
+      ],
+      "primary_topic": "DYNAMIC_PROGRAMMING",
+      "source_type": "ORIGINAL",
+      "source_name": "CodeHehe",
+      "source_url": "",
+      "source_license": "CodeHehe original"
     },
     {
       "slug": "primes-up-to-n",
@@ -152,14 +516,66 @@
       "order": 8,
       "is_active": true,
       "test_cases": [
-        {"input_data": "10", "expected_output": "2 3 5 7", "is_sample": true, "order": 1},
-        {"input_data": "2", "expected_output": "2", "is_sample": false, "order": 2},
-        {"input_data": "3", "expected_output": "2 3", "is_sample": false, "order": 3},
-        {"input_data": "20", "expected_output": "2 3 5 7 11 13 17 19", "is_sample": false, "order": 4},
-        {"input_data": "30", "expected_output": "2 3 5 7 11 13 17 19 23 29", "is_sample": false, "order": 5},
-        {"input_data": "49", "expected_output": "2 3 5 7 11 13 17 19 23 29 31 37 41 43 47", "is_sample": false, "order": 6},
-        {"input_data": "97", "expected_output": "2 3 5 7 11 13 17 19 23 29 31 37 41 43 47 53 59 61 67 71 73 79 83 89 97", "is_sample": false, "order": 7}
-      ]
+        {
+          "input_data": "10",
+          "expected_output": "2 3 5 7",
+          "is_sample": true,
+          "order": 1
+        },
+        {
+          "input_data": "2",
+          "expected_output": "2",
+          "is_sample": false,
+          "order": 2
+        },
+        {
+          "input_data": "3",
+          "expected_output": "2 3",
+          "is_sample": false,
+          "order": 3
+        },
+        {
+          "input_data": "20",
+          "expected_output": "2 3 5 7 11 13 17 19",
+          "is_sample": false,
+          "order": 4
+        },
+        {
+          "input_data": "30",
+          "expected_output": "2 3 5 7 11 13 17 19 23 29",
+          "is_sample": false,
+          "order": 5
+        },
+        {
+          "input_data": "49",
+          "expected_output": "2 3 5 7 11 13 17 19 23 29 31 37 41 43 47",
+          "is_sample": false,
+          "order": 6
+        },
+        {
+          "input_data": "97",
+          "expected_output": "2 3 5 7 11 13 17 19 23 29 31 37 41 43 47 53 59 61 67 71 73 79 83 89 97",
+          "is_sample": false,
+          "order": 7
+        },
+        {
+          "input_data": "3",
+          "expected_output": "2 3",
+          "is_sample": false,
+          "order": 8
+        },
+        {
+          "input_data": "20",
+          "expected_output": "2 3 5 7 11 13 17 19",
+          "is_sample": false,
+          "order": 9
+        }
+      ],
+      "primary_topic": "ARITHMETIC",
+      "source_type": "ORIGINAL",
+      "source_name": "CodeHehe",
+      "source_url": "",
+      "source_license": "CodeHehe original"
     },
     {
       "slug": "second-largest-distinct",
@@ -172,14 +588,66 @@
       "order": 9,
       "is_active": true,
       "test_cases": [
-        {"input_data": "5\n1 3 2 5 4", "expected_output": "4", "is_sample": true, "order": 1},
-        {"input_data": "4\n10 10 9 8", "expected_output": "9", "is_sample": false, "order": 2},
-        {"input_data": "3\n-1 -2 -3", "expected_output": "-2", "is_sample": false, "order": 3},
-        {"input_data": "6\n5 5 5 4 4 3", "expected_output": "4", "is_sample": false, "order": 4},
-        {"input_data": "2\n1 2", "expected_output": "1", "is_sample": false, "order": 5},
-        {"input_data": "5\n-5 -5 -10 -20 -10", "expected_output": "-10", "is_sample": false, "order": 6},
-        {"input_data": "7\n1 2 3 4 5 6 7", "expected_output": "6", "is_sample": false, "order": 7}
-      ]
+        {
+          "input_data": "5\n1 3 2 5 4",
+          "expected_output": "4",
+          "is_sample": true,
+          "order": 1
+        },
+        {
+          "input_data": "4\n10 10 9 8",
+          "expected_output": "9",
+          "is_sample": false,
+          "order": 2
+        },
+        {
+          "input_data": "3\n-1 -2 -3",
+          "expected_output": "-2",
+          "is_sample": false,
+          "order": 3
+        },
+        {
+          "input_data": "6\n5 5 5 4 4 3",
+          "expected_output": "4",
+          "is_sample": false,
+          "order": 4
+        },
+        {
+          "input_data": "2\n1 2",
+          "expected_output": "1",
+          "is_sample": false,
+          "order": 5
+        },
+        {
+          "input_data": "5\n-5 -5 -10 -20 -10",
+          "expected_output": "-10",
+          "is_sample": false,
+          "order": 6
+        },
+        {
+          "input_data": "7\n1 2 3 4 5 6 7",
+          "expected_output": "6",
+          "is_sample": false,
+          "order": 7
+        },
+        {
+          "input_data": "5\n9 1 9 8 7",
+          "expected_output": "8",
+          "is_sample": false,
+          "order": 8
+        },
+        {
+          "input_data": "4\n-1 -2 -3 -4",
+          "expected_output": "-2",
+          "is_sample": false,
+          "order": 9
+        }
+      ],
+      "primary_topic": "LISTS",
+      "source_type": "ORIGINAL",
+      "source_name": "CodeHehe",
+      "source_url": "",
+      "source_license": "CodeHehe original"
     },
     {
       "slug": "star-triangle",
@@ -192,13 +660,1505 @@
       "order": 10,
       "is_active": true,
       "test_cases": [
-        {"input_data": "4", "expected_output": "*\n**\n***\n****", "is_sample": true, "order": 1},
-        {"input_data": "1", "expected_output": "*", "is_sample": false, "order": 2},
-        {"input_data": "2", "expected_output": "*\n**", "is_sample": false, "order": 3},
-        {"input_data": "3", "expected_output": "*\n**\n***", "is_sample": false, "order": 4},
-        {"input_data": "5", "expected_output": "*\n**\n***\n****\n*****", "is_sample": false, "order": 5},
-        {"input_data": "10", "expected_output": "*\n**\n***\n****\n*****\n******\n*******\n********\n*********\n**********", "is_sample": false, "order": 6},
-        {"input_data": "20", "expected_output": "*\n**\n***\n****\n*****\n******\n*******\n********\n*********\n**********\n***********\n************\n*************\n**************\n***************\n****************\n*****************\n******************\n*******************\n********************", "is_sample": false, "order": 7}
+        {
+          "input_data": "4",
+          "expected_output": "*\n**\n***\n****",
+          "is_sample": true,
+          "order": 1
+        },
+        {
+          "input_data": "1",
+          "expected_output": "*",
+          "is_sample": false,
+          "order": 2
+        },
+        {
+          "input_data": "2",
+          "expected_output": "*\n**",
+          "is_sample": false,
+          "order": 3
+        },
+        {
+          "input_data": "3",
+          "expected_output": "*\n**\n***",
+          "is_sample": false,
+          "order": 4
+        },
+        {
+          "input_data": "5",
+          "expected_output": "*\n**\n***\n****\n*****",
+          "is_sample": false,
+          "order": 5
+        },
+        {
+          "input_data": "10",
+          "expected_output": "*\n**\n***\n****\n*****\n******\n*******\n********\n*********\n**********",
+          "is_sample": false,
+          "order": 6
+        },
+        {
+          "input_data": "20",
+          "expected_output": "*\n**\n***\n****\n*****\n******\n*******\n********\n*********\n**********\n***********\n************\n*************\n**************\n***************\n****************\n*****************\n******************\n*******************\n********************",
+          "is_sample": false,
+          "order": 7
+        },
+        {
+          "input_data": "1",
+          "expected_output": "*",
+          "is_sample": false,
+          "order": 8
+        },
+        {
+          "input_data": "5",
+          "expected_output": "*\n**\n***\n****\n*****",
+          "is_sample": false,
+          "order": 9
+        }
+      ],
+      "primary_topic": "SIMULATION",
+      "source_type": "ORIGINAL",
+      "source_name": "CodeHehe",
+      "source_url": "",
+      "source_license": "CodeHehe original"
+    },
+    {
+      "slug": "leap-year",
+      "title": "Năm nhuận",
+      "statement": "Đọc một năm nguyên dương y (1 <= y <= 10^9). In YES nếu y là năm nhuận theo lịch Gregory, ngược lại in NO. Một năm nhuận khi chia hết cho 400 hoặc chia hết cho 4 nhưng không chia hết cho 100.",
+      "difficulty": "EASY",
+      "points": 1,
+      "starter_code": "year = int(input())\n",
+      "reference_solution": "year = int(input())\nis_leap = year % 400 == 0 or (year % 4 == 0 and year % 100 != 0)\nprint(\"YES\" if is_leap else \"NO\")\n",
+      "primary_topic": "BASICS",
+      "source_type": "ADAPTED",
+      "source_name": "Exercism Problem Specifications",
+      "source_url": "https://github.com/exercism/problem-specifications/tree/main/exercises/leap",
+      "source_license": "MIT",
+      "order": 11,
+      "is_active": true,
+      "test_cases": [
+        {
+          "input_data": "2000",
+          "expected_output": "YES",
+          "is_sample": true,
+          "order": 1
+        },
+        {
+          "input_data": "2024",
+          "expected_output": "YES",
+          "is_sample": false,
+          "order": 2
+        },
+        {
+          "input_data": "1900",
+          "expected_output": "NO",
+          "is_sample": false,
+          "order": 3
+        },
+        {
+          "input_data": "2001",
+          "expected_output": "NO",
+          "is_sample": false,
+          "order": 4
+        },
+        {
+          "input_data": "2400",
+          "expected_output": "YES",
+          "is_sample": false,
+          "order": 5
+        },
+        {
+          "input_data": "2100",
+          "expected_output": "NO",
+          "is_sample": false,
+          "order": 6
+        },
+        {
+          "input_data": "4",
+          "expected_output": "YES",
+          "is_sample": false,
+          "order": 7
+        },
+        {
+          "input_data": "100",
+          "expected_output": "NO",
+          "is_sample": false,
+          "order": 8
+        },
+        {
+          "input_data": "400",
+          "expected_output": "YES",
+          "is_sample": false,
+          "order": 9
+        }
+      ]
+    },
+    {
+      "slug": "reverse-string",
+      "title": "Đảo ngược chuỗi",
+      "statement": "Đọc một dòng gồm từ 1 đến 10000 ký tự in được. In ra các ký tự theo thứ tự ngược lại. Khoảng trắng bên trong chuỗi phải được giữ nguyên.",
+      "difficulty": "EASY",
+      "points": 1,
+      "starter_code": "text = input()\n",
+      "reference_solution": "text = input()\nprint(text[::-1])\n",
+      "primary_topic": "STRINGS",
+      "source_type": "ADAPTED",
+      "source_name": "Exercism Problem Specifications",
+      "source_url": "https://github.com/exercism/problem-specifications/tree/main/exercises/reverse-string",
+      "source_license": "MIT",
+      "order": 12,
+      "is_active": true,
+      "test_cases": [
+        {
+          "input_data": "CodeHehe",
+          "expected_output": "eheHedoC",
+          "is_sample": true,
+          "order": 1
+        },
+        {
+          "input_data": "a",
+          "expected_output": "a",
+          "is_sample": false,
+          "order": 2
+        },
+        {
+          "input_data": "abc",
+          "expected_output": "cba",
+          "is_sample": false,
+          "order": 3
+        },
+        {
+          "input_data": "lap trinh",
+          "expected_output": "hnirt pal",
+          "is_sample": false,
+          "order": 4
+        },
+        {
+          "input_data": "12345",
+          "expected_output": "54321",
+          "is_sample": false,
+          "order": 5
+        },
+        {
+          "input_data": "Aa Bb",
+          "expected_output": "bB aA",
+          "is_sample": false,
+          "order": 6
+        },
+        {
+          "input_data": "racecar",
+          "expected_output": "racecar",
+          "is_sample": false,
+          "order": 7
+        },
+        {
+          "input_data": "Python 3",
+          "expected_output": "3 nohtyP",
+          "is_sample": false,
+          "order": 8
+        },
+        {
+          "input_data": "x y z",
+          "expected_output": "z y x",
+          "is_sample": false,
+          "order": 9
+        }
+      ]
+    },
+    {
+      "slug": "hamming-distance",
+      "title": "Khoảng cách Hamming",
+      "statement": "Đọc hai chuỗi có cùng độ dài, mỗi chuỗi nằm trên một dòng và gồm từ 1 đến 10000 chữ cái hoặc chữ số. In số vị trí mà hai chuỗi có ký tự khác nhau.",
+      "difficulty": "EASY",
+      "points": 1,
+      "starter_code": "first = input()\nsecond = input()\n",
+      "reference_solution": "first = input()\nsecond = input()\nprint(sum(left != right for left, right in zip(first, second)))\n",
+      "primary_topic": "STRINGS",
+      "source_type": "ADAPTED",
+      "source_name": "Exercism Problem Specifications",
+      "source_url": "https://github.com/exercism/problem-specifications/tree/main/exercises/hamming",
+      "source_license": "MIT",
+      "order": 13,
+      "is_active": true,
+      "test_cases": [
+        {
+          "input_data": "GAGCCT\nCATCGT",
+          "expected_output": "3",
+          "is_sample": true,
+          "order": 1
+        },
+        {
+          "input_data": "A\nA",
+          "expected_output": "0",
+          "is_sample": false,
+          "order": 2
+        },
+        {
+          "input_data": "abc\nabd",
+          "expected_output": "1",
+          "is_sample": false,
+          "order": 3
+        },
+        {
+          "input_data": "0000\n1111",
+          "expected_output": "4",
+          "is_sample": false,
+          "order": 4
+        },
+        {
+          "input_data": "Code\ncode",
+          "expected_output": "1",
+          "is_sample": false,
+          "order": 5
+        },
+        {
+          "input_data": "Python\nPython",
+          "expected_output": "0",
+          "is_sample": false,
+          "order": 6
+        },
+        {
+          "input_data": "abcde\nedcba",
+          "expected_output": "4",
+          "is_sample": false,
+          "order": 7
+        },
+        {
+          "input_data": "kitten\nsittin",
+          "expected_output": "2",
+          "is_sample": false,
+          "order": 8
+        },
+        {
+          "input_data": "12345\n12354",
+          "expected_output": "2",
+          "is_sample": false,
+          "order": 9
+        }
+      ]
+    },
+    {
+      "slug": "isogram-check",
+      "title": "Chuỗi Isogram",
+      "statement": "Đọc một cụm từ gồm chữ cái tiếng Anh, khoảng trắng và dấu gạch nối. Bỏ qua khoảng trắng, dấu gạch nối và không phân biệt chữ hoa, chữ thường. In YES nếu không chữ cái nào xuất hiện quá một lần, ngược lại in NO.",
+      "difficulty": "EASY",
+      "points": 1,
+      "starter_code": "text = input()\n",
+      "reference_solution": "letters = [character.lower() for character in input() if character.isalpha()]\nprint(\"YES\" if len(letters) == len(set(letters)) else \"NO\")\n",
+      "primary_topic": "HASHING",
+      "source_type": "ADAPTED",
+      "source_name": "Exercism Problem Specifications",
+      "source_url": "https://github.com/exercism/problem-specifications/tree/main/exercises/isogram",
+      "source_license": "MIT",
+      "order": 14,
+      "is_active": true,
+      "test_cases": [
+        {
+          "input_data": "lumberjacks",
+          "expected_output": "YES",
+          "is_sample": true,
+          "order": 1
+        },
+        {
+          "input_data": "background",
+          "expected_output": "YES",
+          "is_sample": false,
+          "order": 2
+        },
+        {
+          "input_data": "downstream",
+          "expected_output": "YES",
+          "is_sample": false,
+          "order": 3
+        },
+        {
+          "input_data": "six-year-old",
+          "expected_output": "YES",
+          "is_sample": false,
+          "order": 4
+        },
+        {
+          "input_data": "Alphabet",
+          "expected_output": "NO",
+          "is_sample": false,
+          "order": 5
+        },
+        {
+          "input_data": "eleven",
+          "expected_output": "NO",
+          "is_sample": false,
+          "order": 6
+        },
+        {
+          "input_data": "isograms",
+          "expected_output": "NO",
+          "is_sample": false,
+          "order": 7
+        },
+        {
+          "input_data": "abc def",
+          "expected_output": "YES",
+          "is_sample": false,
+          "order": 8
+        },
+        {
+          "input_data": "aba",
+          "expected_output": "NO",
+          "is_sample": false,
+          "order": 9
+        }
+      ]
+    },
+    {
+      "slug": "make-acronym",
+      "title": "Tạo từ viết tắt",
+      "statement": "Đọc một cụm từ gồm các từ cách nhau bởi khoảng trắng hoặc dấu gạch nối. In ra chữ cái đầu viết hoa của từng từ theo đúng thứ tự.",
+      "difficulty": "EASY",
+      "points": 1,
+      "starter_code": "phrase = input()\n",
+      "reference_solution": "words = input().replace(\"-\", \" \").split()\nprint(\"\".join(word[0].upper() for word in words))\n",
+      "primary_topic": "STRINGS",
+      "source_type": "ADAPTED",
+      "source_name": "Exercism Problem Specifications",
+      "source_url": "https://github.com/exercism/problem-specifications/tree/main/exercises/acronym",
+      "source_license": "MIT",
+      "order": 15,
+      "is_active": true,
+      "test_cases": [
+        {
+          "input_data": "Portable Network Graphics",
+          "expected_output": "PNG",
+          "is_sample": true,
+          "order": 1
+        },
+        {
+          "input_data": "Ruby on Rails",
+          "expected_output": "ROR",
+          "is_sample": false,
+          "order": 2
+        },
+        {
+          "input_data": "First In First Out",
+          "expected_output": "FIFO",
+          "is_sample": false,
+          "order": 3
+        },
+        {
+          "input_data": "GNU Image Manipulation Program",
+          "expected_output": "GIMP",
+          "is_sample": false,
+          "order": 4
+        },
+        {
+          "input_data": "Complementary metal-oxide semiconductor",
+          "expected_output": "CMOS",
+          "is_sample": false,
+          "order": 5
+        },
+        {
+          "input_data": "CodeHehe",
+          "expected_output": "C",
+          "is_sample": false,
+          "order": 6
+        },
+        {
+          "input_data": "HyperText Markup Language",
+          "expected_output": "HML",
+          "is_sample": false,
+          "order": 7
+        },
+        {
+          "input_data": "one-two three",
+          "expected_output": "OTT",
+          "is_sample": false,
+          "order": 8
+        },
+        {
+          "input_data": "random access memory",
+          "expected_output": "RAM",
+          "is_sample": false,
+          "order": 9
+        }
+      ]
+    },
+    {
+      "slug": "digit-sum",
+      "title": "Tổng các chữ số",
+      "statement": "Đọc một số nguyên n (-10^18 <= n <= 10^18). In tổng các chữ số của giá trị tuyệt đối của n.",
+      "difficulty": "EASY",
+      "points": 1,
+      "starter_code": "n = int(input())\n",
+      "reference_solution": "n = abs(int(input()))\nprint(sum(map(int, str(n))))\n",
+      "primary_topic": "ARITHMETIC",
+      "source_type": "ORIGINAL",
+      "source_name": "CodeHehe",
+      "source_url": "",
+      "source_license": "CodeHehe original",
+      "order": 16,
+      "is_active": true,
+      "test_cases": [
+        {
+          "input_data": "12345",
+          "expected_output": "15",
+          "is_sample": true,
+          "order": 1
+        },
+        {
+          "input_data": "0",
+          "expected_output": "0",
+          "is_sample": false,
+          "order": 2
+        },
+        {
+          "input_data": "-909",
+          "expected_output": "18",
+          "is_sample": false,
+          "order": 3
+        },
+        {
+          "input_data": "1000000",
+          "expected_output": "1",
+          "is_sample": false,
+          "order": 4
+        },
+        {
+          "input_data": "-1",
+          "expected_output": "1",
+          "is_sample": false,
+          "order": 5
+        },
+        {
+          "input_data": "999999999999999999",
+          "expected_output": "162",
+          "is_sample": false,
+          "order": 6
+        },
+        {
+          "input_data": "101010",
+          "expected_output": "3",
+          "is_sample": false,
+          "order": 7
+        },
+        {
+          "input_data": "-80008",
+          "expected_output": "16",
+          "is_sample": false,
+          "order": 8
+        },
+        {
+          "input_data": "42",
+          "expected_output": "6",
+          "is_sample": false,
+          "order": 9
+        }
+      ]
+    },
+    {
+      "slug": "classify-numbers",
+      "title": "Phân loại dãy số",
+      "statement": "Dòng đầu chứa n (1 <= n <= 10000). Dòng sau chứa n số nguyên. In ba số lần lượt là số lượng phần tử dương, âm và bằng 0.",
+      "difficulty": "EASY",
+      "points": 1,
+      "starter_code": "n = int(input())\nnumbers = list(map(int, input().split()))\n",
+      "reference_solution": "n = int(input())\nnumbers = list(map(int, input().split()))\npositive = sum(value > 0 for value in numbers)\nnegative = sum(value < 0 for value in numbers)\nzero = n - positive - negative\nprint(positive, negative, zero)\n",
+      "primary_topic": "LISTS",
+      "source_type": "ORIGINAL",
+      "source_name": "CodeHehe",
+      "source_url": "",
+      "source_license": "CodeHehe original",
+      "order": 17,
+      "is_active": true,
+      "test_cases": [
+        {
+          "input_data": "5\n-1 0 2 -3 4",
+          "expected_output": "2 2 1",
+          "is_sample": true,
+          "order": 1
+        },
+        {
+          "input_data": "1\n0",
+          "expected_output": "0 0 1",
+          "is_sample": false,
+          "order": 2
+        },
+        {
+          "input_data": "1\n7",
+          "expected_output": "1 0 0",
+          "is_sample": false,
+          "order": 3
+        },
+        {
+          "input_data": "1\n-7",
+          "expected_output": "0 1 0",
+          "is_sample": false,
+          "order": 4
+        },
+        {
+          "input_data": "4\n1 2 3 4",
+          "expected_output": "4 0 0",
+          "is_sample": false,
+          "order": 5
+        },
+        {
+          "input_data": "3\n-1 -2 -3",
+          "expected_output": "0 3 0",
+          "is_sample": false,
+          "order": 6
+        },
+        {
+          "input_data": "6\n0 -2 5 0 -9 8",
+          "expected_output": "2 2 2",
+          "is_sample": false,
+          "order": 7
+        },
+        {
+          "input_data": "5\n2 2 -2 -2 0",
+          "expected_output": "2 2 1",
+          "is_sample": false,
+          "order": 8
+        },
+        {
+          "input_data": "4\n1000000000 -1000000000 0 1",
+          "expected_output": "2 1 1",
+          "is_sample": false,
+          "order": 9
+        }
+      ]
+    },
+    {
+      "slug": "armstrong-number",
+      "title": "Số Armstrong",
+      "statement": "Đọc số nguyên không âm n (0 <= n <= 10^18). Gọi k là số chữ số của n. In YES nếu tổng lũy thừa bậc k của từng chữ số bằng n, ngược lại in NO.",
+      "difficulty": "MEDIUM",
+      "points": 2,
+      "starter_code": "n = int(input())\n",
+      "reference_solution": "text = input().strip()\npower = len(text)\nvalue = int(text)\nprint(\"YES\" if sum(int(digit) ** power for digit in text) == value else \"NO\")\n",
+      "primary_topic": "ARITHMETIC",
+      "source_type": "ADAPTED",
+      "source_name": "Exercism Problem Specifications",
+      "source_url": "https://github.com/exercism/problem-specifications/tree/main/exercises/armstrong-numbers",
+      "source_license": "MIT",
+      "order": 18,
+      "is_active": true,
+      "test_cases": [
+        {
+          "input_data": "153",
+          "expected_output": "YES",
+          "is_sample": true,
+          "order": 1
+        },
+        {
+          "input_data": "0",
+          "expected_output": "YES",
+          "is_sample": false,
+          "order": 2
+        },
+        {
+          "input_data": "1",
+          "expected_output": "YES",
+          "is_sample": false,
+          "order": 3
+        },
+        {
+          "input_data": "9",
+          "expected_output": "YES",
+          "is_sample": false,
+          "order": 4
+        },
+        {
+          "input_data": "10",
+          "expected_output": "NO",
+          "is_sample": false,
+          "order": 5
+        },
+        {
+          "input_data": "370",
+          "expected_output": "YES",
+          "is_sample": false,
+          "order": 6
+        },
+        {
+          "input_data": "371",
+          "expected_output": "YES",
+          "is_sample": false,
+          "order": 7
+        },
+        {
+          "input_data": "407",
+          "expected_output": "YES",
+          "is_sample": false,
+          "order": 8
+        },
+        {
+          "input_data": "9474",
+          "expected_output": "YES",
+          "is_sample": false,
+          "order": 9
+        }
+      ]
+    },
+    {
+      "slug": "anagram-check",
+      "title": "Kiểm tra Anagram",
+      "statement": "Đọc hai cụm từ trên hai dòng. Bỏ qua khoảng trắng và không phân biệt chữ hoa, chữ thường. In YES nếu hai cụm từ có cùng tập hợp ký tự với cùng số lần xuất hiện, ngược lại in NO.",
+      "difficulty": "MEDIUM",
+      "points": 2,
+      "starter_code": "first = input()\nsecond = input()\n",
+      "reference_solution": "first = sorted(character.lower() for character in input() if not character.isspace())\nsecond = sorted(character.lower() for character in input() if not character.isspace())\nprint(\"YES\" if first == second else \"NO\")\n",
+      "primary_topic": "HASHING",
+      "source_type": "ADAPTED",
+      "source_name": "Exercism Problem Specifications",
+      "source_url": "https://github.com/exercism/problem-specifications/tree/main/exercises/anagram",
+      "source_license": "MIT",
+      "order": 19,
+      "is_active": true,
+      "test_cases": [
+        {
+          "input_data": "listen\nsilent",
+          "expected_output": "YES",
+          "is_sample": true,
+          "order": 1
+        },
+        {
+          "input_data": "evil\nvile",
+          "expected_output": "YES",
+          "is_sample": false,
+          "order": 2
+        },
+        {
+          "input_data": "rail safety\nfairy tales",
+          "expected_output": "YES",
+          "is_sample": false,
+          "order": 3
+        },
+        {
+          "input_data": "hello\nworld",
+          "expected_output": "NO",
+          "is_sample": false,
+          "order": 4
+        },
+        {
+          "input_data": "Astronomer\nMoon starer",
+          "expected_output": "YES",
+          "is_sample": false,
+          "order": 5
+        },
+        {
+          "input_data": "abc\nabcc",
+          "expected_output": "NO",
+          "is_sample": false,
+          "order": 6
+        },
+        {
+          "input_data": "Dormitory\nDirty room",
+          "expected_output": "YES",
+          "is_sample": false,
+          "order": 7
+        },
+        {
+          "input_data": "a\na",
+          "expected_output": "YES",
+          "is_sample": false,
+          "order": 8
+        },
+        {
+          "input_data": "School master\nThe classroom",
+          "expected_output": "YES",
+          "is_sample": false,
+          "order": 9
+        }
+      ]
+    },
+    {
+      "slug": "luhn-check",
+      "title": "Kiểm tra mã Luhn",
+      "statement": "Đọc một chuỗi có ít nhất 2 chữ số, có thể chứa khoảng trắng. Bỏ khoảng trắng rồi áp dụng thuật toán Luhn: từ phải sang trái, nhân đôi mỗi chữ số ở vị trí thứ hai; nếu kết quả lớn hơn 9 thì trừ 9. In YES nếu tổng chia hết cho 10, ngược lại in NO.",
+      "difficulty": "MEDIUM",
+      "points": 2,
+      "starter_code": "text = input()\n",
+      "reference_solution": "digits = [int(character) for character in input() if character != \" \"]\ntotal = 0\nfor index, digit in enumerate(reversed(digits)):\n    if index % 2 == 1:\n        digit *= 2\n        if digit > 9:\n            digit -= 9\n    total += digit\nprint(\"YES\" if total % 10 == 0 else \"NO\")\n",
+      "primary_topic": "SIMULATION",
+      "source_type": "ADAPTED",
+      "source_name": "Exercism Problem Specifications",
+      "source_url": "https://github.com/exercism/problem-specifications/tree/main/exercises/luhn",
+      "source_license": "MIT",
+      "order": 20,
+      "is_active": true,
+      "test_cases": [
+        {
+          "input_data": "4539 1488 0343 6467",
+          "expected_output": "YES",
+          "is_sample": true,
+          "order": 1
+        },
+        {
+          "input_data": "059",
+          "expected_output": "YES",
+          "is_sample": false,
+          "order": 2
+        },
+        {
+          "input_data": "055 444 285",
+          "expected_output": "YES",
+          "is_sample": false,
+          "order": 3
+        },
+        {
+          "input_data": "8273 1232 7352 0569",
+          "expected_output": "NO",
+          "is_sample": false,
+          "order": 4
+        },
+        {
+          "input_data": "00",
+          "expected_output": "YES",
+          "is_sample": false,
+          "order": 5
+        },
+        {
+          "input_data": "18",
+          "expected_output": "YES",
+          "is_sample": false,
+          "order": 6
+        },
+        {
+          "input_data": "10",
+          "expected_output": "NO",
+          "is_sample": false,
+          "order": 7
+        },
+        {
+          "input_data": "79927398713",
+          "expected_output": "YES",
+          "is_sample": false,
+          "order": 8
+        },
+        {
+          "input_data": "79927398714",
+          "expected_output": "NO",
+          "is_sample": false,
+          "order": 9
+        }
+      ]
+    },
+    {
+      "slug": "nucleotide-count",
+      "title": "Đếm nucleotide",
+      "statement": "Đọc một chuỗi DNA không rỗng chỉ gồm A, C, G và T, độ dài không quá 100000. In bốn số là số lần xuất hiện của A, C, G và T.",
+      "difficulty": "MEDIUM",
+      "points": 2,
+      "starter_code": "dna = input().strip()\n",
+      "reference_solution": "dna = input().strip()\nprint(dna.count(\"A\"), dna.count(\"C\"), dna.count(\"G\"), dna.count(\"T\"))\n",
+      "primary_topic": "HASHING",
+      "source_type": "ADAPTED",
+      "source_name": "Exercism Problem Specifications",
+      "source_url": "https://github.com/exercism/problem-specifications/tree/main/exercises/nucleotide-count",
+      "source_license": "MIT",
+      "order": 21,
+      "is_active": true,
+      "test_cases": [
+        {
+          "input_data": "GATTACA",
+          "expected_output": "3 1 1 2",
+          "is_sample": true,
+          "order": 1
+        },
+        {
+          "input_data": "A",
+          "expected_output": "1 0 0 0",
+          "is_sample": false,
+          "order": 2
+        },
+        {
+          "input_data": "C",
+          "expected_output": "0 1 0 0",
+          "is_sample": false,
+          "order": 3
+        },
+        {
+          "input_data": "G",
+          "expected_output": "0 0 1 0",
+          "is_sample": false,
+          "order": 4
+        },
+        {
+          "input_data": "T",
+          "expected_output": "0 0 0 1",
+          "is_sample": false,
+          "order": 5
+        },
+        {
+          "input_data": "ACGT",
+          "expected_output": "1 1 1 1",
+          "is_sample": false,
+          "order": 6
+        },
+        {
+          "input_data": "AAAA",
+          "expected_output": "4 0 0 0",
+          "is_sample": false,
+          "order": 7
+        },
+        {
+          "input_data": "TTTG",
+          "expected_output": "0 0 1 3",
+          "is_sample": false,
+          "order": 8
+        },
+        {
+          "input_data": "GCGCACGT",
+          "expected_output": "1 3 3 1",
+          "is_sample": false,
+          "order": 9
+        }
+      ]
+    },
+    {
+      "slug": "collatz-steps",
+      "title": "Số bước Collatz",
+      "statement": "Đọc số nguyên n (1 <= n <= 10^6). Nếu n chẵn, thay n bằng n/2; nếu n lẻ, thay n bằng 3n+1. In số bước cần để n trở thành 1.",
+      "difficulty": "MEDIUM",
+      "points": 2,
+      "starter_code": "n = int(input())\n",
+      "reference_solution": "n = int(input())\nsteps = 0\nwhile n != 1:\n    n = n // 2 if n % 2 == 0 else 3 * n + 1\n    steps += 1\nprint(steps)\n",
+      "primary_topic": "SIMULATION",
+      "source_type": "ADAPTED",
+      "source_name": "Exercism Problem Specifications",
+      "source_url": "https://github.com/exercism/problem-specifications/tree/main/exercises/collatz-conjecture",
+      "source_license": "MIT",
+      "order": 22,
+      "is_active": true,
+      "test_cases": [
+        {
+          "input_data": "12",
+          "expected_output": "9",
+          "is_sample": true,
+          "order": 1
+        },
+        {
+          "input_data": "1",
+          "expected_output": "0",
+          "is_sample": false,
+          "order": 2
+        },
+        {
+          "input_data": "2",
+          "expected_output": "1",
+          "is_sample": false,
+          "order": 3
+        },
+        {
+          "input_data": "3",
+          "expected_output": "7",
+          "is_sample": false,
+          "order": 4
+        },
+        {
+          "input_data": "6",
+          "expected_output": "8",
+          "is_sample": false,
+          "order": 5
+        },
+        {
+          "input_data": "16",
+          "expected_output": "4",
+          "is_sample": false,
+          "order": 6
+        },
+        {
+          "input_data": "19",
+          "expected_output": "20",
+          "is_sample": false,
+          "order": 7
+        },
+        {
+          "input_data": "27",
+          "expected_output": "111",
+          "is_sample": false,
+          "order": 8
+        },
+        {
+          "input_data": "100",
+          "expected_output": "25",
+          "is_sample": false,
+          "order": 9
+        }
+      ]
+    },
+    {
+      "slug": "difference-of-squares",
+      "title": "Hiệu hai tổng bình phương",
+      "statement": "Đọc n (1 <= n <= 10^6). In hiệu giữa bình phương của tổng 1+2+...+n và tổng bình phương 1^2+2^2+...+n^2.",
+      "difficulty": "MEDIUM",
+      "points": 2,
+      "starter_code": "n = int(input())\n",
+      "reference_solution": "n = int(input())\ntotal = n * (n + 1) // 2\nsquares = n * (n + 1) * (2 * n + 1) // 6\nprint(total * total - squares)\n",
+      "primary_topic": "ARITHMETIC",
+      "source_type": "ADAPTED",
+      "source_name": "Exercism Problem Specifications",
+      "source_url": "https://github.com/exercism/problem-specifications/tree/main/exercises/difference-of-squares",
+      "source_license": "MIT",
+      "order": 23,
+      "is_active": true,
+      "test_cases": [
+        {
+          "input_data": "10",
+          "expected_output": "2640",
+          "is_sample": true,
+          "order": 1
+        },
+        {
+          "input_data": "1",
+          "expected_output": "0",
+          "is_sample": false,
+          "order": 2
+        },
+        {
+          "input_data": "2",
+          "expected_output": "4",
+          "is_sample": false,
+          "order": 3
+        },
+        {
+          "input_data": "3",
+          "expected_output": "22",
+          "is_sample": false,
+          "order": 4
+        },
+        {
+          "input_data": "4",
+          "expected_output": "70",
+          "is_sample": false,
+          "order": 5
+        },
+        {
+          "input_data": "5",
+          "expected_output": "170",
+          "is_sample": false,
+          "order": 6
+        },
+        {
+          "input_data": "20",
+          "expected_output": "41230",
+          "is_sample": false,
+          "order": 7
+        },
+        {
+          "input_data": "50",
+          "expected_output": "1582700",
+          "is_sample": false,
+          "order": 8
+        },
+        {
+          "input_data": "100",
+          "expected_output": "25164150",
+          "is_sample": false,
+          "order": 9
+        }
+      ]
+    },
+    {
+      "slug": "rotate-array",
+      "title": "Xoay mảng k bước",
+      "statement": "Dòng đầu chứa n và k (1 <= n <= 10000, 0 <= k <= 10^9). Dòng sau chứa n số nguyên. Xoay mảng sang phải k bước rồi in kết quả.",
+      "difficulty": "MEDIUM",
+      "points": 2,
+      "starter_code": "n, k = map(int, input().split())\nnumbers = list(map(int, input().split()))\n",
+      "reference_solution": "n, k = map(int, input().split())\nnumbers = list(map(int, input().split()))\nk %= n\nresult = numbers[-k:] + numbers[:-k] if k else numbers\nprint(*result)\n",
+      "primary_topic": "LISTS",
+      "source_type": "ORIGINAL",
+      "source_name": "CodeHehe",
+      "source_url": "",
+      "source_license": "CodeHehe original",
+      "order": 24,
+      "is_active": true,
+      "test_cases": [
+        {
+          "input_data": "5 2\n1 2 3 4 5",
+          "expected_output": "4 5 1 2 3",
+          "is_sample": true,
+          "order": 1
+        },
+        {
+          "input_data": "4 0\n1 2 3 4",
+          "expected_output": "1 2 3 4",
+          "is_sample": false,
+          "order": 2
+        },
+        {
+          "input_data": "4 4\n1 2 3 4",
+          "expected_output": "1 2 3 4",
+          "is_sample": false,
+          "order": 3
+        },
+        {
+          "input_data": "4 5\n1 2 3 4",
+          "expected_output": "4 1 2 3",
+          "is_sample": false,
+          "order": 4
+        },
+        {
+          "input_data": "1 999\n7",
+          "expected_output": "7",
+          "is_sample": false,
+          "order": 5
+        },
+        {
+          "input_data": "3 1\n-1 -2 -3",
+          "expected_output": "-3 -1 -2",
+          "is_sample": false,
+          "order": 6
+        },
+        {
+          "input_data": "6 3\n1 1 2 2 3 3",
+          "expected_output": "2 3 3 1 1 2",
+          "is_sample": false,
+          "order": 7
+        },
+        {
+          "input_data": "5 12\n9 8 7 6 5",
+          "expected_output": "6 5 9 8 7",
+          "is_sample": false,
+          "order": 8
+        },
+        {
+          "input_data": "2 1\n1000000000 -1000000000",
+          "expected_output": "-1000000000 1000000000",
+          "is_sample": false,
+          "order": 9
+        }
+      ]
+    },
+    {
+      "slug": "most-frequent-value",
+      "title": "Giá trị xuất hiện nhiều nhất",
+      "statement": "Dòng đầu chứa n (1 <= n <= 100000). Dòng sau chứa n số nguyên. In giá trị xuất hiện nhiều nhất; nếu nhiều giá trị có cùng tần suất lớn nhất, in giá trị nhỏ nhất.",
+      "difficulty": "MEDIUM",
+      "points": 2,
+      "starter_code": "n = int(input())\nnumbers = list(map(int, input().split()))\n",
+      "reference_solution": "from collections import Counter\n\nn = int(input())\nnumbers = list(map(int, input().split()))\ncounts = Counter(numbers)\nbest_count = max(counts.values())\nprint(min(value for value, count in counts.items() if count == best_count))\n",
+      "primary_topic": "HASHING",
+      "source_type": "ORIGINAL",
+      "source_name": "CodeHehe",
+      "source_url": "",
+      "source_license": "CodeHehe original",
+      "order": 25,
+      "is_active": true,
+      "test_cases": [
+        {
+          "input_data": "7\n1 3 1 2 3 3 2",
+          "expected_output": "3",
+          "is_sample": true,
+          "order": 1
+        },
+        {
+          "input_data": "1\n5",
+          "expected_output": "5",
+          "is_sample": false,
+          "order": 2
+        },
+        {
+          "input_data": "5\n4 4 4 4 4",
+          "expected_output": "4",
+          "is_sample": false,
+          "order": 3
+        },
+        {
+          "input_data": "4\n1 2 3 4",
+          "expected_output": "1",
+          "is_sample": false,
+          "order": 4
+        },
+        {
+          "input_data": "6\n-1 -2 -1 -2 0 0",
+          "expected_output": "-2",
+          "is_sample": false,
+          "order": 5
+        },
+        {
+          "input_data": "7\n2 2 1 1 3 3 3",
+          "expected_output": "3",
+          "is_sample": false,
+          "order": 6
+        },
+        {
+          "input_data": "5\n0 0 -1 -1 2",
+          "expected_output": "-1",
+          "is_sample": false,
+          "order": 7
+        },
+        {
+          "input_data": "8\n5 6 5 6 5 6 7 7",
+          "expected_output": "5",
+          "is_sample": false,
+          "order": 8
+        },
+        {
+          "input_data": "4\n1000000000 -1000000000 1000000000 -1000000000",
+          "expected_output": "-1000000000",
+          "is_sample": false,
+          "order": 9
+        }
+      ]
+    },
+    {
+      "slug": "largest-series-product",
+      "title": "Tích lớn nhất của đoạn liên tiếp",
+      "statement": "Dòng đầu chứa một chuỗi chữ số có độ dài từ 1 đến 10000. Dòng sau chứa k (0 <= k <= độ dài chuỗi). In tích lớn nhất của k chữ số liên tiếp. Với k=0, kết quả là 1.",
+      "difficulty": "HARD",
+      "points": 3,
+      "starter_code": "digits = input().strip()\nk = int(input())\n",
+      "reference_solution": "digits = [int(character) for character in input().strip()]\nk = int(input())\nif k == 0:\n    print(1)\nelse:\n    best = 0\n    for start in range(len(digits) - k + 1):\n        product = 1\n        for digit in digits[start:start + k]:\n            product *= digit\n        best = max(best, product)\n    print(best)\n",
+      "primary_topic": "SEARCH",
+      "source_type": "ADAPTED",
+      "source_name": "Exercism Problem Specifications",
+      "source_url": "https://github.com/exercism/problem-specifications/tree/main/exercises/largest-series-product",
+      "source_license": "MIT",
+      "order": 26,
+      "is_active": true,
+      "test_cases": [
+        {
+          "input_data": "1027839564\n3",
+          "expected_output": "270",
+          "is_sample": true,
+          "order": 1
+        },
+        {
+          "input_data": "12345\n2",
+          "expected_output": "20",
+          "is_sample": false,
+          "order": 2
+        },
+        {
+          "input_data": "999\n2",
+          "expected_output": "81",
+          "is_sample": false,
+          "order": 3
+        },
+        {
+          "input_data": "0000\n3",
+          "expected_output": "0",
+          "is_sample": false,
+          "order": 4
+        },
+        {
+          "input_data": "123\n0",
+          "expected_output": "1",
+          "is_sample": false,
+          "order": 5
+        },
+        {
+          "input_data": "5\n1",
+          "expected_output": "5",
+          "is_sample": false,
+          "order": 6
+        },
+        {
+          "input_data": "111111\n4",
+          "expected_output": "1",
+          "is_sample": false,
+          "order": 7
+        },
+        {
+          "input_data": "12034\n2",
+          "expected_output": "12",
+          "is_sample": false,
+          "order": 8
+        },
+        {
+          "input_data": "987654\n3",
+          "expected_output": "504",
+          "is_sample": false,
+          "order": 9
+        }
+      ]
+    },
+    {
+      "slug": "minesweeper-map",
+      "title": "Bản đồ dò mìn",
+      "statement": "Dòng đầu chứa r và c (1 <= r,c <= 100). r dòng tiếp theo gồm '.' và '*'. Với mỗi ô '.', in số mìn trong 8 ô kề; giữ nguyên '*'. In bản đồ kết quả gồm r dòng.",
+      "difficulty": "HARD",
+      "points": 3,
+      "starter_code": "rows, columns = map(int, input().split())\ngrid = [input().strip() for _ in range(rows)]\n",
+      "reference_solution": "rows, columns = map(int, input().split())\ngrid = [input().strip() for _ in range(rows)]\nresult = []\nfor row in range(rows):\n    output_row = []\n    for column in range(columns):\n        if grid[row][column] == \"*\":\n            output_row.append(\"*\")\n            continue\n        count = 0\n        for dr in (-1, 0, 1):\n            for dc in (-1, 0, 1):\n                nr, nc = row + dr, column + dc\n                if 0 <= nr < rows and 0 <= nc < columns and grid[nr][nc] == \"*\":\n                    count += 1\n        output_row.append(str(count))\n    result.append(\"\".join(output_row))\nprint(\"\\n\".join(result))\n",
+      "primary_topic": "MATRIX",
+      "source_type": "ADAPTED",
+      "source_name": "Exercism Problem Specifications",
+      "source_url": "https://github.com/exercism/problem-specifications/tree/main/exercises/minesweeper",
+      "source_license": "MIT",
+      "order": 27,
+      "is_active": true,
+      "test_cases": [
+        {
+          "input_data": "3 3\n*..\n...\n..*",
+          "expected_output": "*10\n121\n01*",
+          "is_sample": true,
+          "order": 1
+        },
+        {
+          "input_data": "1 1\n.",
+          "expected_output": "0",
+          "is_sample": false,
+          "order": 2
+        },
+        {
+          "input_data": "1 1\n*",
+          "expected_output": "*",
+          "is_sample": false,
+          "order": 3
+        },
+        {
+          "input_data": "2 2\n*.\n..",
+          "expected_output": "*1\n11",
+          "is_sample": false,
+          "order": 4
+        },
+        {
+          "input_data": "2 3\n...\n...",
+          "expected_output": "000\n000",
+          "is_sample": false,
+          "order": 5
+        },
+        {
+          "input_data": "2 2\n**\n**",
+          "expected_output": "**\n**",
+          "is_sample": false,
+          "order": 6
+        },
+        {
+          "input_data": "3 3\n...\n.*.\n...",
+          "expected_output": "111\n1*1\n111",
+          "is_sample": false,
+          "order": 7
+        },
+        {
+          "input_data": "3 4\n*..*\n....\n*...",
+          "expected_output": "*11*\n2211\n*100",
+          "is_sample": false,
+          "order": 8
+        },
+        {
+          "input_data": "1 5\n.*.*.",
+          "expected_output": "1*2*1",
+          "is_sample": false,
+          "order": 9
+        }
+      ]
+    },
+    {
+      "slug": "saddle-points",
+      "title": "Điểm yên ngựa của ma trận",
+      "statement": "Dòng đầu chứa r và c (1 <= r,c <= 100), sau đó là r dòng ma trận. Một ô là điểm yên ngựa nếu giá trị của nó lớn nhất trên hàng và nhỏ nhất trên cột. In tọa độ 1-based theo thứ tự hàng rồi cột, mỗi tọa độ một dòng; nếu không có, in NONE.",
+      "difficulty": "HARD",
+      "points": 3,
+      "starter_code": "rows, columns = map(int, input().split())\nmatrix = [list(map(int, input().split())) for _ in range(rows)]\n",
+      "reference_solution": "rows, columns = map(int, input().split())\nmatrix = [list(map(int, input().split())) for _ in range(rows)]\npoints = []\nfor row in range(rows):\n    row_max = max(matrix[row])\n    for column in range(columns):\n        value = matrix[row][column]\n        if value == row_max and value == min(matrix[index][column] for index in range(rows)):\n            points.append((row + 1, column + 1))\nif points:\n    print(\"\\n\".join(f\"{row} {column}\" for row, column in points))\nelse:\n    print(\"NONE\")\n",
+      "primary_topic": "MATRIX",
+      "source_type": "ADAPTED",
+      "source_name": "Exercism Problem Specifications",
+      "source_url": "https://github.com/exercism/problem-specifications/tree/main/exercises/saddle-points",
+      "source_license": "MIT",
+      "order": 28,
+      "is_active": true,
+      "test_cases": [
+        {
+          "input_data": "3 3\n9 8 7\n5 3 2\n6 6 7",
+          "expected_output": "2 1",
+          "is_sample": true,
+          "order": 1
+        },
+        {
+          "input_data": "1 1\n5",
+          "expected_output": "1 1",
+          "is_sample": false,
+          "order": 2
+        },
+        {
+          "input_data": "1 3\n1 2 3",
+          "expected_output": "1 3",
+          "is_sample": false,
+          "order": 3
+        },
+        {
+          "input_data": "3 1\n1\n2\n3",
+          "expected_output": "1 1",
+          "is_sample": false,
+          "order": 4
+        },
+        {
+          "input_data": "2 2\n1 2\n2 1",
+          "expected_output": "NONE",
+          "is_sample": false,
+          "order": 5
+        },
+        {
+          "input_data": "2 2\n3 3\n3 3",
+          "expected_output": "1 1\n1 2\n2 1\n2 2",
+          "is_sample": false,
+          "order": 6
+        },
+        {
+          "input_data": "3 3\n1 2 3\n3 2 1\n2 3 2",
+          "expected_output": "NONE",
+          "is_sample": false,
+          "order": 7
+        },
+        {
+          "input_data": "2 3\n4 5 5\n3 5 4",
+          "expected_output": "1 2\n2 2",
+          "is_sample": false,
+          "order": 8
+        },
+        {
+          "input_data": "3 2\n8 7\n6 5\n4 3",
+          "expected_output": "3 1",
+          "is_sample": false,
+          "order": 9
+        }
+      ]
+    },
+    {
+      "slug": "balanced-brackets",
+      "title": "Kiểm tra ngoặc cân bằng",
+      "statement": "Đọc chuỗi dài từ 1 đến 10000 chỉ gồm các ký tự (), [] và {}. In YES nếu mọi dấu ngoặc được đóng đúng loại và đúng thứ tự, ngược lại in NO.",
+      "difficulty": "HARD",
+      "points": 3,
+      "starter_code": "text = input().strip()\n",
+      "reference_solution": "text = input().strip()\nstack = []\npairs = {\")\": \"(\", \"]\": \"[\", \"}\": \"{\"}\nvalid = True\nfor character in text:\n    if character in \"([{\":\n        stack.append(character)\n    elif not stack or stack.pop() != pairs[character]:\n        valid = False\n        break\nprint(\"YES\" if valid and not stack else \"NO\")\n",
+      "primary_topic": "STACK",
+      "source_type": "ORIGINAL",
+      "source_name": "CodeHehe",
+      "source_url": "",
+      "source_license": "CodeHehe original",
+      "order": 29,
+      "is_active": true,
+      "test_cases": [
+        {
+          "input_data": "([]{})",
+          "expected_output": "YES",
+          "is_sample": true,
+          "order": 1
+        },
+        {
+          "input_data": "()",
+          "expected_output": "YES",
+          "is_sample": false,
+          "order": 2
+        },
+        {
+          "input_data": "([{}])",
+          "expected_output": "YES",
+          "is_sample": false,
+          "order": 3
+        },
+        {
+          "input_data": "([)]",
+          "expected_output": "NO",
+          "is_sample": false,
+          "order": 4
+        },
+        {
+          "input_data": "(",
+          "expected_output": "NO",
+          "is_sample": false,
+          "order": 5
+        },
+        {
+          "input_data": ")",
+          "expected_output": "NO",
+          "is_sample": false,
+          "order": 6
+        },
+        {
+          "input_data": "{{[[(())]]}}",
+          "expected_output": "YES",
+          "is_sample": false,
+          "order": 7
+        },
+        {
+          "input_data": "{}[]()",
+          "expected_output": "YES",
+          "is_sample": false,
+          "order": 8
+        },
+        {
+          "input_data": "((()))]",
+          "expected_output": "NO",
+          "is_sample": false,
+          "order": 9
+        }
+      ]
+    },
+    {
+      "slug": "longest-increasing-run",
+      "title": "Đoạn tăng liên tiếp dài nhất",
+      "statement": "Dòng đầu chứa n (1 <= n <= 100000). Dòng sau chứa n số nguyên. In độ dài lớn nhất của một đoạn liên tiếp có các phần tử tăng nghiêm ngặt.",
+      "difficulty": "HARD",
+      "points": 3,
+      "starter_code": "n = int(input())\nnumbers = list(map(int, input().split()))\n",
+      "reference_solution": "n = int(input())\nnumbers = list(map(int, input().split()))\nbest = current = 1\nfor index in range(1, n):\n    current = current + 1 if numbers[index] > numbers[index - 1] else 1\n    best = max(best, current)\nprint(best)\n",
+      "primary_topic": "DYNAMIC_PROGRAMMING",
+      "source_type": "ORIGINAL",
+      "source_name": "CodeHehe",
+      "source_url": "",
+      "source_license": "CodeHehe original",
+      "order": 30,
+      "is_active": true,
+      "test_cases": [
+        {
+          "input_data": "8\n1 2 3 2 3 4 5 1",
+          "expected_output": "4",
+          "is_sample": true,
+          "order": 1
+        },
+        {
+          "input_data": "1\n7",
+          "expected_output": "1",
+          "is_sample": false,
+          "order": 2
+        },
+        {
+          "input_data": "5\n1 2 3 4 5",
+          "expected_output": "5",
+          "is_sample": false,
+          "order": 3
+        },
+        {
+          "input_data": "5\n5 4 3 2 1",
+          "expected_output": "1",
+          "is_sample": false,
+          "order": 4
+        },
+        {
+          "input_data": "6\n1 1 2 2 3 3",
+          "expected_output": "2",
+          "is_sample": false,
+          "order": 5
+        },
+        {
+          "input_data": "7\n-3 -2 -1 0 -5 -4 -3",
+          "expected_output": "4",
+          "is_sample": false,
+          "order": 6
+        },
+        {
+          "input_data": "5\n2 4 6 1 3",
+          "expected_output": "3",
+          "is_sample": false,
+          "order": 7
+        },
+        {
+          "input_data": "8\n3 1 2 3 4 0 1 2",
+          "expected_output": "4",
+          "is_sample": false,
+          "order": 8
+        },
+        {
+          "input_data": "4\n1000000000 -1 0 1",
+          "expected_output": "3",
+          "is_sample": false,
+          "order": 9
+        }
       ]
     }
   ]

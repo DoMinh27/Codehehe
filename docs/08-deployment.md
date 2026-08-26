@@ -221,6 +221,7 @@ git checkout <RELEASE_COMMIT>
 npm ci
 npm run build
 sudo -u codehehe /opt/codehehe/venv/bin/python manage.py migrate
+sudo -u codehehe /opt/codehehe/venv/bin/python manage.py seed_problems
 sudo -u codehehe /opt/codehehe/venv/bin/python manage.py collectstatic --noinput
 sudo -u codehehe /opt/codehehe/venv/bin/python manage.py check
 sudo cp deploy/codehehe-ai-review.service /etc/systemd/system/codehehe-ai-review.service
@@ -231,6 +232,11 @@ sudo systemctl start codehehe-ai-review.timer
 sudo systemctl reload nginx
 curl --fail https://<CODEHEHE_FQDN>/health/ready/
 ```
+
+`seed_problems` replaces every TestCase belonging to a seeded Problem. Always
+complete the SQLite backup above before running it. The problem-bank expansion
+release should report `20 created, 10 updated, 270 test cases` when the existing
+ten-problem seed is present; a fresh database reports `30 created` instead.
 
 ## 5. Rollback
 

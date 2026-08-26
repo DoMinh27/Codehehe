@@ -47,3 +47,35 @@ class ProblemSlugMigrationTests(TransactionTestCase):
             problem.objects.values_list("slug", flat=True).distinct().count(),
             3,
         )
+
+
+class ProblemSourceMetadataMigrationTests(TransactionTestCase):
+    migrate_from = [("problems", "0005_problem_reference_solution")]
+    migrate_to = [("problems", "0006_problem_source_metadata")]
+
+    def test_existing_problem_receives_safe_source_defaults(self):
+        executor = MigrationExecutor(connection)
+        executor.migrate(self.migrate_from)
+        old_apps = executor.loader.project_state(self.migrate_from).apps
+        old_problem = old_apps.get_model("problems", "Problem")
+        original = old_problem.objects.create(
+            slug="existing-problem",
+            title="Existing Problem",
+            statement="Statement",
+            difficulty="EASY",
+            points=1,
+            reference_solution="print(1)",
+        )
+
+        executor = MigrationExecutor(connection)
+        executor.migrate(self.migrate_to)
+        new_apps = executor.loader.project_state(self.migrate_to).apps
+        problem = new_apps.get_model("problems", "Problem").objects.get(
+            pk=original.pk
+        )
+
+        self.assertEqual(problem.primary_topic, "OTHER")
+        self.assertEqual(problem.source_type, "ORIGINAL")
+        self.assertEqual(problem.source_name, "CodeHehe")
+        self.assertEqual(problem.source_url, "")
+        self.assertEqual(problem.source_license, "CodeHehe original")

@@ -21,6 +21,15 @@ class ProblemAdminForm(ModelForm):
                 "reference_solution",
                 "Bài đang hoạt động phải có lời giải chuẩn.",
             )
+        if cleaned_data.get("source_type") == Problem.SourceType.ADAPTED:
+            for field_name, message in (
+                ("source_name", "Bài chuyển thể phải ghi tên nguồn."),
+                ("source_url", "Bài chuyển thể phải có URL nguồn."),
+                ("source_license", "Bài chuyển thể phải ghi giấy phép."),
+            ):
+                value = cleaned_data.get(field_name, "")
+                if not str(value).strip():
+                    self.add_error(field_name, message)
         return cleaned_data
 
 
@@ -50,9 +59,25 @@ class TestCaseInline(admin.TabularInline):
 @admin.register(Problem)
 class ProblemAdmin(admin.ModelAdmin):
     form = ProblemAdminForm
-    list_display = ("title", "slug", "difficulty", "points", "order", "is_active")
-    list_filter = ("difficulty", "is_active")
-    search_fields = ("title", "slug", "statement")
+    list_display = (
+        "title",
+        "slug",
+        "difficulty",
+        "primary_topic",
+        "source_type",
+        "source_license",
+        "points",
+        "order",
+        "is_active",
+    )
+    list_filter = (
+        "difficulty",
+        "primary_topic",
+        "source_type",
+        "source_license",
+        "is_active",
+    )
+    search_fields = ("title", "slug", "statement", "source_name", "source_url")
     ordering = ("order", "id")
     prepopulated_fields = {"slug": ("title",)}
     inlines = (TestCaseInline,)

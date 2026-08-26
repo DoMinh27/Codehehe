@@ -13,29 +13,33 @@ from problems.models import Problem, TestCase as ProblemTestCase
 
 
 class SeedProblemsCommandTests(TestCase):
-    def test_default_seed_creates_ten_problems_and_tests(self):
+    def test_default_seed_creates_thirty_problems_and_tests(self):
         output = StringIO()
 
         call_command("seed_problems", stdout=output)
 
-        self.assertEqual(Problem.objects.count(), 10)
-        self.assertEqual(ProblemTestCase.objects.count(), 70)
+        self.assertEqual(Problem.objects.count(), 30)
+        self.assertEqual(ProblemTestCase.objects.count(), 270)
         self.assertFalse(
             Problem.objects.filter(reference_solution="").exists()
         )
         self.assertEqual(
             Problem.objects.filter(difficulty=Problem.Difficulty.EASY).count(),
-            3,
+            10,
         )
         self.assertEqual(
             Problem.objects.filter(difficulty=Problem.Difficulty.MEDIUM).count(),
-            4,
+            12,
         )
         self.assertEqual(
             Problem.objects.filter(difficulty=Problem.Difficulty.HARD).count(),
-            3,
+            8,
         )
-        self.assertIn("10 created", output.getvalue())
+        self.assertEqual(
+            Problem.objects.filter(source_type=Problem.SourceType.ADAPTED).count(),
+            14,
+        )
+        self.assertIn("30 created", output.getvalue())
 
     def test_rerun_updates_by_slug_without_duplicates(self):
         call_command("seed_problems", stdout=StringIO())
@@ -46,13 +50,13 @@ class SeedProblemsCommandTests(TestCase):
             output = StringIO()
             call_command("seed_problems", file=seed_file, stdout=output)
 
-        self.assertEqual(Problem.objects.count(), 10)
-        self.assertEqual(ProblemTestCase.objects.count(), 70)
+        self.assertEqual(Problem.objects.count(), 30)
+        self.assertEqual(ProblemTestCase.objects.count(), 270)
         self.assertEqual(
             Problem.objects.get(slug="sum-two-numbers").title,
             "Tên mới của bài tính tổng",
         )
-        self.assertIn("0 created, 10 updated", output.getvalue())
+        self.assertIn("0 created, 30 updated", output.getvalue())
 
     def test_duplicate_slug_rejects_entire_file(self):
         payload = self._default_payload()
@@ -92,6 +96,77 @@ class SeedProblemsCommandTests(TestCase):
                 call_command("seed_problems", file=seed_file, stdout=StringIO())
 
         self.assertFalse(Problem.objects.exists())
+
+    def test_adapted_problem_requires_source_url(self):
+        payload = self._default_payload()
+        adapted = next(
+            problem
+            for problem in payload["problems"]
+            if problem["source_type"] == "ADAPTED"
+        )
+        adapted["source_url"] = ""
+
+        with self._temporary_seed(payload) as seed_file:
+            with self.assertRaisesMessage(
+                CommandError,
+                "source_url must be provided for adapted problems",
+            ):
+                call_command("seed_problems", file=seed_file, stdout=StringIO())
+
+        self.assertFalse(Problem.objects.exists())
+
+    def test_seed_rejects_invalid_topic_and_source_url(self):
+        cases = (
+            ("primary_topic", "UNKNOWN", "primary_topic must be one of"),
+            ("source_url", "not-a-url", "source_url must be a valid URL"),
+        )
+        for field, value, message in cases:
+            with self.subTest(field=field):
+                payload = self._default_payload()
+                adapted = next(
+                    problem
+                    for problem in payload["problems"]
+                    if problem["source_type"] == "ADAPTED"
+                )
+                adapted[field] = value
+
+                with self._temporary_seed(payload) as seed_file:
+                    with self.assertRaisesMessage(CommandError, message):
+                        call_command(
+                            "seed_problems",
+                            file=seed_file,
+                            stdout=StringIO(),
+                        )
+
+                self.assertFalse(Problem.objects.exists())
+
+    def test_version_two_seed_uses_safe_metadata_defaults(self):
+        payload = self._default_payload()
+        payload["version"] = 2
+        metadata_fields = {
+            "primary_topic",
+            "source_type",
+            "source_name",
+            "source_url",
+            "source_license",
+        }
+        for problem in payload["problems"]:
+            for field in metadata_fields:
+                problem.pop(field)
+
+        with self._temporary_seed(payload) as seed_file:
+            call_command("seed_problems", file=seed_file, stdout=StringIO())
+
+        self.assertEqual(Problem.objects.count(), 30)
+        self.assertFalse(
+            Problem.objects.exclude(
+                primary_topic=Problem.PrimaryTopic.OTHER,
+                source_type=Problem.SourceType.ORIGINAL,
+                source_name="CodeHehe",
+                source_url="",
+                source_license="CodeHehe original",
+            ).exists()
+        )
 
     def _default_payload(self):
         return json.loads(DEFAULT_DATA_FILE.read_text(encoding="utf-8"))

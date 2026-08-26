@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 from django.core.management.base import BaseCommand, CommandError
-from django.core.validators import validate_slug
+from django.core.validators import URLValidator, validate_slug
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
@@ -10,7 +10,7 @@ from problems.models import Problem, TestCase
 
 
 DEFAULT_DATA_FILE = Path(__file__).resolve().parents[2] / "data" / "problems.json"
-PROBLEM_FIELDS = {
+PROBLEM_FIELDS_V2 = {
     "slug",
     "title",
     "statement",
@@ -22,6 +22,14 @@ PROBLEM_FIELDS = {
     "is_active",
     "test_cases",
 }
+PROBLEM_METADATA_FIELDS = {
+    "primary_topic",
+    "source_type",
+    "source_name",
+    "source_url",
+    "source_license",
+}
+PROBLEM_FIELDS_V3 = PROBLEM_FIELDS_V2 | PROBLEM_METADATA_FIELDS
 TEST_CASE_FIELDS = {
     "input_data",
     "expected_output",
@@ -91,8 +99,9 @@ class Command(BaseCommand):
     def _validate_payload(self, payload):
         if not isinstance(payload, dict):
             raise CommandError("The JSON root must be an object.")
-        if payload.get("version") != 2:
-            raise CommandError("Only seed format version 2 is supported.")
+        version = payload.get("version")
+        if version not in {2, 3}:
+            raise CommandError("Only seed format versions 2 and 3 are supported.")
 
         problems = payload.get("problems")
         if not isinstance(problems, list) or not problems:
@@ -104,8 +113,19 @@ class Command(BaseCommand):
 
         for index, raw_problem in enumerate(problems, start=1):
             label = f"Problem #{index}"
-            self._require_exact_fields(raw_problem, PROBLEM_FIELDS, label)
+            expected_fields = PROBLEM_FIELDS_V3 if version == 3 else PROBLEM_FIELDS_V2
+            self._require_exact_fields(raw_problem, expected_fields, label)
             problem = dict(raw_problem)
+            if version == 2:
+                problem.update(
+                    {
+                        "primary_topic": Problem.PrimaryTopic.OTHER,
+                        "source_type": Problem.SourceType.ORIGINAL,
+                        "source_name": "CodeHehe",
+                        "source_url": "",
+                        "source_license": "CodeHehe original",
+                    }
+                )
             test_cases = problem["test_cases"]
 
             self._validate_problem(problem, label)
@@ -144,6 +164,31 @@ class Command(BaseCommand):
         self._require_integer(problem["order"], f"{label}.order", minimum=0)
         if not isinstance(problem["is_active"], bool):
             raise CommandError(f"{label}.is_active must be a boolean.")
+
+        if problem["primary_topic"] not in Problem.PrimaryTopic.values:
+            choices = ", ".join(Problem.PrimaryTopic.values)
+            raise CommandError(f"{label}.primary_topic must be one of: {choices}.")
+        if problem["source_type"] not in Problem.SourceType.values:
+            choices = ", ".join(Problem.SourceType.values)
+            raise CommandError(f"{label}.source_type must be one of: {choices}.")
+        self._require_text(problem["source_name"], f"{label}.source_name", 100)
+        self._require_text(
+            problem["source_license"],
+            f"{label}.source_license",
+            100,
+        )
+        source_url = problem["source_url"]
+        if not isinstance(source_url, str):
+            raise CommandError(f"{label}.source_url must be a string.")
+        if len(source_url) > 500:
+            raise CommandError(f"{label}.source_url must not exceed 500 characters.")
+        if problem["source_type"] == Problem.SourceType.ADAPTED and not source_url:
+            raise CommandError(f"{label}.source_url must be provided for adapted problems.")
+        if source_url:
+            try:
+                URLValidator()(source_url)
+            except ValidationError as error:
+                raise CommandError(f"{label}.source_url must be a valid URL.") from error
 
     def _validate_test_cases(self, test_cases, problem_label):
         if not isinstance(test_cases, list) or not test_cases:

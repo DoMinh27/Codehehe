@@ -7,6 +7,23 @@ class Problem(models.Model):
         MEDIUM = "MEDIUM", "Medium"
         HARD = "HARD", "Hard"
 
+    class PrimaryTopic(models.TextChoices):
+        OTHER = "OTHER", "Khác"
+        BASICS = "BASICS", "Python cơ bản"
+        ARITHMETIC = "ARITHMETIC", "Số học"
+        STRINGS = "STRINGS", "Chuỗi"
+        LISTS = "LISTS", "Danh sách"
+        HASHING = "HASHING", "Bảng băm"
+        SEARCH = "SEARCH", "Tìm kiếm"
+        SIMULATION = "SIMULATION", "Mô phỏng"
+        MATRIX = "MATRIX", "Ma trận"
+        STACK = "STACK", "Ngăn xếp"
+        DYNAMIC_PROGRAMMING = "DYNAMIC_PROGRAMMING", "Quy hoạch động"
+
+    class SourceType(models.TextChoices):
+        ORIGINAL = "ORIGINAL", "CodeHehe tự xây"
+        ADAPTED = "ADAPTED", "Chuyển thể"
+
     slug = models.SlugField(max_length=220, unique=True)
     title = models.CharField(max_length=200)
     statement = models.TextField()
@@ -18,6 +35,24 @@ class Problem(models.Model):
     points = models.PositiveIntegerField()
     starter_code = models.TextField(blank=True)
     reference_solution = models.TextField(blank=True)
+    primary_topic = models.CharField(
+        max_length=30,
+        choices=PrimaryTopic.choices,
+        default=PrimaryTopic.OTHER,
+        db_index=True,
+    )
+    source_type = models.CharField(
+        max_length=10,
+        choices=SourceType.choices,
+        default=SourceType.ORIGINAL,
+        db_index=True,
+    )
+    source_name = models.CharField(max_length=100, default="CodeHehe")
+    source_url = models.URLField(max_length=500, blank=True)
+    source_license = models.CharField(
+        max_length=100,
+        default="CodeHehe original",
+    )
     order = models.PositiveIntegerField(default=0, db_index=True)
     is_active = models.BooleanField(default=True, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)

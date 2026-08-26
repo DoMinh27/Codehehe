@@ -4,6 +4,7 @@ from django.test import TestCase as DjangoTestCase
 from django.urls import reverse
 from django.utils.html import escape
 
+from .admin import ProblemAdminForm
 from .models import Problem, TestCase
 
 
@@ -20,6 +21,11 @@ class ProblemModelTests(DjangoTestCase):
         self.assertEqual(str(problem), "Two Sum")
         self.assertTrue(problem.is_active)
         self.assertEqual(problem.order, 0)
+        self.assertEqual(problem.primary_topic, Problem.PrimaryTopic.OTHER)
+        self.assertEqual(problem.source_type, Problem.SourceType.ORIGINAL)
+        self.assertEqual(problem.source_name, "CodeHehe")
+        self.assertEqual(problem.source_url, "")
+        self.assertEqual(problem.source_license, "CodeHehe original")
 
     def test_problem_points_must_be_at_least_one(self):
         with self.assertRaises(IntegrityError), transaction.atomic():
@@ -58,6 +64,55 @@ class TestCaseModelTests(DjangoTestCase):
 
         self.assertEqual(list(problem.test_cases.all()), [sample, hidden])
         self.assertIn("sample", str(sample))
+
+
+class ProblemAdminFormTests(DjangoTestCase):
+    def test_adapted_problem_requires_complete_source_metadata(self):
+        form = ProblemAdminForm(
+            data={
+                "slug": "adapted-problem",
+                "title": "Adapted Problem",
+                "statement": "Statement",
+                "difficulty": Problem.Difficulty.EASY,
+                "points": 1,
+                "starter_code": "",
+                "reference_solution": "print(1)",
+                "primary_topic": Problem.PrimaryTopic.BASICS,
+                "source_type": Problem.SourceType.ADAPTED,
+                "source_name": "",
+                "source_url": "",
+                "source_license": "",
+                "order": 1,
+                "is_active": True,
+            }
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("source_name", form.errors)
+        self.assertIn("source_url", form.errors)
+        self.assertIn("source_license", form.errors)
+
+    def test_original_problem_accepts_blank_source_url(self):
+        form = ProblemAdminForm(
+            data={
+                "slug": "original-problem",
+                "title": "Original Problem",
+                "statement": "Statement",
+                "difficulty": Problem.Difficulty.EASY,
+                "points": 1,
+                "starter_code": "",
+                "reference_solution": "print(1)",
+                "primary_topic": Problem.PrimaryTopic.BASICS,
+                "source_type": Problem.SourceType.ORIGINAL,
+                "source_name": "CodeHehe",
+                "source_url": "",
+                "source_license": "CodeHehe original",
+                "order": 1,
+                "is_active": True,
+            }
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
 
 
 class ProblemPageTests(DjangoTestCase):
@@ -169,6 +224,31 @@ class ProblemPageTests(DjangoTestCase):
             [test_case.is_sample for test_case in response.context["problem"].sample_tests],
             [True],
         )
+
+    def test_problem_pages_do_not_expose_source_metadata(self):
+        self.problem.source_type = Problem.SourceType.ADAPTED
+        self.problem.source_name = "private-source-name"
+        self.problem.source_url = "https://example.com/private-source-url"
+        self.problem.source_license = "private-license-label"
+        self.problem.save(
+            update_fields=(
+                "source_type",
+                "source_name",
+                "source_url",
+                "source_license",
+            )
+        )
+        self.client.force_login(self.user)
+
+        for url in (
+            reverse("problem-list"),
+            reverse("problem-detail", args=[self.problem.slug]),
+        ):
+            with self.subTest(url=url):
+                response = self.client.get(url)
+                self.assertNotContains(response, "private-source-name")
+                self.assertNotContains(response, "private-source-url")
+                self.assertNotContains(response, "private-license-label")
 
     def test_problem_detail_returns_404_for_inactive_or_unknown_slug(self):
         self.client.force_login(self.user)

@@ -110,7 +110,7 @@ class StartMatchServiceTests(TestCase):
         self.assertIsNotNone(match.started_at)
         self.assertEqual(match.match_problems.count(), 4)
         self.assertEqual(match.problem_progress.count(), 8)
-        self.assertEqual(match.match_skills.count(), 4)
+        self.assertEqual(match.match_skills.count(), 6)
         self.assertEqual(
             list(match.match_problems.values_list("difficulty_snapshot", flat=True)),
             ["EASY", "EASY", "MEDIUM", "HARD"],
@@ -127,6 +127,24 @@ class StartMatchServiceTests(TestCase):
         snapshot = MatchProblem.objects.get(match=match, problem=problem)
         self.assertEqual(snapshot.title_snapshot, "Easy 0")
         self.assertEqual(snapshot.reference_solution_snapshot, frozen_reference)
+
+    def test_start_keeps_the_skill_catalog_from_an_existing_snapshot(self):
+        snapshot = deepcopy(self.match.rules_snapshot)
+        snapshot["required_skill_codes"] = [
+            "MIRROR_CODE",
+            "BLUR_STATEMENT",
+            "TIME_DRAIN_60",
+            "TYPING_CHALLENGE",
+        ]
+        self.match.rules_snapshot = snapshot
+        self.match.save(update_fields=["rules_snapshot"])
+
+        match = StartMatchService().start(user=self.host, match_id=self.match.pk)
+
+        self.assertEqual(
+            list(match.match_skills.values_list("code_snapshot", flat=True)),
+            snapshot["required_skill_codes"],
+        )
 
     def test_start_selects_two_problems_from_each_difficulty(self):
         for index in range(2, 5):

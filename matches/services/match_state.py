@@ -11,11 +11,13 @@ from django.utils import timezone
 from matches.models import (
     Match,
     MatchPlayer,
+    MatchPlayerSkill,
     MatchSkill,
     PlayerProblemProgress,
     SkillEffect,
     SkillUse,
 )
+from matches.skills.definitions import PURIFY, SKILL_REGISTRY, STEAL
 
 
 class MatchStateError(Exception):
@@ -103,6 +105,16 @@ class MatchStateService:
             ),
             None,
         )
+        stealable_skill_available = (
+            opponent is not None
+            and MatchPlayerSkill.objects.filter(
+                player=opponent,
+                match_skill__match=match,
+                quantity__gt=0,
+            )
+            .exclude(match_skill__code_snapshot=STEAL)
+            .exists()
+        )
         recent_skill_uses = list(
             SkillUse.objects.filter(match=match)
             .select_related(
@@ -133,6 +145,34 @@ class MatchStateService:
         opponent_remaining = (
             remaining_seconds[opponent.pk] if opponent is not None else 0
         )
+
+        def skill_payload(match_skill):
+            definition = SKILL_REGISTRY[match_skill.code_snapshot]
+            unavailable_reason = None
+            if match_skill.code_snapshot == PURIFY and not active_effects:
+                unavailable_reason = "Không có hiệu ứng nào để thanh tẩy."
+            elif (
+                match_skill.code_snapshot == STEAL
+                and not stealable_skill_available
+            ):
+                unavailable_reason = (
+                    "Đối thủ không còn skill có thể đánh cắp."
+                )
+            return {
+                "code": match_skill.code_snapshot,
+                "name": match_skill.name_snapshot,
+                "description": match_skill.description_snapshot,
+                "energy_cost": match_skill.energy_cost_snapshot,
+                "duration_seconds": match_skill.duration_seconds_snapshot,
+                "quantity": match_skill.current_quantity,
+                "target_mode": definition.target_mode,
+                "ui_group": definition.ui_group,
+                "can_use_while_action_locked": (
+                    definition.can_use_while_action_locked
+                ),
+                "unavailable_reason": unavailable_reason,
+            }
+
         return {
             "status": match.status,
             "server_time": evaluation_time.isoformat(),
@@ -155,19 +195,7 @@ class MatchStateService:
                 if active_typing_challenge is not None
                 else None
             ),
-            "my_skills": [
-                {
-                    "code": match_skill.code_snapshot,
-                    "name": match_skill.name_snapshot,
-                    "description": match_skill.description_snapshot,
-                    "energy_cost": match_skill.energy_cost_snapshot,
-                    "duration_seconds": (
-                        match_skill.duration_seconds_snapshot
-                    ),
-                    "quantity": match_skill.current_quantity,
-                }
-                for match_skill in match_skills
-            ],
+            "my_skills": [skill_payload(match_skill) for match_skill in match_skills],
             "active_effects": [
                 {
                     "id": effect.id,

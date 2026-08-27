@@ -87,6 +87,7 @@ def use_skill(request, match_id, skill_code):
             "code": skill_use.match_skill.code_snapshot,
             "target_player_id": skill_use.target_player_id,
             "energy_spent": skill_use.energy_spent,
+            "outcome": skill_use.outcome_snapshot,
             "used_at": skill_use.used_at.isoformat(),
             "effect": (
                 {

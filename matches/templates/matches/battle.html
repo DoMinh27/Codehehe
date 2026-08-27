@@ -71,8 +71,21 @@
     id="skill-list"
     class="skill-toolbar"
     data-icon-sprite-url="{% static 'matches/ui/icons.svg' %}"
-  ></div>
-  <p id="skill-notice" class="skill-notice" role="status"></p>
+  >
+    <div
+      class="skill-toolbar__group"
+      data-skill-group="DEFENSIVE"
+      role="group"
+      aria-label="Skill phòng thủ"
+    ></div>
+    <p id="skill-notice" class="skill-notice" role="status"></p>
+    <div
+      class="skill-toolbar__group skill-toolbar__group--offensive"
+      data-skill-group="OFFENSIVE"
+      role="group"
+      aria-label="Skill tấn công"
+    ></div>
+  </div>
 </section>
 
 <section id="typing-challenge" class="typing-challenge" aria-label="Thử thách gõ chữ" hidden>

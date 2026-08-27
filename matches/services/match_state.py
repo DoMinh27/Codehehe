@@ -11,7 +11,6 @@ from django.utils import timezone
 from matches.models import (
     Match,
     MatchPlayer,
-    MatchPlayerSkill,
     MatchSkill,
     PlayerProblemProgress,
     SkillEffect,
@@ -78,7 +77,16 @@ class MatchStateService:
                         ),
                     ),
                     0,
-                )
+                ),
+                opponent_quantity=Coalesce(
+                    Max(
+                        "player_inventory__quantity",
+                        filter=Q(
+                            player_inventory__player=opponent,
+                        ),
+                    ),
+                    0,
+                ),
             )
             .order_by("id")
         )
@@ -105,15 +113,10 @@ class MatchStateService:
             ),
             None,
         )
-        stealable_skill_available = (
-            opponent is not None
-            and MatchPlayerSkill.objects.filter(
-                player=opponent,
-                match_skill__match=match,
-                quantity__gt=0,
-            )
-            .exclude(match_skill__code_snapshot=STEAL)
-            .exists()
+        stealable_skill_available = any(
+            match_skill.code_snapshot != STEAL
+            and match_skill.opponent_quantity > 0
+            for match_skill in match_skills
         )
         recent_skill_uses = list(
             SkillUse.objects.filter(match=match)

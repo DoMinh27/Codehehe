@@ -263,6 +263,7 @@ class SkillUse(models.Model):
     )
     energy_spent = models.PositiveSmallIntegerField()
     idempotency_key = models.CharField(max_length=64)
+    outcome_snapshot = models.JSONField(default=dict, blank=True)
     used_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     class Meta:

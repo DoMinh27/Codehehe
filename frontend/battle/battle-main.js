@@ -106,8 +106,8 @@ export function bootstrapBattle({
         documentRoot,
         config,
         editorRegistry,
-        onUseSkill: (skillCode, button) => (
-            skillController.useSkill(skillCode, button)
+        onUseSkill: (skill, button) => (
+            skillController.useSkill(skill, button)
         ),
         onFinalize: requestFinalize,
     });

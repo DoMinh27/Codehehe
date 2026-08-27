@@ -16,6 +16,7 @@ from matches.models import (
     SkillEffect,
     SkillUse,
 )
+from matches.skills.definitions import PURIFY, SKILL_REGISTRY, STEAL
 
 
 class MatchStateError(Exception):
@@ -76,7 +77,16 @@ class MatchStateService:
                         ),
                     ),
                     0,
-                )
+                ),
+                opponent_quantity=Coalesce(
+                    Max(
+                        "player_inventory__quantity",
+                        filter=Q(
+                            player_inventory__player=opponent,
+                        ),
+                    ),
+                    0,
+                ),
             )
             .order_by("id")
         )
@@ -102,6 +112,11 @@ class MatchStateService:
                 if hasattr(effect, "typing_challenge")
             ),
             None,
+        )
+        stealable_skill_available = any(
+            match_skill.code_snapshot != STEAL
+            and match_skill.opponent_quantity > 0
+            for match_skill in match_skills
         )
         recent_skill_uses = list(
             SkillUse.objects.filter(match=match)
@@ -133,6 +148,34 @@ class MatchStateService:
         opponent_remaining = (
             remaining_seconds[opponent.pk] if opponent is not None else 0
         )
+
+        def skill_payload(match_skill):
+            definition = SKILL_REGISTRY[match_skill.code_snapshot]
+            unavailable_reason = None
+            if match_skill.code_snapshot == PURIFY and not active_effects:
+                unavailable_reason = "Không có hiệu ứng nào để thanh tẩy."
+            elif (
+                match_skill.code_snapshot == STEAL
+                and not stealable_skill_available
+            ):
+                unavailable_reason = (
+                    "Đối thủ không còn skill có thể đánh cắp."
+                )
+            return {
+                "code": match_skill.code_snapshot,
+                "name": match_skill.name_snapshot,
+                "description": match_skill.description_snapshot,
+                "energy_cost": match_skill.energy_cost_snapshot,
+                "duration_seconds": match_skill.duration_seconds_snapshot,
+                "quantity": match_skill.current_quantity,
+                "target_mode": definition.target_mode,
+                "ui_group": definition.ui_group,
+                "can_use_while_action_locked": (
+                    definition.can_use_while_action_locked
+                ),
+                "unavailable_reason": unavailable_reason,
+            }
+
         return {
             "status": match.status,
             "server_time": evaluation_time.isoformat(),
@@ -155,19 +198,7 @@ class MatchStateService:
                 if active_typing_challenge is not None
                 else None
             ),
-            "my_skills": [
-                {
-                    "code": match_skill.code_snapshot,
-                    "name": match_skill.name_snapshot,
-                    "description": match_skill.description_snapshot,
-                    "energy_cost": match_skill.energy_cost_snapshot,
-                    "duration_seconds": (
-                        match_skill.duration_seconds_snapshot
-                    ),
-                    "quantity": match_skill.current_quantity,
-                }
-                for match_skill in match_skills
-            ],
+            "my_skills": [skill_payload(match_skill) for match_skill in match_skills],
             "active_effects": [
                 {
                     "id": effect.id,

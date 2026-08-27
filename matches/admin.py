@@ -128,6 +128,7 @@ class SkillUseAdmin(admin.ModelAdmin):
         "target_player",
         "match_skill",
         "energy_spent",
+        "outcome_snapshot",
         "used_at",
     )
     search_fields = (
@@ -143,6 +144,7 @@ class SkillUseAdmin(admin.ModelAdmin):
         "match_skill",
         "energy_spent",
         "idempotency_key",
+        "outcome_snapshot",
         "used_at",
     )
 

@@ -15,22 +15,37 @@ export function createSkillController({
     const activeSkills = new Set();
     let typingInFlight = false;
 
-    async function useSkill(skillCode, button) {
+    function skillNoticeFor(payload) {
+        const outcome = payload.outcome || {};
+        if (outcome.kind === "PURIFIED_EFFECT") {
+            return `Đã thanh tẩy: ${outcome.skill_name}.`;
+        }
+        if (outcome.kind === "STOLEN_SKILL") {
+            return `Đã đánh cắp: ${outcome.skill_name}.`;
+        }
+        return "Skill đã được kích hoạt.";
+    }
+
+    async function useSkill(skill, button) {
+        const skillCode = skill.code;
         if (activeSkills.has(skillCode)) {
             return;
         }
         activeSkills.add(skillCode);
         button.disabled = true;
         try {
-            await api.postJson(
+            const targetPlayerId = skill.target_mode === "SELF"
+                ? config.currentPlayerId
+                : config.opponentPlayerId;
+            const payload = await api.postJson(
                 config.skillUseUrlTemplate.replace("__skill__", skillCode),
                 {
-                    target_player_id: config.opponentPlayerId,
+                    target_player_id: targetPlayerId,
                     idempotency_key: randomUUID(),
                 },
                 csrfToken,
             );
-            skillNotice.textContent = "Skill đã được kích hoạt.";
+            skillNotice.textContent = skillNoticeFor(payload);
             await refreshState();
         } catch (error) {
             skillNotice.textContent = error.message;

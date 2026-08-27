@@ -4,7 +4,15 @@ const SKILL_ICONS = {
     BLUR_STATEMENT: "icon-sparkles",
     TIME_DRAIN_60: "icon-timer",
     TYPING_CHALLENGE: "icon-keyboard",
+    PURIFY: "icon-shield",
+    STEAL: "icon-steal",
 };
+const DEFENSIVE_GROUP = "DEFENSIVE";
+const OFFENSIVE_GROUP = "OFFENSIVE";
+const SKILL_GROUPS = [
+    [DEFENSIVE_GROUP, "Skill phòng thủ"],
+    [OFFENSIVE_GROUP, "Skill tấn công"],
+];
 
 
 function createIcon(documentRoot, spriteUrl, symbolId) {
@@ -31,10 +39,10 @@ function unavailableReason({
     if (timedOut) {
         return "Bạn đã hết thời gian.";
     }
-    if (actionLocked) {
+    if (actionLocked && !skill.can_use_while_action_locked) {
         return "Hành động đang bị khóa bởi Thử thách gõ chữ.";
     }
-    if (!hasOpponent) {
+    if (skill.target_mode === "OPPONENT" && !hasOpponent) {
         return "Chưa có đối thủ để sử dụng skill.";
     }
     if (skill.quantity < 1) {
@@ -43,7 +51,7 @@ function unavailableReason({
     if (energy < skill.energy_cost) {
         return "Không đủ năng lượng.";
     }
-    return null;
+    return skill.unavailable_reason || null;
 }
 
 
@@ -55,7 +63,106 @@ export function createSkillToolbar({
 }) {
     const items = new Map();
     const pendingCodes = new Set();
+    const groupContainers = new Map();
+    const windowRoot = documentRoot.defaultView;
     let latestState = null;
+    let activeItem = null;
+
+    function skillGroup(skill) {
+        return skill.ui_group === DEFENSIVE_GROUP
+            ? DEFENSIVE_GROUP
+            : OFFENSIVE_GROUP;
+    }
+
+    function ensureGroups() {
+        for (const [group, label] of SKILL_GROUPS) {
+            let groupContainer = container.querySelector(
+                `[data-skill-group="${group}"]`,
+            );
+            if (!groupContainer) {
+                groupContainer = documentRoot.createElement("div");
+                groupContainer.className = "skill-toolbar__group";
+                if (group === OFFENSIVE_GROUP) {
+                    groupContainer.classList.add("skill-toolbar__group--offensive");
+                }
+                groupContainer.dataset.skillGroup = group;
+                groupContainer.setAttribute("role", "group");
+                groupContainer.setAttribute("aria-label", label);
+                container.appendChild(groupContainer);
+            }
+            groupContainers.set(group, groupContainer);
+        }
+    }
+
+    function clamp(value, minimum, maximum) {
+        return Math.min(Math.max(value, minimum), maximum);
+    }
+
+    function positionTooltip(item) {
+        if (!windowRoot || activeItem !== item || !item?.element.isConnected) {
+            if (activeItem === item) {
+                deactivateTooltip(item);
+            }
+            return;
+        }
+
+        const viewportMargin = 12;
+        const tooltipGap = 8;
+        const triggerRect = item.trigger.getBoundingClientRect();
+        const tooltipRect = item.tooltip.getBoundingClientRect();
+        const viewportWidth = windowRoot.innerWidth;
+        const viewportHeight = windowRoot.innerHeight;
+        const tooltipWidth = Math.min(
+            tooltipRect.width || 288,
+            Math.max(0, viewportWidth - (viewportMargin * 2)),
+        );
+        const tooltipHeight = tooltipRect.height || 160;
+        const preferredTop = triggerRect.bottom + tooltipGap;
+        const flippedTop = triggerRect.top - tooltipGap - tooltipHeight;
+        const fitsBelow = preferredTop + tooltipHeight <= viewportHeight - viewportMargin;
+        const fitsAbove = flippedTop >= viewportMargin;
+        const left = clamp(
+            triggerRect.left + (triggerRect.width / 2) - (tooltipWidth / 2),
+            viewportMargin,
+            Math.max(viewportMargin, viewportWidth - viewportMargin - tooltipWidth),
+        );
+        const top = fitsBelow
+            ? preferredTop
+            : fitsAbove
+                ? flippedTop
+                : clamp(
+                    preferredTop,
+                    viewportMargin,
+                    Math.max(viewportMargin, viewportHeight - viewportMargin - tooltipHeight),
+                );
+
+        item.tooltip.dataset.placement = fitsBelow ? "bottom" : "top";
+        item.tooltip.style.left = `${Math.round(left)}px`;
+        item.tooltip.style.top = `${Math.round(top)}px`;
+    }
+
+    function deactivateTooltip(item = activeItem) {
+        if (!item) {
+            return;
+        }
+        item.element.removeAttribute("data-tooltip-active");
+        if (activeItem === item) {
+            activeItem = null;
+        }
+    }
+
+    function activateTooltip(item) {
+        if (activeItem && activeItem !== item) {
+            deactivateTooltip(activeItem);
+        }
+        activeItem = item;
+        item.element.dataset.tooltipActive = "true";
+        positionTooltip(item);
+    }
+
+    function refreshActiveTooltip() {
+        positionTooltip(activeItem);
+    }
 
     function renderItem(skill) {
         const item = items.get(skill.code);
@@ -91,7 +198,7 @@ export function createSkillToolbar({
         const skill = item.skill;
         renderItem(skill);
         try {
-            await onUseSkill(skillCode, item.trigger);
+            await onUseSkill(skill, item.trigger);
         } finally {
             pendingCodes.delete(skillCode);
             renderItem(item.skill);
@@ -136,33 +243,59 @@ export function createSkillToolbar({
         tooltip.append(heading, description, details, status);
 
         trigger.addEventListener("click", () => activateSkill(skill.code));
+        item.addEventListener("mouseenter", () => activateTooltip(itemState));
+        item.addEventListener("mouseleave", () => {
+            if (!item.contains(documentRoot.activeElement)) {
+                deactivateTooltip(itemState);
+            }
+        });
+        trigger.addEventListener("focus", () => activateTooltip(itemState));
+        trigger.addEventListener("blur", () => {
+            windowRoot?.setTimeout(() => {
+                if (!item.contains(documentRoot.activeElement)) {
+                    deactivateTooltip(itemState);
+                }
+            });
+        });
         item.append(trigger, tooltip);
-        container.appendChild(item);
 
-        return {
+        const itemState = {
             description,
+            element: item,
             energy,
             heading,
             quantity,
             quantityDetail,
             status,
             trigger,
+            tooltip,
         };
+        return itemState;
     }
 
     function ensureItems(skills) {
-        const nextCodes = skills.map((skill) => skill.code);
-        const currentCodes = [...items.keys()];
-        if (
-            nextCodes.length === currentCodes.length
-            && nextCodes.every((code, index) => code === currentCodes[index])
-        ) {
-            return;
+        const nextCodes = new Set(skills.map((skill) => skill.code));
+        for (const [code, item] of items) {
+            if (!nextCodes.has(code)) {
+                deactivateTooltip(item);
+                item.element.remove();
+                items.delete(code);
+            }
         }
-        container.replaceChildren();
-        items.clear();
         for (const skill of skills) {
-            items.set(skill.code, buildItem(skill));
+            let item = items.get(skill.code);
+            if (!item) {
+                item = buildItem(skill);
+                items.set(skill.code, item);
+            }
+            const groupContainer = groupContainers.get(skillGroup(skill));
+            if (item.element.parentElement !== groupContainer) {
+                const hadFocus = documentRoot.activeElement === item.trigger;
+                groupContainer.appendChild(item.element);
+                if (hadFocus) {
+                    item.trigger.focus({preventScroll: true});
+                }
+            }
         }
     }
 
@@ -186,5 +319,16 @@ export function createSkillToolbar({
         }
     }
 
-    return {update};
+    documentRoot.addEventListener("scroll", refreshActiveTooltip, true);
+    windowRoot?.addEventListener("resize", refreshActiveTooltip);
+    ensureGroups();
+
+    return {
+        update,
+        destroy() {
+            deactivateTooltip();
+            documentRoot.removeEventListener("scroll", refreshActiveTooltip, true);
+            windowRoot?.removeEventListener("resize", refreshActiveTooltip);
+        },
+    };
 }

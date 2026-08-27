@@ -5,11 +5,17 @@ MIRROR_CODE = "MIRROR_CODE"
 BLUR_STATEMENT = "BLUR_STATEMENT"
 TIME_DRAIN_60 = "TIME_DRAIN_60"
 TYPING_CHALLENGE = "TYPING_CHALLENGE"
+PURIFY = "PURIFY"
+STEAL = "STEAL"
+DEFENSIVE = "DEFENSIVE"
+OFFENSIVE = "OFFENSIVE"
 REQUIRED_SKILL_CODES = (
     MIRROR_CODE,
     BLUR_STATEMENT,
     TIME_DRAIN_60,
     TYPING_CHALLENGE,
+    PURIFY,
+    STEAL,
 )
 TYPING_PROMPTS = (
     "practice makes progress",
@@ -30,6 +36,9 @@ TYPING_PROMPTS = (
 class SkillDefinition:
     code: str
     effect_kind: str
+    target_mode: str = "OPPONENT"
+    can_use_while_action_locked: bool = False
+    ui_group: str = OFFENSIVE
 
 
 SKILL_REGISTRY = {
@@ -40,4 +49,12 @@ SKILL_REGISTRY = {
         "TIME_PENALTY",
     ),
     TYPING_CHALLENGE: SkillDefinition(TYPING_CHALLENGE, "TYPING_CHALLENGE"),
+    PURIFY: SkillDefinition(
+        PURIFY,
+        "PURIFY",
+        target_mode="SELF",
+        can_use_while_action_locked=True,
+        ui_group=DEFENSIVE,
+    ),
+    STEAL: SkillDefinition(STEAL, "STEAL"),
 }

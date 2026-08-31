@@ -5,8 +5,9 @@ from dataclasses import dataclass
 from django.db import transaction
 from django.utils import timezone
 
-from matches.models import Match, TypingChallenge
+from matches.models import Match, MatchEvent, TypingChallenge
 from matches.services.db import retry_transient_db_lock
+from matches.services.events import record_event
 
 
 class TypingChallengeError(Exception):
@@ -120,4 +121,10 @@ class TypingChallengeService:
             challenge.save(update_fields=["completed_at"])
             challenge.effect.cancelled_at = evaluation_time
             challenge.effect.save(update_fields=["cancelled_at"])
+            record_event(
+                match=match, kind=MatchEvent.Kind.TYPING_COMPLETED,
+                event_key=f"typing:{challenge.pk}", actor=skill_use.target_player,
+                payload={"challenge_id": challenge.pk, "skill_use_id": skill_use.pk},
+                now=evaluation_time,
+            )
             return TypingChallengeResult(challenge, completed_now=True)

@@ -10,6 +10,7 @@ from django.utils import timezone
 
 from matches.models import (
     Match,
+    MatchEvent,
     MatchPlayer,
     MatchProblem,
     MatchSkill,
@@ -21,6 +22,7 @@ from matches.rules import rules_for_match
 from problems.models import Problem
 
 from .db import retry_transient_db_lock
+from .events import record_event, record_match_finished
 from .scoring import ScoringService
 
 class MatchLifecycleError(Exception):
@@ -193,7 +195,12 @@ class StartMatchService:
 
             match.status = Match.Status.PLAYING
             match.started_at = timezone.now()
-            match.save(update_fields=["status", "started_at", "updated_at"])
+            match.timeline_version = 1
+            match.save(update_fields=["status", "started_at", "timeline_version", "updated_at"])
+            record_event(
+                match=match, kind=MatchEvent.Kind.MATCH_STARTED, event_key="started",
+                payload={"duration_seconds": match.duration_seconds}, now=match.started_at,
+            )
             return match
 
 
@@ -324,6 +331,7 @@ class FinishMatchService:
                 ]
             )
             MatchPlayer.objects.filter(match=match).update(is_active=False)
+            record_match_finished(match=match, players=players)
             return match
 
     def try_finalize(self, *, match_id: int, now=None) -> Match | None:
@@ -400,4 +408,10 @@ class SurrenderMatchService:
                 ]
             )
             MatchPlayer.objects.filter(match=match).update(is_active=False)
+            record_event(
+                match=match, kind=MatchEvent.Kind.PLAYER_SURRENDERED,
+                event_key="surrendered", actor=current_player, target=opponent,
+                now=match.ended_at,
+            )
+            record_match_finished(match=match, players=players, now=match.ended_at)
             return match

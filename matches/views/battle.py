@@ -6,6 +6,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
+from django.views.decorators.cache import never_cache
 
 from matches.models import (
     Match,
@@ -15,6 +16,8 @@ from matches.models import (
     SubmissionAIReview,
 )
 from matches.services.ai_review_state import AIReviewStateService
+from matches.services.events import get_timeline_page
+from matches.services.rematch import get_rematch_state
 from matches.services.gameplay import (
     FinishMatchService,
     InsufficientProblemsError,
@@ -268,6 +271,7 @@ def surrender_match(request, match_id):
 
 
 @login_required
+@never_cache
 def match_result(request, match_id):
     match = get_object_or_404(Match, pk=match_id)
     players = list(
@@ -327,6 +331,19 @@ def match_result(request, match_id):
             "result_left": player_results[0],
             "result_right": player_results[1],
             "match_problems": match_problems,
+            "timeline_page": get_timeline_page(
+                match=match, page=request.GET.get("timeline_page", 1),
+            ),
+            "disable_active_match_redirect": True,
+            "rematch_config": (
+                {
+                    "stateUrl": reverse("rematch-state", kwargs={"match_id": match.pk}),
+                    "actionUrl": reverse("rematch-action", kwargs={"match_id": match.pk}),
+                    "initialState": get_rematch_state(user=request.user, match_id=match.pk),
+                }
+                if len(players) == 2 and any(p.user_id == request.user.id for p in players)
+                else None
+            ),
             "ai_review_config": (
                 {
                     "stateUrl": reverse(

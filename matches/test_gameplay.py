@@ -108,6 +108,8 @@ class StartMatchServiceTests(TestCase):
 
         self.assertEqual(match.status, Match.Status.PLAYING)
         self.assertIsNotNone(match.started_at)
+        self.assertEqual(match.timeline_version, 1)
+        self.assertEqual(list(match.events.values_list("kind", flat=True)), ["MATCH_STARTED"])
         self.assertEqual(match.match_problems.count(), 4)
         self.assertEqual(match.problem_progress.count(), 8)
         self.assertEqual(match.match_skills.count(), 6)

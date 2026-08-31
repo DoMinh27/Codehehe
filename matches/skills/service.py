@@ -19,6 +19,7 @@ from matches.models import (
 )
 from matches.rules import rules_for_match
 from matches.services.db import retry_transient_db_lock
+from matches.services.events import record_skill_used
 
 from .definitions import SKILL_REGISTRY, STEAL
 from .handlers import SkillHandlerConfigurationError, apply_skill_effect
@@ -349,4 +350,8 @@ class SkillService:
                         "Skill is temporarily unavailable."
                     ) from error
 
+            record_skill_used(
+                match=match, skill_use=skill_use, source=source, target=target,
+                rules=rules, now=evaluation_time,
+            )
             return SkillUseResult(skill_use, created=True)

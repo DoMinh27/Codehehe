@@ -38,11 +38,32 @@
   </div>
 </header>
 
+{% if rematch_config %}
+  <section id="rematch-controls" class="panel result-rematch" aria-labelledby="rematch-heading">
+    <div>
+      <h2 id="rematch-heading">Tái đấu</h2>
+      <p data-rematch-notice role="status">Đang tải trạng thái tái đấu…</p>
+      <p class="muted">Mỗi trận có một lời mời, hiệu lực 2 phút.</p>
+      <p data-rematch-error role="status" class="result-rematch__error"></p>
+    </div>
+    <div class="result-rematch__actions">
+      <button type="button" class="button button-primary button-small" data-rematch-action="request" hidden>Tái đấu</button>
+      <button type="button" class="button button-primary button-small" data-rematch-action="accept" hidden>Đồng ý</button>
+      <button type="button" class="button button-secondary button-small" data-rematch-action="decline" hidden>Từ chối</button>
+      <button type="button" class="button button-secondary button-small" data-rematch-action="cancel" hidden>Hủy lời mời</button>
+      <a class="button button-primary button-small" data-rematch-open hidden>Vào trận tái đấu</a>
+      <button type="button" class="button button-secondary button-small" data-rematch-refresh>Cập nhật</button>
+    </div>
+    <form id="rematch-csrf" hidden>{% csrf_token %}</form>
+    <noscript>Cần bật JavaScript để gửi và nhận lời mời tái đấu.</noscript>
+  </section>
+  {{ rematch_config|json_script:"rematch-config" }}
+{% endif %}
+
 <section class="result-section" aria-labelledby="score-heading">
   <div class="section-heading">
     <div>
       <h2 id="score-heading">Bảng điểm</h2>
-      <p>Kết quả chung cuộc của trận đấu.</p>
     </div>
   </div>
   <div class="panel result-table-wrap">
@@ -78,7 +99,6 @@
   <div class="section-heading">
     <div>
       <h2 id="first-solve-heading">Người giải đầu tiên</h2>
-      <p>Người hoàn thành đầu tiên ở từng bài.</p>
     </div>
   </div>
   <ol class="panel first-solve-list">
@@ -96,12 +116,38 @@
   </ol>
 </section>
 
+<section class="result-section" aria-labelledby="timeline-heading">
+  <div class="section-heading">
+    <div>
+      <h2 id="timeline-heading">Diễn biến trận</h2>
+    </div>
+  </div>
+  {% if timeline_page %}
+    <ol class="panel result-timeline">
+      {% for event in timeline_page %}
+        <li>
+          <time datetime="{{ event.recorded_at|date:'c' }}" title="{{ event.recorded_at|date:'H:i:s d/m/Y' }}">{{ event.elapsed }}</time>
+          <div><strong>{{ event.label }}</strong><p>{{ event.text }}</p></div>
+        </li>
+      {% endfor %}
+    </ol>
+    {% if timeline_page.has_other_pages %}
+      <nav class="result-timeline__pagination" aria-label="Phân trang diễn biến trận">
+        {% if timeline_page.has_previous %}<a href="?timeline_page={{ timeline_page.previous_page_number }}#timeline-heading">Trang trước</a>{% endif %}
+        <span>Trang {{ timeline_page.number }} / {{ timeline_page.paginator.num_pages }}</span>
+        {% if timeline_page.has_next %}<a href="?timeline_page={{ timeline_page.next_page_number }}#timeline-heading">Trang sau</a>{% endif %}
+      </nav>
+    {% endif %}
+  {% else %}
+    <p class="muted">Trận này chưa có dữ liệu diễn biến.</p>
+  {% endif %}
+</section>
+
 {% if ai_review_config %}
   <section id="ai-review-section" class="result-section ai-review-section" aria-labelledby="ai-review-heading">
     <div class="section-heading">
       <div>
         <h2 id="ai-review-heading">Phân tích bài làm bằng AI</h2>
-        <p>Nhận xét sau trận, không ảnh hưởng đến điểm số.</p>
       </div>
       <p id="ai-review-notice" class="ai-review-notice" role="status"></p>
     </div>
@@ -113,7 +159,7 @@
 {% endblock %}
 
 {% block extra_scripts %}
-  {% if ai_review_config %}
+  {% if ai_review_config or rematch_config %}
     <script src="{% static 'matches/dist/result-main.bundle.js' %}" defer></script>
   {% endif %}
 {% endblock %}

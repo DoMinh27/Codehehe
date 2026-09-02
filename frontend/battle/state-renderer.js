@@ -145,10 +145,12 @@ export function createStateRenderer({
         );
         if (newUses.length) {
             const latest = newUses.at(-1);
-            skillNotice.textContent = (
-                `${latest.source_username} đã dùng ${latest.name} lên `
-                + `${latest.target_username}.`
-            );
+            skillNotice.textContent = latest.outcome_kind === "BLOCKED_BY_SHIELD"
+                ? `${latest.name} của ${latest.source_username} đã bị Shield chặn.`
+                : (
+                    `${latest.source_username} đã dùng ${latest.name} lên `
+                    + `${latest.target_username}.`
+                );
         }
         newestRenderedSkillUseId = Math.max(
             newestRenderedSkillUseId,

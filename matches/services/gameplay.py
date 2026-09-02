@@ -10,6 +10,7 @@ from django.utils import timezone
 
 from matches.models import (
     Match,
+    MatchEvent,
     MatchPlayer,
     MatchProblem,
     MatchSkill,
@@ -18,10 +19,13 @@ from matches.models import (
     Submission,
 )
 from matches.rules import rules_for_match
+from matches.skills.definitions import SKILL_REGISTRY
 from problems.models import Problem
 
 from .db import retry_transient_db_lock
+from .events import record_event, record_match_finished
 from .scoring import ScoringService
+
 
 class MatchLifecycleError(Exception):
     """Base class for expected match lifecycle failures."""
@@ -101,19 +105,21 @@ class StartMatchService:
                 )
             }
             if set(active_skills) != set(rules.required_skill_codes):
-                raise InsufficientSkillsError(
-                    "Cấu hình Skill Battle chưa đầy đủ."
-                )
+                raise InsufficientSkillsError("Cấu hình Skill Battle chưa đầy đủ.")
 
-            eligible_problems = Problem.objects.annotate(
-                hidden_test_count=Count(
-                    "test_cases",
-                    filter=Q(test_cases__is_sample=False),
+            eligible_problems = (
+                Problem.objects.annotate(
+                    hidden_test_count=Count(
+                        "test_cases",
+                        filter=Q(test_cases__is_sample=False),
+                    )
                 )
-            ).filter(
-                is_active=True,
-                hidden_test_count__gt=0,
-            ).exclude(reference_solution="")
+                .filter(
+                    is_active=True,
+                    hidden_test_count__gt=0,
+                )
+                .exclude(reference_solution="")
+            )
             selected_problems = []
             for difficulty, required_count in rules.problem_counts.items():
                 if required_count == 0:
@@ -175,6 +181,7 @@ class StartMatchService:
                         duration_seconds_snapshot=(
                             active_skills[code].duration_seconds
                         ),
+                        policy_snapshot=(SKILL_REGISTRY[code].to_policy_snapshot()),
                     )
                     for code in rules.required_skill_codes
                 ]
@@ -193,7 +200,17 @@ class StartMatchService:
 
             match.status = Match.Status.PLAYING
             match.started_at = timezone.now()
-            match.save(update_fields=["status", "started_at", "updated_at"])
+            match.timeline_version = 1
+            match.save(
+                update_fields=["status", "started_at", "timeline_version", "updated_at"]
+            )
+            record_event(
+                match=match,
+                kind=MatchEvent.Kind.MATCH_STARTED,
+                event_key="started",
+                payload={"duration_seconds": match.duration_seconds},
+                now=match.started_at,
+            )
             return match
 
 
@@ -239,9 +256,7 @@ class FinishMatchService:
                 .order_by("id")
             )
             if len(players) != 2:
-                raise MatchPlayerCountError(
-                    "Trận đấu cần đúng hai người để kết thúc."
-                )
+                raise MatchPlayerCountError("Trận đấu cần đúng hai người để kết thúc.")
             problem_count = MatchProblem.objects.filter(match=match).count()
             solved_counts = {
                 row["player_id"]: row["count"]
@@ -267,9 +282,7 @@ class FinishMatchService:
                 for player in players
             )
             if not all_players_terminal:
-                raise MatchNotReadyToFinishError(
-                    "Trận đấu chưa đủ điều kiện kết thúc."
-                )
+                raise MatchNotReadyToFinishError("Trận đấu chưa đủ điều kiện kết thúc.")
 
             if Submission.objects.filter(
                 match=match,
@@ -324,6 +337,7 @@ class FinishMatchService:
                 ]
             )
             MatchPlayer.objects.filter(match=match).update(is_active=False)
+            record_match_finished(match=match, players=players)
             return match
 
     def try_finalize(self, *, match_id: int, now=None) -> Match | None:
@@ -375,9 +389,7 @@ class SurrenderMatchService:
             if match.status != Match.Status.PLAYING:
                 raise MatchStateError("Trận đấu không ở trạng thái đang chơi.")
             if len(players) != 2:
-                raise MatchPlayerCountError(
-                    "Trận đấu cần đúng hai người để đầu hàng."
-                )
+                raise MatchPlayerCountError("Trận đấu cần đúng hai người để đầu hàng.")
 
             opponent = next(
                 player for player in players if player.pk != current_player.pk
@@ -400,4 +412,13 @@ class SurrenderMatchService:
                 ]
             )
             MatchPlayer.objects.filter(match=match).update(is_active=False)
+            record_event(
+                match=match,
+                kind=MatchEvent.Kind.PLAYER_SURRENDERED,
+                event_key="surrendered",
+                actor=current_player,
+                target=opponent,
+                now=match.ended_at,
+            )
+            record_match_finished(match=match, players=players, now=match.ended_at)
             return match

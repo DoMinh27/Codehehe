@@ -404,6 +404,79 @@
     margin-top: 0.35rem;
 }
 
+.result-rematch {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem;
+    overflow-wrap: anywhere;
+}
+
+.result-rematch > div:first-child {
+    flex: 1 1 20rem;
+    min-width: 0;
+}
+
+.result-rematch h2 {
+    margin: 0 0 0.35rem;
+    font-size: 1.15rem;
+}
+
+.result-rematch p {
+    margin: 0.35rem 0;
+}
+
+.result-rematch__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.result-rematch [hidden] {
+    display: none;
+}
+
+.result-rematch__error {
+    color: var(--text-danger, #b42318);
+}
+
+.result-timeline {
+    list-style: none;
+    padding: 0 1rem;
+    margin: 0;
+}
+
+.result-timeline li {
+    display: grid;
+    grid-template-columns: 4rem minmax(0, 1fr);
+    gap: 0.75rem;
+    padding: 0.85rem 0;
+    border-bottom: 1px solid var(--border-default);
+    overflow-wrap: anywhere;
+}
+
+.result-timeline li:last-child {
+    border-bottom: 0;
+}
+
+.result-timeline time {
+    font-family: Consolas, monospace;
+    color: var(--text-secondary);
+}
+
+.result-timeline p {
+    margin: 0.25rem 0 0;
+}
+
+.result-timeline__pagination {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 0.75rem;
+}
+
 .complexity-badges span {
     background: var(--bg-subtle);
     border: 1px solid var(--border-default);

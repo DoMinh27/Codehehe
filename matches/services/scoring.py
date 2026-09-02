@@ -7,6 +7,7 @@ from django.db.models import Q, Sum
 
 from matches.models import (
     Match,
+    MatchEvent,
     MatchPlayer,
     MatchProblem,
     PlayerProblemProgress,
@@ -16,6 +17,7 @@ from matches.rules import rules_for_match
 from matches.skills.rewards import RewardService
 
 from .db import retry_transient_db_lock
+from .events import record_event
 
 
 class ScoringError(Exception):
@@ -47,7 +49,7 @@ class ScoringService:
             )
             submission = (
                 Submission.objects.select_for_update()
-                .select_related("player", "match_problem")
+                .select_related("player__user", "match_problem")
                 .get(pk=submission_id)
             )
             if submission.verdict == Submission.Verdict.PENDING:
@@ -111,7 +113,30 @@ class ScoringService:
                 progress=progress,
                 player=submission.player,
             )
-            self._sync_player_score(submission.player_id)
+            player = self._sync_player_score(submission.player_id)
+            record_event(
+                match=match_problem.match, kind=MatchEvent.Kind.PROBLEM_SOLVED,
+                event_key=f"solved:{progress.pk}", actor=player,
+                payload={
+                    "problem_id": match_problem.pk,
+                    "problem_title": match_problem.title_snapshot,
+                    "points": progress.base_points_awarded, "score_after": player.score,
+                    "submission_id": submission.pk,
+                    "submitted_at": submission.received_at.isoformat(),
+                },
+            )
+            if progress.skill_awarded_id:
+                skill = progress.skill_awarded
+                record_event(
+                    match=match_problem.match, kind=MatchEvent.Kind.REWARD_GRANTED,
+                    event_key=f"reward:{progress.pk}", actor=player,
+                    payload={
+                        "problem_id": match_problem.pk,
+                        "problem_title": match_problem.title_snapshot,
+                        "energy": progress.energy_awarded,
+                        "skill_code": skill.code_snapshot, "skill_name": skill.name_snapshot,
+                    },
+                )
         elif progress.solved_at is None or submission.received_at < progress.solved_at:
             progress.solved_at = submission.received_at
             progress.accepted_submission = submission
@@ -128,6 +153,7 @@ class ScoringService:
                 match_problem=match_problem,
                 verdict=Submission.Verdict.ACCEPTED,
             )
+            .only("id", "player_id", "received_at")
             .order_by("received_at", "id")
             .first()
         )
@@ -161,15 +187,25 @@ class ScoringService:
         match_problem.first_solver_id = candidate.player_id
         match_problem.first_solved_at = candidate.received_at
         match_problem.save(update_fields=["first_solver", "first_solved_at"])
-        self._sync_player_score(candidate.player_id)
+        player = self._sync_player_score(candidate.player_id)
+        record_event(
+            match=match_problem.match, kind=MatchEvent.Kind.FIRST_SOLVE_CONFIRMED,
+            event_key=f"first-solve:{match_problem.pk}", actor=player,
+            payload={
+                "problem_id": match_problem.pk, "problem_title": match_problem.title_snapshot,
+                "points": progress.first_solve_bonus_awarded, "score_after": player.score,
+                "submission_id": candidate.pk, "submitted_at": candidate.received_at.isoformat(),
+            },
+        )
         return True
 
     @staticmethod
-    def _sync_player_score(player_id: int) -> None:
-        player = MatchPlayer.objects.select_for_update().get(pk=player_id)
+    def _sync_player_score(player_id: int) -> MatchPlayer:
+        player = MatchPlayer.objects.select_for_update().select_related("user").get(pk=player_id)
         totals = PlayerProblemProgress.objects.filter(player_id=player_id).aggregate(
             base=Sum("base_points_awarded"),
             bonus=Sum("first_solve_bonus_awarded"),
         )
         player.score = (totals["base"] or 0) + (totals["bonus"] or 0)
         player.save(update_fields=["score"])
+        return player

@@ -2,6 +2,7 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 from .rules import CURRENT_RULESET_VERSION, default_v3_rules_snapshot
 
@@ -56,6 +57,7 @@ class Match(models.Model):
     )
     rules_snapshot = models.JSONField(default=default_v3_rules_snapshot)
     ai_review_enabled = models.BooleanField(default=False)
+    timeline_version = models.PositiveSmallIntegerField(default=0)
     winner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
@@ -88,9 +90,7 @@ class Match(models.Model):
                 name="match_duration_gt_0",
             ),
             models.CheckConstraint(
-                condition=~(
-                    models.Q(winner__isnull=False) & models.Q(is_draw=True)
-                ),
+                condition=~(models.Q(winner__isnull=False) & models.Q(is_draw=True)),
                 name="match_winner_or_draw_not_both",
             ),
             models.CheckConstraint(
@@ -135,6 +135,7 @@ class MatchSkill(models.Model):
     description_snapshot = models.TextField()
     energy_cost_snapshot = models.PositiveSmallIntegerField()
     duration_seconds_snapshot = models.PositiveIntegerField(null=True, blank=True)
+    policy_snapshot = models.JSONField(default=dict, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -210,6 +211,135 @@ class MatchPlayer(models.Model):
 
     def __str__(self):
         return f"{self.user.username} in {self.match.room_code}"
+
+
+class MatchEvent(models.Model):
+    """Append-only application audit; never used to calculate match results."""
+
+    class Kind(models.TextChoices):
+        MATCH_STARTED = "MATCH_STARTED", "Bắt đầu trận"
+        PROBLEM_SOLVED = "PROBLEM_SOLVED", "Giải được bài"
+        FIRST_SOLVE_CONFIRMED = "FIRST_SOLVE_CONFIRMED", "Người giải đầu tiên"
+        REWARD_GRANTED = "REWARD_GRANTED", "Nhận phần thưởng"
+        SKILL_USED = "SKILL_USED", "Sử dụng Skill"
+        TYPING_COMPLETED = "TYPING_COMPLETED", "Hoàn thành thử thách gõ chữ"
+        PLAYER_SURRENDERED = "PLAYER_SURRENDERED", "Đầu hàng"
+        MATCH_FINISHED = "MATCH_FINISHED", "Kết thúc trận"
+
+    match = models.ForeignKey(Match, on_delete=models.CASCADE, related_name="events")
+    kind = models.CharField(max_length=32, choices=Kind.choices)
+    actor = models.ForeignKey(
+        MatchPlayer,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="events_as_actor",
+    )
+    target = models.ForeignKey(
+        MatchPlayer,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="events_as_target",
+    )
+    actor_name_snapshot = models.CharField(max_length=150, blank=True)
+    target_name_snapshot = models.CharField(max_length=150, blank=True)
+    recorded_at = models.DateTimeField(default=timezone.now)
+    event_key = models.CharField(max_length=128)
+    payload = models.JSONField(default=dict)
+
+    class Meta:
+        ordering = ["id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["match", "event_key"],
+                name="matchevent_match_key_unique",
+            ),
+        ]
+        indexes = [models.Index(fields=["match", "id"], name="matchevent_match_id_idx")]
+
+    def __str__(self):
+        return f"{self.match_id} · {self.kind} · {self.pk}"
+
+
+class RematchRequest(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Đang chờ"
+        ACCEPTED = "ACCEPTED", "Đã đồng ý"
+        DECLINED = "DECLINED", "Đã từ chối"
+        CANCELLED = "CANCELLED", "Đã hủy"
+
+    match = models.OneToOneField(
+        Match, on_delete=models.CASCADE, related_name="rematch_request"
+    )
+    requester = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="rematch_invitations_sent",
+    )
+    recipient = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="rematch_invitations_received",
+    )
+    status = models.CharField(
+        max_length=12, choices=Status.choices, default=Status.PENDING
+    )
+    created_at = models.DateTimeField(default=timezone.now)
+    expires_at = models.DateTimeField()
+    responded_at = models.DateTimeField(null=True, blank=True)
+    new_match = models.OneToOneField(
+        Match,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="rematch_origin",
+    )
+
+    class Meta:
+        ordering = ["-id"]
+        constraints = [
+            models.CheckConstraint(
+                condition=~models.Q(requester=models.F("recipient")),
+                name="rematch_distinct_users",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(expires_at__gt=models.F("created_at")),
+                name="rematch_valid_expiry",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(status="ACCEPTED", new_match__isnull=False)
+                    | (~models.Q(status="ACCEPTED") & models.Q(new_match__isnull=True))
+                ),
+                name="rematch_accepted_has_match",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(status="PENDING", responded_at__isnull=True)
+                    | (
+                        ~models.Q(status="PENDING")
+                        & models.Q(responded_at__isnull=False)
+                    )
+                ),
+                name="rematch_response_state",
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(match=models.F("new_match")),
+                name="rematch_different_match",
+            ),
+        ]
+
+    def effective_status(self, now=None):
+        if (
+            self.status == self.Status.PENDING
+            and (now or timezone.now()) >= self.expires_at
+        ):
+            return "EXPIRED"
+        return self.status
+
+    def __str__(self):
+        return f"Rematch {self.match_id} · {self.effective_status()}"
 
 
 class MatchPlayerSkill(models.Model):
@@ -294,6 +424,7 @@ class SkillEffect(models.Model):
     started_at = models.DateTimeField()
     expires_at = models.DateTimeField(db_index=True)
     cancelled_at = models.DateTimeField(null=True, blank=True)
+    consumed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["expires_at", "id"]
@@ -301,6 +432,13 @@ class SkillEffect(models.Model):
             models.CheckConstraint(
                 condition=models.Q(expires_at__gt=models.F("started_at")),
                 name="skilleffect_expires_after_start",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(cancelled_at__isnull=True)
+                    | models.Q(consumed_at__isnull=True)
+                ),
+                name="skilleffect_not_cancelled_and_consumed",
             ),
         ]
 
@@ -459,7 +597,9 @@ class Submission(models.Model):
             ),
         ]
         indexes = [
-            models.Index(fields=["match", "player"], name="submission_match_player_idx"),
+            models.Index(
+                fields=["match", "player"], name="submission_match_player_idx"
+            ),
             models.Index(
                 fields=["match_problem", "received_at"],
                 name="submission_problem_rcvd_idx",

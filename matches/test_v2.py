@@ -29,6 +29,7 @@ from matches.services.submission import (
 from matches.skills.definitions import (
     BLUR_STATEMENT,
     MIRROR_CODE,
+    SKILL_REGISTRY,
     TIME_DRAIN_60,
 )
 from matches.skills.rewards import RewardService
@@ -95,6 +96,7 @@ class V2FixtureMixin:
                 description_snapshot=skill.description,
                 energy_cost_snapshot=cost,
                 duration_seconds_snapshot=duration,
+                policy_snapshot=SKILL_REGISTRY[code].to_policy_snapshot(),
             )
 
         problem = Problem.objects.create(
@@ -318,9 +320,7 @@ class SkillServiceTests(V2FixtureMixin, TestCase):
 
     def test_time_drain_uses_match_rules_snapshot(self):
         snapshot = deepcopy(self.match.rules_snapshot)
-        snapshot["skill_effects"]["TIME_DRAIN_60"][
-            "time_penalty_seconds"
-        ] = 15
+        snapshot["skill_effects"]["TIME_DRAIN_60"]["time_penalty_seconds"] = 15
         self.match.rules_snapshot = snapshot
         self.match.save(update_fields=["rules_snapshot"])
         self.grant(

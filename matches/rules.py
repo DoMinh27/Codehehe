@@ -15,7 +15,8 @@ from matches.skills.definitions import (
 )
 
 
-CURRENT_RULESET_VERSION = "v3.1"
+CURRENT_RULESET_VERSION = "v3.2"
+SUPPORTED_RULESET_VERSIONS = {"v3.1", CURRENT_RULESET_VERSION}
 DEFAULT_MATCH_DURATION_SECONDS = 300
 DEFAULT_EASY_PROBLEM_COUNT = 2
 DEFAULT_MEDIUM_PROBLEM_COUNT = 1
@@ -59,7 +60,7 @@ class MatchRules:
     typing_prompts: tuple[str, ...]
 
     def __post_init__(self) -> None:
-        if self.version != CURRENT_RULESET_VERSION:
+        if self.version not in SUPPORTED_RULESET_VERSIONS:
             raise RulesetConfigurationError(
                 f"Unsupported ruleset version: {self.version!r}."
             )
@@ -69,17 +70,11 @@ class MatchRules:
             )
         problem_counts = self.problem_counts
         if any(count < 0 for count in problem_counts.values()):
-            raise RulesetConfigurationError(
-                "Problem counts must not be negative."
-            )
+            raise RulesetConfigurationError("Problem counts must not be negative.")
         if sum(problem_counts.values()) == 0:
-            raise RulesetConfigurationError(
-                "At least one problem is required."
-            )
+            raise RulesetConfigurationError("At least one problem is required.")
         if self.first_solve_bonus not in {0, 1}:
-            raise RulesetConfigurationError(
-                "first_solve_bonus must be zero or one."
-            )
+            raise RulesetConfigurationError("first_solve_bonus must be zero or one.")
         if not 0 <= self.max_energy <= 3:
             raise RulesetConfigurationError(
                 "max_energy must be between zero and three."
@@ -89,29 +84,18 @@ class MatchRules:
                 "energy_per_first_solve must be zero or one."
             )
         if not self.required_skill_codes:
-            raise RulesetConfigurationError(
-                "At least one Skill code is required."
-            )
-        if len(set(self.required_skill_codes)) != len(
-            self.required_skill_codes
-        ):
-            raise RulesetConfigurationError(
-                "Skill codes must not be duplicated."
-            )
-        unsupported_codes = set(self.required_skill_codes) - set(
-            SKILL_REGISTRY
-        )
+            raise RulesetConfigurationError("At least one Skill code is required.")
+        if len(set(self.required_skill_codes)) != len(self.required_skill_codes):
+            raise RulesetConfigurationError("Skill codes must not be duplicated.")
+        unsupported_codes = set(self.required_skill_codes) - set(SKILL_REGISTRY)
         if unsupported_codes:
             raise RulesetConfigurationError(
                 "Ruleset contains an unsupported Skill code."
             )
         if self.time_drain_seconds < 0:
-            raise RulesetConfigurationError(
-                "time_drain_seconds must not be negative."
-            )
+            raise RulesetConfigurationError("time_drain_seconds must not be negative.")
         if not self.typing_prompts or any(
-            not isinstance(prompt, str) or not prompt
-            for prompt in self.typing_prompts
+            not isinstance(prompt, str) or not prompt for prompt in self.typing_prompts
         ):
             raise RulesetConfigurationError(
                 "Typing Prompt catalog must contain non-empty strings."
@@ -180,9 +164,7 @@ class MatchRules:
             )
         prompts = typing.get("prompts")
         if not isinstance(prompts, list):
-            raise RulesetConfigurationError(
-                "typing.prompts must be a list."
-            )
+            raise RulesetConfigurationError("typing.prompts must be a list.")
 
         return cls(
             version=version,

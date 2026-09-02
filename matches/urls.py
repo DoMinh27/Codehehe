@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import battle, history, reviews, rooms, skills, submissions
+from .views import battle, history, rematch, reviews, rooms, skills, submissions
 
 urlpatterns = [
     path("history/", history.match_history, name="match-history"),
@@ -42,6 +42,8 @@ urlpatterns = [
         name="match-surrender",
     ),
     path("<int:match_id>/result/", battle.match_result, name="match-result"),
+    path("<int:match_id>/rematch/state/", rematch.rematch_state, name="rematch-state"),
+    path("<int:match_id>/rematch/", rematch.rematch_action, name="rematch-action"),
     path(
         "<int:match_id>/my-submissions/",
         history.my_submissions,

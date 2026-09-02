@@ -23,6 +23,9 @@ export function createSkillController({
         if (outcome.kind === "STOLEN_SKILL") {
             return `Đã đánh cắp: ${outcome.skill_name}.`;
         }
+        if (outcome.kind === "BLOCKED_BY_SHIELD") {
+            return "Skill đã bị Shield của đối thủ chặn.";
+        }
         return "Skill đã được kích hoạt.";
     }
 

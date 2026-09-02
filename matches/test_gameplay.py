@@ -108,9 +108,16 @@ class StartMatchServiceTests(TestCase):
 
         self.assertEqual(match.status, Match.Status.PLAYING)
         self.assertIsNotNone(match.started_at)
+        self.assertEqual(match.timeline_version, 1)
+        self.assertEqual(
+            list(match.events.values_list("kind", flat=True)), ["MATCH_STARTED"]
+        )
         self.assertEqual(match.match_problems.count(), 4)
         self.assertEqual(match.problem_progress.count(), 8)
-        self.assertEqual(match.match_skills.count(), 6)
+        self.assertEqual(match.match_skills.count(), 7)
+        self.assertTrue(
+            all(match_skill.policy_snapshot for match_skill in match.match_skills.all())
+        )
         self.assertEqual(
             list(match.match_problems.values_list("difficulty_snapshot", flat=True)),
             ["EASY", "EASY", "MEDIUM", "HARD"],
@@ -224,7 +231,9 @@ class StartMatchServiceTests(TestCase):
             StartMatchService().start(user=self.host, match_id=self.match.pk)
 
         self.assertEqual(MatchProblem.objects.filter(match=self.match).count(), 4)
-        self.assertEqual(PlayerProblemProgress.objects.filter(match=self.match).count(), 8)
+        self.assertEqual(
+            PlayerProblemProgress.objects.filter(match=self.match).count(), 8
+        )
 
     def test_insufficient_problem_set_rolls_back(self):
         Problem.objects.filter(difficulty=Problem.Difficulty.MEDIUM).delete()
@@ -610,9 +619,7 @@ class LifecycleFixtureMixin:
                 title=f"Problem {index}",
                 statement=f"Statement {index}",
                 difficulty=(
-                    Problem.Difficulty.EASY
-                    if index <= 2
-                    else Problem.Difficulty.MEDIUM
+                    Problem.Difficulty.EASY if index <= 2 else Problem.Difficulty.MEDIUM
                 ),
                 points=1 if index <= 2 else 2,
                 order=index,
@@ -908,9 +915,7 @@ class MatchLifecycleViewTests(LifecycleFixtureMixin, TestCase):
         FinishMatchService().finalize(match_id=self.match.pk)
         self.client.force_login(self.host)
 
-        response = self.client.get(
-            reverse("match-result", args=[self.match.pk])
-        )
+        response = self.client.get(reverse("match-result", args=[self.match.pk]))
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(

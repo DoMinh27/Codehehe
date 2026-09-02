@@ -16,7 +16,39 @@ from matches.models import (
     SkillEffect,
     SkillUse,
 )
-from matches.skills.definitions import PURIFY, SKILL_REGISTRY, STEAL
+from matches.rules import rules_for_match
+from matches.skills.definitions import (
+    OPPONENT,
+    SKILL_REGISTRY,
+    STEAL,
+    policy_for_match_skill,
+)
+from matches.skills.effects import active_effect_condition
+from matches.skills.engine import (
+    SkillAvailabilityFacts,
+    SkillConditionError,
+    SkillContext,
+    SkillEngineConfigurationError,
+    SkillTargetError,
+    validate_and_prepare,
+)
+
+
+UNAVAILABLE_REASONS = {
+    "MATCH_NOT_PLAYING": "Trận đấu không ở trạng thái đang chơi.",
+    "PLAYER_TIMED_OUT": "Bạn đã hết thời gian.",
+    "ACTION_LOCKED": "Hành động đang bị khóa bởi Thử thách gõ chữ.",
+    "NO_QUANTITY": "Đã hết lượt sử dụng.",
+    "INSUFFICIENT_ENERGY": "Không đủ năng lượng.",
+    "EFFECT_ALREADY_ACTIVE": "Hiệu ứng này đang hoạt động.",
+    "TARGET_FINISHED": "Đối thủ đã hoàn thành hoặc hết thời gian.",
+    "NO_DISPELLABLE_EFFECT": "Không có hiệu ứng nào để thanh tẩy.",
+    "NO_STEALABLE_SKILL": "Đối thủ không còn skill có thể đánh cắp.",
+    "INVALID_STEAL_SELECTION": "Không thể chọn skill để đánh cắp.",
+    "INVALID_TARGET": "Mục tiêu skill không hợp lệ.",
+    "NO_OPPONENT": "Chưa có đối thủ để sử dụng skill.",
+    "INVALID_POLICY": "Skill tạm thời không khả dụng.",
+}
 
 
 class MatchStateError(Exception):
@@ -42,7 +74,7 @@ class MatchStateService:
 
         players = list(
             MatchPlayer.objects.filter(match=match)
-            .select_related("user")
+            .select_related("user", "match")
             .order_by("-is_host", "joined_at", "id")
         )
         current_player = next(
@@ -50,9 +82,7 @@ class MatchStateService:
             None,
         )
         if current_player is None:
-            raise MatchStatePermissionError(
-                "You are not a player in this match."
-            )
+            raise MatchStatePermissionError("You are not a player in this match.")
         opponent = next(
             (player for player in players if player.pk != current_player.pk),
             None,
@@ -81,9 +111,7 @@ class MatchStateService:
                 opponent_quantity=Coalesce(
                     Max(
                         "player_inventory__quantity",
-                        filter=Q(
-                            player_inventory__player=opponent,
-                        ),
+                        filter=Q(player_inventory__player=opponent),
                     ),
                     0,
                 ),
@@ -91,12 +119,10 @@ class MatchStateService:
             .order_by("id")
         )
         evaluation_time = now or timezone.now()
-        active_effects = list(
+        all_active_effects = list(
             SkillEffect.objects.filter(
+                active_effect_condition(evaluation_time),
                 skill_use__match=match,
-                skill_use__target_player=current_player,
-                cancelled_at__isnull=True,
-                expires_at__gt=evaluation_time,
             )
             .select_related(
                 "skill_use__match_skill",
@@ -105,6 +131,11 @@ class MatchStateService:
             )
             .order_by("expires_at", "id")
         )
+        active_effects = [
+            effect
+            for effect in all_active_effects
+            if effect.skill_use.target_player_id == current_player.pk
+        ]
         active_typing_challenge = next(
             (
                 effect.typing_challenge
@@ -112,11 +143,6 @@ class MatchStateService:
                 if hasattr(effect, "typing_challenge")
             ),
             None,
-        )
-        stealable_skill_available = any(
-            match_skill.code_snapshot != STEAL
-            and match_skill.opponent_quantity > 0
-            for match_skill in match_skills
         )
         recent_skill_uses = list(
             SkillUse.objects.filter(match=match)
@@ -148,19 +174,75 @@ class MatchStateService:
         opponent_remaining = (
             remaining_seconds[opponent.pk] if opponent is not None else 0
         )
+        rules = rules_for_match(match)
+        active_skill_ids_by_target = {
+            player.pk: frozenset(
+                effect.skill_use.match_skill_id
+                for effect in all_active_effects
+                if effect.skill_use.target_player_id == player.pk
+            )
+            for player in players
+        }
+        has_dispellable_effect = any(
+            self._is_dispellable(effect.skill_use.match_skill)
+            for effect in active_effects
+        )
+        stealable_skill_available = any(
+            match_skill.code_snapshot != STEAL
+            and match_skill.opponent_quantity > 0
+            for match_skill in match_skills
+        )
+
+        def target_finished(player):
+            deadline = player.personal_ends_at
+            rows = [
+                row for row in progress_rows if row["player_id"] == player.pk
+            ]
+            return (
+                deadline is None
+                or evaluation_time >= deadline
+                or (bool(rows) and all(row["is_solved"] for row in rows))
+            )
 
         def skill_payload(match_skill):
-            definition = SKILL_REGISTRY[match_skill.code_snapshot]
-            unavailable_reason = None
-            if match_skill.code_snapshot == PURIFY and not active_effects:
-                unavailable_reason = "Không có hiệu ứng nào để thanh tẩy."
-            elif (
-                match_skill.code_snapshot == STEAL
-                and not stealable_skill_available
-            ):
-                unavailable_reason = (
-                    "Đối thủ không còn skill có thể đánh cắp."
+            unavailable_code = None
+            try:
+                definition = policy_for_match_skill(match_skill)
+                target = (
+                    opponent if definition.target_mode == OPPONENT else current_player
                 )
+                if target is None:
+                    unavailable_code = "NO_OPPONENT"
+                else:
+                    context = SkillContext(
+                        match=match,
+                        source=current_player,
+                        target=target,
+                        match_skill=match_skill,
+                        policy=definition,
+                        rules=rules,
+                        now=evaluation_time,
+                    )
+                    validate_and_prepare(
+                        context=context,
+                        quantity=match_skill.current_quantity,
+                        action_locked=active_typing_challenge is not None,
+                        facts=SkillAvailabilityFacts(
+                            active_match_skill_ids=(
+                                active_skill_ids_by_target[target.pk]
+                            ),
+                            has_dispellable_effect=has_dispellable_effect,
+                            has_stealable_skill=stealable_skill_available,
+                            target_finished=target_finished(target),
+                        ),
+                    )
+            except SkillConditionError as error:
+                unavailable_code = error.code
+            except SkillTargetError:
+                unavailable_code = "INVALID_TARGET"
+            except (SkillEngineConfigurationError, ValueError):
+                unavailable_code = "INVALID_POLICY"
+                definition = SKILL_REGISTRY[match_skill.code_snapshot]
             return {
                 "code": match_skill.code_snapshot,
                 "name": match_skill.name_snapshot,
@@ -170,10 +252,9 @@ class MatchStateService:
                 "quantity": match_skill.current_quantity,
                 "target_mode": definition.target_mode,
                 "ui_group": definition.ui_group,
-                "can_use_while_action_locked": (
-                    definition.can_use_while_action_locked
-                ),
-                "unavailable_reason": unavailable_reason,
+                "can_use_while_action_locked": (definition.can_use_while_action_locked),
+                "unavailable_code": unavailable_code,
+                "unavailable_reason": UNAVAILABLE_REASONS.get(unavailable_code),
             }
 
         return {
@@ -191,9 +272,7 @@ class MatchStateService:
                 {
                     "id": active_typing_challenge.id,
                     "prompt": active_typing_challenge.prompt,
-                    "expires_at": (
-                        active_typing_challenge.expires_at.isoformat()
-                    ),
+                    "expires_at": (active_typing_challenge.expires_at.isoformat()),
                 }
                 if active_typing_challenge is not None
                 else None
@@ -205,9 +284,7 @@ class MatchStateService:
                     "skill_use_id": effect.skill_use_id,
                     "code": effect.skill_use.match_skill.code_snapshot,
                     "source_player_id": effect.skill_use.source_player_id,
-                    "source_username": (
-                        effect.skill_use.source_player.user.username
-                    ),
+                    "source_username": (effect.skill_use.source_player.user.username),
                     "started_at": effect.started_at.isoformat(),
                     "expires_at": effect.expires_at.isoformat(),
                 }
@@ -219,25 +296,18 @@ class MatchStateService:
                     "code": skill_use.match_skill.code_snapshot,
                     "name": skill_use.match_skill.name_snapshot,
                     "source_player_id": skill_use.source_player_id,
-                    "source_username": (
-                        skill_use.source_player.user.username
-                    ),
+                    "source_username": (skill_use.source_player.user.username),
                     "target_player_id": skill_use.target_player_id,
-                    "target_username": (
-                        skill_use.target_player.user.username
-                    ),
+                    "target_username": (skill_use.target_player.user.username),
                     "used_at": skill_use.used_at.isoformat(),
+                    "outcome_kind": skill_use.outcome_snapshot.get("kind"),
                 }
                 for skill_use in reversed(recent_skill_uses)
             ],
             "my_solved_problem_ids": solved_ids(current_player),
-            "opponent_solved_problem_ids": (
-                solved_ids(opponent) if opponent else []
-            ),
+            "opponent_solved_problem_ids": (solved_ids(opponent) if opponent else []),
             "first_solvers": {
-                str(row["match_problem_id"]): (
-                    row["match_problem__first_solver_id"]
-                )
+                str(row["match_problem_id"]): (row["match_problem__first_solver_id"])
                 for row in progress_rows
             },
             "winner_id": match.winner_id,
@@ -256,9 +326,16 @@ class MatchStateService:
         if match.started_at is not None and match.ends_at is not None:
             deadline = max(
                 match.started_at,
-                match.ends_at
-                - timedelta(seconds=player.time_penalty_seconds),
+                match.ends_at - timedelta(seconds=player.time_penalty_seconds),
             )
         if deadline is None or match.status != Match.Status.PLAYING:
             return 0
         return max(0, math.ceil((deadline - now).total_seconds()))
+
+    @staticmethod
+    def _is_dispellable(match_skill) -> bool:
+        try:
+            policy = policy_for_match_skill(match_skill)
+        except ValueError:
+            return False
+        return policy.disposition == "HARMFUL" and policy.dispellable

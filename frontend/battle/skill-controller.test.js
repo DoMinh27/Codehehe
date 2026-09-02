@@ -74,6 +74,25 @@ describe("skill controller", () => {
         );
     });
 
+    it("explains when an offensive skill is blocked by Shield", async () => {
+        const api = {
+            postJson: vi.fn().mockResolvedValue({
+                outcome: {kind: "BLOCKED_BY_SHIELD"},
+            }),
+        };
+        const controller = makeController(api);
+        const button = document.createElement("button");
+
+        await controller.useSkill(
+            {code: "MIRROR_CODE", target_mode: "OPPONENT"},
+            button,
+        );
+
+        expect(document.getElementById("skill-notice").textContent).toBe(
+            "Skill đã bị Shield của đối thủ chặn.",
+        );
+    });
+
     it("suppresses duplicate typing completion", () => {
         const api = {postJson: vi.fn(() => new Promise(() => {}))};
         const controller = makeController(api);

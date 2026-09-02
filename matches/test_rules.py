@@ -88,6 +88,8 @@ class MatchRulesMigrationTests(TransactionTestCase):
 
     def test_existing_match_duration_is_preserved_in_snapshot(self):
         executor = MigrationExecutor(connection)
+        leaves = executor.loader.graph.leaf_nodes()
+        self.addCleanup(lambda: MigrationExecutor(connection).migrate(leaves))
         executor.migrate(self.migrate_from)
         old_apps = executor.loader.project_state(self.migrate_from).apps
         user_model = old_apps.get_model("auth", "User")
@@ -113,5 +115,5 @@ class MatchRulesMigrationTests(TransactionTestCase):
         )
         self.assertEqual(
             migrated_match.ruleset_version,
-            CURRENT_RULESET_VERSION,
+            "v3.1",
         )

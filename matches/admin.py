@@ -1,13 +1,17 @@
 from django.contrib import admin
+from django.urls import reverse
+from django.utils.html import format_html
 
 from .models import (
     AIReviewProviderThrottle,
     Match,
+    MatchEvent,
     MatchPlayer,
     MatchPlayerSkill,
     MatchProblem,
     MatchSkill,
     PlayerProblemProgress,
+    RematchRequest,
     Skill,
     SkillEffect,
     SkillUse,
@@ -47,8 +51,70 @@ class MatchAdmin(admin.ModelAdmin):
         "ai_review_enabled",
         "created_at",
         "updated_at",
+        "timeline_version",
+        "timeline_link",
     )
     inlines = (MatchPlayerInline, MatchProblemInline)
+
+    @admin.display(description="Diễn biến")
+    def timeline_link(self, obj):
+        if not obj.pk:
+            return "—"
+        return format_html(
+            '<a href="{}?match__id__exact={}">Xem sự kiện trận</a>',
+            reverse("admin:matches_matchevent_changelist"),
+            obj.pk,
+        )
+
+
+class ReadOnlyAuditAdmin(admin.ModelAdmin):
+    def get_readonly_fields(self, request, obj=None):
+        return tuple(field.name for field in self.model._meta.fields)
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(MatchEvent)
+class MatchEventAdmin(ReadOnlyAuditAdmin):
+    list_display = (
+        "id",
+        "match",
+        "kind",
+        "actor_name_snapshot",
+        "target_name_snapshot",
+        "recorded_at",
+    )
+    list_filter = ("kind",)
+    search_fields = ("match__room_code", "actor_name_snapshot", "target_name_snapshot")
+    list_select_related = ("match",)
+    ordering = ("-id",)
+
+
+@admin.register(RematchRequest)
+class RematchRequestAdmin(ReadOnlyAuditAdmin):
+    list_display = (
+        "id",
+        "match",
+        "requester",
+        "recipient",
+        "current_status",
+        "expires_at",
+        "new_match",
+    )
+    list_select_related = ("match", "requester", "recipient", "new_match")
+    search_fields = ("match__room_code", "requester__username", "recipient__username")
+
+    @admin.display(description="Trạng thái")
+    def current_status(self, obj):
+        status = obj.effective_status()
+        return "Đã hết hạn" if status == "EXPIRED" else obj.get_status_display()
 
 
 @admin.register(MatchPlayer)
@@ -105,6 +171,7 @@ class MatchSkillAdmin(admin.ModelAdmin):
         "description_snapshot",
         "energy_cost_snapshot",
         "duration_seconds_snapshot",
+        "policy_snapshot",
         "created_at",
     )
 
@@ -151,8 +218,20 @@ class SkillUseAdmin(admin.ModelAdmin):
 
 @admin.register(SkillEffect)
 class SkillEffectAdmin(admin.ModelAdmin):
-    list_display = ("skill_use", "started_at", "expires_at", "cancelled_at")
-    readonly_fields = ("skill_use", "started_at", "expires_at")
+    list_display = (
+        "skill_use",
+        "started_at",
+        "expires_at",
+        "cancelled_at",
+        "consumed_at",
+    )
+    readonly_fields = (
+        "skill_use",
+        "started_at",
+        "expires_at",
+        "cancelled_at",
+        "consumed_at",
+    )
 
 
 @admin.register(TypingChallenge)

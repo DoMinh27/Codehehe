@@ -48,8 +48,9 @@ export function createBattleApi({fetchImpl = window.fetch.bind(window)} = {}) {
     }
 
     return {
-        getJson(url) {
+        getJson(url, options = {}) {
             return request(url, {
+                ...options,
                 headers: {"Accept": "application/json"},
             });
         },
@@ -59,8 +60,9 @@ export function createBattleApi({fetchImpl = window.fetch.bind(window)} = {}) {
                 headers: {"X-CSRFToken": csrfToken},
             });
         },
-        postJson(url, payload, csrfToken) {
+        postJson(url, payload, csrfToken, options = {}) {
             return request(url, {
+                ...options,
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

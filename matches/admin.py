@@ -62,7 +62,8 @@ class MatchAdmin(admin.ModelAdmin):
             return "—"
         return format_html(
             '<a href="{}?match__id__exact={}">Xem sự kiện trận</a>',
-            reverse("admin:matches_matchevent_changelist"), obj.pk,
+            reverse("admin:matches_matchevent_changelist"),
+            obj.pk,
         )
 
 
@@ -82,7 +83,14 @@ class ReadOnlyAuditAdmin(admin.ModelAdmin):
 
 @admin.register(MatchEvent)
 class MatchEventAdmin(ReadOnlyAuditAdmin):
-    list_display = ("id", "match", "kind", "actor_name_snapshot", "target_name_snapshot", "recorded_at")
+    list_display = (
+        "id",
+        "match",
+        "kind",
+        "actor_name_snapshot",
+        "target_name_snapshot",
+        "recorded_at",
+    )
     list_filter = ("kind",)
     search_fields = ("match__room_code", "actor_name_snapshot", "target_name_snapshot")
     list_select_related = ("match",)
@@ -91,7 +99,15 @@ class MatchEventAdmin(ReadOnlyAuditAdmin):
 
 @admin.register(RematchRequest)
 class RematchRequestAdmin(ReadOnlyAuditAdmin):
-    list_display = ("id", "match", "requester", "recipient", "current_status", "expires_at", "new_match")
+    list_display = (
+        "id",
+        "match",
+        "requester",
+        "recipient",
+        "current_status",
+        "expires_at",
+        "new_match",
+    )
     list_select_related = ("match", "requester", "recipient", "new_match")
     search_fields = ("match__room_code", "requester__username", "recipient__username")
 
@@ -155,6 +171,7 @@ class MatchSkillAdmin(admin.ModelAdmin):
         "description_snapshot",
         "energy_cost_snapshot",
         "duration_seconds_snapshot",
+        "policy_snapshot",
         "created_at",
     )
 
@@ -201,8 +218,20 @@ class SkillUseAdmin(admin.ModelAdmin):
 
 @admin.register(SkillEffect)
 class SkillEffectAdmin(admin.ModelAdmin):
-    list_display = ("skill_use", "started_at", "expires_at", "cancelled_at")
-    readonly_fields = ("skill_use", "started_at", "expires_at")
+    list_display = (
+        "skill_use",
+        "started_at",
+        "expires_at",
+        "cancelled_at",
+        "consumed_at",
+    )
+    readonly_fields = (
+        "skill_use",
+        "started_at",
+        "expires_at",
+        "cancelled_at",
+        "consumed_at",
+    )
 
 
 @admin.register(TypingChallenge)

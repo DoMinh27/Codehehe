@@ -133,6 +133,32 @@ describe("skill toolbar", () => {
         expect(container.textContent).not.toContain("Tấn công");
     });
 
+    test("renders Shield as a defensive icon distinct from Purify", () => {
+        const shield = {
+            code: "SHIELD",
+            name: "Shield",
+            description: "Chặn skill tấn công tiếp theo.",
+            energy_cost: 1,
+            quantity: 1,
+            target_mode: "SELF",
+            can_use_while_action_locked: false,
+            ui_group: "DEFENSIVE",
+            unavailable_reason: null,
+        };
+
+        toolbar.update(availableState({skills: [shield]}));
+
+        const defensiveGroup = container.querySelector(
+            '[data-skill-group="DEFENSIVE"]',
+        );
+        expect(defensiveGroup.querySelector("use").getAttribute("href")).toBe(
+            "/static/icons.svg#icon-guard",
+        );
+        expect(defensiveGroup.querySelector(".skill-tooltip").textContent).toContain(
+            "Chặn skill tấn công tiếp theo.",
+        );
+    });
+
     test("uses the icon button itself to activate the skill", () => {
         const trigger = container.querySelector(".skill-trigger");
 

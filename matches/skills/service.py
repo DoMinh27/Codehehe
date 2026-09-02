@@ -1,11 +1,10 @@
-"""Transactional Skill use validation and application."""
+"""Transactional, server-authoritative Skill pipeline."""
 
 from dataclasses import dataclass
 from secrets import choice
 from typing import Callable, Sequence
 
 from django.db import transaction
-from django.db.models import Count, Q
 from django.utils import timezone
 
 from matches.models import (
@@ -13,17 +12,23 @@ from matches.models import (
     MatchPlayer,
     MatchPlayerSkill,
     MatchSkill,
-    PlayerProblemProgress,
-    SkillEffect,
     SkillUse,
 )
 from matches.rules import rules_for_match
 from matches.services.db import retry_transient_db_lock
 from matches.services.events import record_skill_used
 
-from .definitions import SKILL_REGISTRY, STEAL
-from .handlers import SkillHandlerConfigurationError, apply_skill_effect
-from .typing import has_active_typing_challenge
+from .definitions import SKILL_REGISTRY, policy_for_match_skill
+from .engine import (
+    SkillConditionError,
+    SkillContext,
+    SkillEngineConfigurationError,
+    SkillTargetError,
+    apply_skill,
+    find_active_shield,
+    outcome_for_preparation,
+    validate_and_prepare,
+)
 
 
 MAX_IDEMPOTENCY_KEY_LENGTH = 64
@@ -34,19 +39,21 @@ class SkillUseError(Exception):
 
 
 class InvalidSkillUseError(SkillUseError):
-    """Raised when the request payload is invalid."""
+    pass
 
 
 class SkillUsePermissionError(SkillUseError):
-    """Raised when source or target is not valid for the match."""
+    pass
 
 
 class SkillUseNotFoundError(SkillUseError):
-    """Raised when the match or frozen Skill is missing."""
+    pass
 
 
 class SkillUseConflictError(SkillUseError):
-    """Raised when the Skill cannot currently be used."""
+    def __init__(self, message, reason_code="SKILL_USE_CONFLICT"):
+        self.reason_code = reason_code
+        super().__init__(message)
 
 
 @dataclass(frozen=True)
@@ -58,9 +65,7 @@ class SkillUseResult:
 @dataclass
 class SkillService:
     prompt_selector: Callable[[Sequence[str]], str] = choice
-    steal_selector: Callable[
-        [Sequence[MatchPlayerSkill]], MatchPlayerSkill
-    ] = choice
+    steal_selector: Callable[[Sequence[MatchPlayerSkill]], MatchPlayerSkill] = choice
 
     def use(
         self,
@@ -97,10 +102,7 @@ class SkillService:
         if not isinstance(idempotency_key, str):
             raise InvalidSkillUseError("idempotency_key must be a string.")
         idempotency_key = idempotency_key.strip()
-        if (
-            not idempotency_key
-            or len(idempotency_key) > MAX_IDEMPOTENCY_KEY_LENGTH
-        ):
+        if not idempotency_key or len(idempotency_key) > MAX_IDEMPOTENCY_KEY_LENGTH:
             raise InvalidSkillUseError("idempotency_key is invalid.")
         return skill_code, idempotency_key
 
@@ -115,243 +117,146 @@ class SkillService:
         now,
     ) -> SkillUseResult:
         evaluation_time = now or timezone.now()
-        with transaction.atomic():
-            try:
-                match = Match.objects.select_for_update().get(pk=match_id)
-            except Match.DoesNotExist as error:
-                raise SkillUseNotFoundError("Match was not found.") from error
-
-            players = list(
-                MatchPlayer.objects.select_for_update()
-                .filter(match=match)
-                .select_related("user")
-                .order_by("id")
-            )
-            source = next(
-                (player for player in players if player.user_id == user.id),
-                None,
-            )
-            if source is None:
-                raise SkillUsePermissionError(
-                    "You are not a player in this match."
-                )
-            definition = SKILL_REGISTRY[skill_code]
-            target = next(
-                (player for player in players if player.id == target_player_id),
-                None,
-            )
-            if target is None:
-                raise SkillUsePermissionError(
-                    "Target must be a player in this match."
-                )
-            if definition.target_mode == "SELF" and target.id != source.id:
-                raise SkillUsePermissionError("Target must be yourself.")
-            if definition.target_mode == "OPPONENT" and target.id == source.id:
-                raise SkillUsePermissionError(
-                    "Target must be your opponent in this match."
-                )
-
-            existing = (
-                SkillUse.objects.select_related("match_skill", "effect")
-                .filter(
-                    source_player=source,
-                    idempotency_key=idempotency_key,
-                )
-                .first()
-            )
-            if existing is not None:
-                if (
-                    existing.match_id != match.id
-                    or existing.target_player_id != target.id
-                    or existing.match_skill.code_snapshot != skill_code
-                ):
-                    raise SkillUseConflictError(
-                        "Idempotency key was used with a different request."
-                    )
-                return SkillUseResult(existing, created=False)
-
-            if match.status != Match.Status.PLAYING or match.ends_at is None:
-                raise SkillUseConflictError("Match is not playing.")
-            rules = rules_for_match(match)
-            source_deadline = source.personal_ends_at
-            if source_deadline is None or evaluation_time > source_deadline:
-                raise SkillUseConflictError("Your personal time has ended.")
-            if (
-                not definition.can_use_while_action_locked
-                and has_active_typing_challenge(
-                player_id=source.id,
-                now=evaluation_time,
-                )
-            ):
-                raise SkillUseConflictError(
-                    "Complete the Typing challenge before using a Skill."
-                )
-
-            try:
-                match_skill = MatchSkill.objects.get(
-                    match=match,
-                    code_snapshot=skill_code,
-                )
-            except MatchSkill.DoesNotExist as error:
-                raise SkillUseNotFoundError(
-                    "Skill is not available in this match."
-                ) from error
-
-            try:
-                inventory = MatchPlayerSkill.objects.select_for_update().get(
-                    player=source,
-                    match_skill=match_skill,
-                )
-            except MatchPlayerSkill.DoesNotExist as error:
-                raise SkillUseConflictError(
-                    "You do not have this Skill."
-                ) from error
-
-            if inventory.quantity < 1:
-                raise SkillUseConflictError("You do not have this Skill.")
-            if source.energy < match_skill.energy_cost_snapshot:
-                raise SkillUseConflictError("Not enough Energy.")
-
-            if definition.effect_kind in {
-                "TIMED",
-                "TYPING_CHALLENGE",
-            } and SkillEffect.objects.filter(
-                skill_use__match=match,
-                skill_use__target_player=target,
-                skill_use__match_skill__code_snapshot=skill_code,
-                cancelled_at__isnull=True,
-                expires_at__gt=evaluation_time,
-            ).exists():
-                raise SkillUseConflictError("This effect is already active.")
-            if definition.effect_kind == "TYPING_CHALLENGE":
-                target_deadline = target.personal_ends_at
-                if target_deadline is None or evaluation_time >= target_deadline:
-                    raise SkillUseConflictError(
-                        "The opponent has already finished."
-                    )
-                progress_summary = PlayerProblemProgress.objects.filter(
-                    match=match,
-                    player=target,
-                ).aggregate(
-                    total=Count("id"),
-                    solved=Count("id", filter=Q(is_solved=True)),
-                )
-                if (
-                    progress_summary["total"] > 0
-                    and progress_summary["solved"] == progress_summary["total"]
-                ):
-                    raise SkillUseConflictError(
-                        "The opponent has already finished."
-                    )
-
-            purified_effect = None
-            stolen_inventory = None
-            outcome_snapshot = {}
-            if definition.effect_kind == "PURIFY":
-                purified_effect = (
-                    SkillEffect.objects.select_for_update()
-                    .filter(
-                        skill_use__match=match,
-                        skill_use__target_player=source,
-                        cancelled_at__isnull=True,
-                        expires_at__gt=evaluation_time,
-                    )
-                    .select_related("skill_use__match_skill")
-                    .order_by("-started_at", "-id")
-                    .first()
-                )
-                if purified_effect is None:
-                    raise SkillUseConflictError(
-                        "You have no active effect to purify."
-                    )
-                cancelled_skill = purified_effect.skill_use.match_skill
-                outcome_snapshot = {
-                    "kind": "PURIFIED_EFFECT",
-                    "effect_id": purified_effect.id,
-                    "skill_code": cancelled_skill.code_snapshot,
-                    "skill_name": cancelled_skill.name_snapshot,
-                }
-            elif definition.effect_kind == "STEAL":
-                stealable_inventory = list(
-                    MatchPlayerSkill.objects.select_for_update()
-                    .filter(
-                        player=target,
-                        match_skill__match=match,
-                        quantity__gt=0,
-                    )
-                    .exclude(match_skill__code_snapshot=STEAL)
-                    .select_related("match_skill")
-                    .order_by("match_skill_id", "id")
-                )
-                if not stealable_inventory:
-                    raise SkillUseConflictError(
-                        "The opponent has no Skill available to steal."
-                    )
-                stolen_inventory = self.steal_selector(stealable_inventory)
-                if stolen_inventory not in stealable_inventory:
-                    raise SkillUseConflictError("Skill steal selection is invalid.")
-                stolen_skill = stolen_inventory.match_skill
-                outcome_snapshot = {
-                    "kind": "STOLEN_SKILL",
-                    "match_skill_id": stolen_skill.id,
-                    "skill_code": stolen_skill.code_snapshot,
-                    "skill_name": stolen_skill.name_snapshot,
-                }
-
-            skill_use = SkillUse.objects.create(
-                match=match,
-                source_player=source,
-                target_player=target,
-                match_skill=match_skill,
-                energy_spent=match_skill.energy_cost_snapshot,
-                idempotency_key=idempotency_key,
-                outcome_snapshot=outcome_snapshot,
-            )
-            source.energy -= match_skill.energy_cost_snapshot
-            source.save(update_fields=["energy"])
-            inventory.quantity -= 1
-            inventory.used_count += 1
-            inventory.save(
-                update_fields=["quantity", "used_count", "updated_at"]
-            )
-            if definition.effect_kind == "PURIFY":
-                purified_effect.cancelled_at = evaluation_time
-                purified_effect.save(update_fields=["cancelled_at"])
-            elif definition.effect_kind == "STEAL":
-                stolen_inventory.quantity -= 1
-                stolen_inventory.save(update_fields=["quantity", "updated_at"])
-                recipient_inventory = (
-                    MatchPlayerSkill.objects.select_for_update()
-                    .filter(player=source, match_skill=stolen_inventory.match_skill)
-                    .first()
-                )
-                if recipient_inventory is None:
-                    MatchPlayerSkill.objects.create(
-                        player=source,
-                        match_skill=stolen_inventory.match_skill,
-                        quantity=1,
-                    )
-                else:
-                    recipient_inventory.quantity += 1
-                    recipient_inventory.save(
-                        update_fields=["quantity", "updated_at"]
-                    )
-            else:
+        try:
+            with transaction.atomic():
                 try:
-                    apply_skill_effect(
+                    match = Match.objects.select_for_update().get(pk=match_id)
+                except Match.DoesNotExist as error:
+                    raise SkillUseNotFoundError("Match was not found.") from error
+
+                players = list(
+                    MatchPlayer.objects.select_for_update()
+                    .filter(match=match)
+                    .select_related("user")
+                    .order_by("id")
+                )
+                source = next(
+                    (player for player in players if player.user_id == user.id),
+                    None,
+                )
+                if source is None:
+                    raise SkillUsePermissionError("You are not a player in this match.")
+                target = next(
+                    (player for player in players if player.pk == target_player_id),
+                    None,
+                )
+                if target is None:
+                    raise SkillUsePermissionError(
+                        "Target must be a player in this match."
+                    )
+                try:
+                    match_skill = MatchSkill.objects.get(
+                        match=match,
+                        code_snapshot=skill_code,
+                    )
+                    policy = policy_for_match_skill(match_skill)
+                except MatchSkill.DoesNotExist as error:
+                    raise SkillUseNotFoundError(
+                        "Skill is not available in this match."
+                    ) from error
+                except ValueError as error:
+                    raise SkillUseConflictError(
+                        "Skill is temporarily unavailable.",
+                        "INVALID_POLICY",
+                    ) from error
+                existing = (
+                    SkillUse.objects.select_related("match_skill", "effect")
+                    .filter(
+                        source_player=source,
+                        idempotency_key=idempotency_key,
+                    )
+                    .first()
+                )
+                if existing is not None:
+                    if (
+                        existing.match_id != match.pk
+                        or existing.target_player_id != target.pk
+                        or existing.match_skill.code_snapshot != skill_code
+                    ):
+                        raise SkillUseConflictError(
+                            "Idempotency key was used with a different request.",
+                            "IDEMPOTENCY_CONFLICT",
+                        )
+                    return SkillUseResult(existing, created=False)
+
+                inventory = (
+                    MatchPlayerSkill.objects.select_for_update()
+                    .filter(player=source, match_skill=match_skill)
+                    .first()
+                )
+                quantity = inventory.quantity if inventory else 0
+                rules = rules_for_match(match)
+                context = SkillContext(
+                    match=match,
+                    source=source,
+                    target=target,
+                    match_skill=match_skill,
+                    policy=policy,
+                    rules=rules,
+                    now=evaluation_time,
+                )
+                try:
+                    preparation = validate_and_prepare(
+                        context=context,
+                        quantity=quantity,
+                        lock=True,
+                        steal_selector=self.steal_selector,
+                    )
+                except SkillTargetError as error:
+                    raise SkillUsePermissionError(str(error)) from error
+                shield = find_active_shield(context=context, lock=True)
+                outcome = outcome_for_preparation(
+                    context=context,
+                    preparation=preparation,
+                )
+                if shield is not None:
+                    shield_skill = shield.skill_use.match_skill
+                    outcome = {
+                        "kind": "BLOCKED_BY_SHIELD",
+                        "effect_id": shield.pk,
+                        "skill_use_id": shield.skill_use_id,
+                        "skill_code": shield_skill.code_snapshot,
+                        "skill_name": shield_skill.name_snapshot,
+                    }
+
+                skill_use = SkillUse.objects.create(
+                    match=match,
+                    source_player=source,
+                    target_player=target,
+                    match_skill=match_skill,
+                    energy_spent=match_skill.energy_cost_snapshot,
+                    idempotency_key=idempotency_key,
+                    outcome_snapshot=outcome,
+                )
+                source.energy -= match_skill.energy_cost_snapshot
+                source.save(update_fields=["energy"])
+                inventory.quantity -= 1
+                inventory.used_count += 1
+                inventory.save(update_fields=["quantity", "used_count", "updated_at"])
+                if shield is not None:
+                    shield.consumed_at = evaluation_time
+                    shield.save(update_fields=["consumed_at"])
+                else:
+                    apply_skill(
+                        context=context,
                         skill_use=skill_use,
-                        target_player=target,
-                        rules=rules,
-                        now=evaluation_time,
+                        preparation=preparation,
                         prompt_selector=self.prompt_selector,
                     )
-                except SkillHandlerConfigurationError as error:
-                    raise SkillUseConflictError(
-                        "Skill is temporarily unavailable."
-                    ) from error
 
-            record_skill_used(
-                match=match, skill_use=skill_use, source=source, target=target,
-                rules=rules, now=evaluation_time,
-            )
-            return SkillUseResult(skill_use, created=True)
+                record_skill_used(
+                    match=match,
+                    skill_use=skill_use,
+                    source=source,
+                    target=target,
+                    rules=rules,
+                    now=evaluation_time,
+                )
+                return SkillUseResult(skill_use, created=True)
+        except SkillConditionError as error:
+            raise SkillUseConflictError(str(error), error.code) from error
+        except SkillEngineConfigurationError as error:
+            raise SkillUseConflictError(
+                "Skill is temporarily unavailable.",
+                "INVALID_POLICY",
+            ) from error

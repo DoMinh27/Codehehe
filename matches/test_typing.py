@@ -19,7 +19,11 @@ from matches.services.submission import (
     SubmissionConflictError,
     SubmissionService,
 )
-from matches.skills.definitions import MIRROR_CODE, TYPING_CHALLENGE
+from matches.skills.definitions import (
+    MIRROR_CODE,
+    SKILL_REGISTRY,
+    TYPING_CHALLENGE,
+)
 from matches.skills.rewards import RewardService
 from matches.skills.service import SkillService, SkillUseConflictError
 from matches.skills.typing import (
@@ -56,6 +60,7 @@ class TypingFixtureMixin(V2FixtureMixin):
             description_snapshot=skill.description,
             energy_cost_snapshot=1,
             duration_seconds_snapshot=20,
+            policy_snapshot=(SKILL_REGISTRY[TYPING_CHALLENGE].to_policy_snapshot()),
         )
 
     def activate_typing(self, *, now=None, quantity=1):
@@ -64,9 +69,7 @@ class TypingFixtureMixin(V2FixtureMixin):
             TYPING_CHALLENGE,
             quantity=quantity,
         )
-        result = SkillService(
-            prompt_selector=lambda prompts: PROMPT
-        ).use(
+        result = SkillService(prompt_selector=lambda prompts: PROMPT).use(
             user=self.host,
             match_id=self.match.pk,
             skill_code=TYPING_CHALLENGE,
@@ -74,9 +77,7 @@ class TypingFixtureMixin(V2FixtureMixin):
             idempotency_key=f"typing-{self.match.room_code}",
             now=now,
         )
-        challenge = TypingChallenge.objects.get(
-            effect__skill_use=result.skill_use
-        )
+        challenge = TypingChallenge.objects.get(effect__skill_use=result.skill_use)
         return result, challenge, inventory
 
 
@@ -238,9 +239,7 @@ class TypingSkillServiceTests(TypingFixtureMixin, TestCase):
             player=self.host_player,
             match_skill=self.match_skills[TYPING_CHALLENGE],
         ).update(quantity=1)
-        second = SkillService(
-            prompt_selector=lambda prompts: PROMPT
-        ).use(
+        second = SkillService(prompt_selector=lambda prompts: PROMPT).use(
             user=self.host,
             match_id=self.match.pk,
             skill_code=TYPING_CHALLENGE,
@@ -248,9 +247,7 @@ class TypingSkillServiceTests(TypingFixtureMixin, TestCase):
             idempotency_key="typing-expiry",
             now=now,
         )
-        expired = TypingChallenge.objects.get(
-            effect__skill_use=second.skill_use
-        )
+        expired = TypingChallenge.objects.get(effect__skill_use=second.skill_use)
         with self.assertRaises(TypingChallengeConflictError):
             service.complete(
                 user=self.opponent,
@@ -312,9 +309,7 @@ class TypingChallengeViewTests(TypingFixtureMixin, TestCase):
         self.assertContains(battle, '"typingCompleteUrlTemplate"')
 
         self.client.force_login(self.host)
-        source_state = self.client.get(
-            reverse("match-state", args=[self.match.pk])
-        )
+        source_state = self.client.get(reverse("match-state", args=[self.match.pk]))
         self.assertFalse(source_state.json()["my_action_locked"])
         self.assertIsNone(source_state.json()["typing_challenge"])
         self.assertNotIn(PROMPT, source_state.content.decode())

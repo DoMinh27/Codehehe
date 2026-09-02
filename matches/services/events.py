@@ -145,10 +145,11 @@ def record_skill_used(*, match, skill_use, source, target, rules, now):
         "skill_name": skill.name_snapshot,
         "energy_spent": skill_use.energy_spent,
     }
-    if skill.duration_seconds_snapshot is not None:
-        payload["duration_seconds"] = skill.duration_seconds_snapshot
-    if skill.code_snapshot == "TIME_DRAIN_60":
-        payload["time_penalty_seconds"] = rules.time_drain_seconds
+    if outcome.get("kind") != "BLOCKED_BY_SHIELD":
+        if skill.duration_seconds_snapshot is not None:
+            payload["duration_seconds"] = skill.duration_seconds_snapshot
+        if skill.code_snapshot == "TIME_DRAIN_60":
+            payload["time_penalty_seconds"] = rules.time_drain_seconds
     for source_key, dest_key in (
         ("kind", "outcome_kind"),
         ("skill_code", "affected_skill_code"),
@@ -190,6 +191,8 @@ def present_event(event, started_at):
             text += f" Đã gỡ {data['affected_skill_name']}."
         elif data.get("outcome_kind") == "STOLEN_SKILL":
             text += f" Đã đánh cắp 1 lượt {data['affected_skill_name']}."
+        elif data.get("outcome_kind") == "BLOCKED_BY_SHIELD":
+            text += " Đòn tấn công đã bị Shield chặn."
         elif "time_penalty_seconds" in data:
             text += f" Cộng {data['time_penalty_seconds']} giây phạt thời gian."
         elif "duration_seconds" in data:

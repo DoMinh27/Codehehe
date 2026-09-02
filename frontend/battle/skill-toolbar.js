@@ -6,6 +6,7 @@ const SKILL_ICONS = {
     TYPING_CHALLENGE: "icon-keyboard",
     PURIFY: "icon-shield",
     STEAL: "icon-steal",
+    SHIELD: "icon-guard",
 };
 const DEFENSIVE_GROUP = "DEFENSIVE";
 const OFFENSIVE_GROUP = "OFFENSIVE";

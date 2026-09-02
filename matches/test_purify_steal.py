@@ -5,12 +5,19 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from matches.models import MatchPlayerSkill, MatchSkill, Skill, SkillEffect, TypingChallenge
+from matches.models import (
+    MatchPlayerSkill,
+    MatchSkill,
+    Skill,
+    SkillEffect,
+    TypingChallenge,
+)
 from matches.services.match_state import MatchStateService
 from matches.skills.definitions import (
     BLUR_STATEMENT,
     MIRROR_CODE,
     PURIFY,
+    SKILL_REGISTRY,
     STEAL,
     TIME_DRAIN_60,
     TYPING_CHALLENGE,
@@ -50,6 +57,7 @@ class PurifyStealFixtureMixin(V2FixtureMixin):
                 description_snapshot=skill.description,
                 energy_cost_snapshot=cost,
                 duration_seconds_snapshot=duration,
+                policy_snapshot=SKILL_REGISTRY[code].to_policy_snapshot(),
             )
 
 
@@ -106,7 +114,9 @@ class PurifySkillTests(PurifyStealFixtureMixin, TestCase):
         )
         self.opponent_player.refresh_from_db()
         purify_inventory.refresh_from_db()
-        self.assertEqual((self.opponent_player.energy, purify_inventory.quantity), (2, 0))
+        self.assertEqual(
+            (self.opponent_player.energy, purify_inventory.quantity), (2, 0)
+        )
 
     def test_purify_can_break_typing_action_lock(self):
         now = timezone.now()
@@ -202,9 +212,7 @@ class StealSkillTests(PurifyStealFixtureMixin, TestCase):
             energy=3,
         )
 
-        result = SkillService(
-            steal_selector=lambda inventory: target_inventory
-        ).use(
+        result = SkillService(steal_selector=lambda inventory: target_inventory).use(
             user=self.host,
             match_id=self.match.pk,
             skill_code=STEAL,
@@ -220,7 +228,9 @@ class StealSkillTests(PurifyStealFixtureMixin, TestCase):
         )
         self.host_player.refresh_from_db()
         self.assertEqual((self.host_player.energy, source_inventory.quantity), (1, 0))
-        self.assertEqual((target_inventory.quantity, target_inventory.used_count), (1, 0))
+        self.assertEqual(
+            (target_inventory.quantity, target_inventory.used_count), (1, 0)
+        )
         self.assertEqual((received.quantity, received.used_count), (1, 0))
         self.assertEqual(
             result.skill_use.outcome_snapshot["skill_code"],

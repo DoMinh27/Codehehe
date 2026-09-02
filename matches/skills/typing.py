@@ -41,6 +41,7 @@ def has_active_typing_challenge(*, player_id: int, now=None) -> bool:
     return TypingChallenge.objects.filter(
         effect__skill_use__target_player_id=player_id,
         effect__cancelled_at__isnull=True,
+        effect__consumed_at__isnull=True,
         completed_at__isnull=True,
         expires_at__gt=evaluation_time,
     ).exists()
@@ -109,9 +110,7 @@ class TypingChallengeService:
             if match.status != Match.Status.PLAYING:
                 raise TypingChallengeConflictError("Match is not playing.")
             if evaluation_time >= challenge.expires_at:
-                raise TypingChallengeConflictError(
-                    "Typing challenge has expired."
-                )
+                raise TypingChallengeConflictError("Typing challenge has expired.")
             if typed_text != challenge.prompt:
                 raise InvalidTypingChallengeError(
                     "The typed text does not match the prompt."
@@ -122,8 +121,10 @@ class TypingChallengeService:
             challenge.effect.cancelled_at = evaluation_time
             challenge.effect.save(update_fields=["cancelled_at"])
             record_event(
-                match=match, kind=MatchEvent.Kind.TYPING_COMPLETED,
-                event_key=f"typing:{challenge.pk}", actor=skill_use.target_player,
+                match=match,
+                kind=MatchEvent.Kind.TYPING_COMPLETED,
+                event_key=f"typing:{challenge.pk}",
+                actor=skill_use.target_player,
                 payload={"challenge_id": challenge.pk, "skill_use_id": skill_use.pk},
                 now=evaluation_time,
             )

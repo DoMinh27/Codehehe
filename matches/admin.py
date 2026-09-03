@@ -6,6 +6,8 @@ from .models import (
     AIReviewProviderThrottle,
     Match,
     MatchEvent,
+    MatchIntegrityEvent,
+    MatchIntegrityState,
     MatchPlayer,
     MatchPlayerSkill,
     MatchProblem,
@@ -38,6 +40,7 @@ class MatchAdmin(admin.ModelAdmin):
         "host",
         "status",
         "ai_review_enabled",
+        "integrity_monitor_enabled",
         "ruleset_version",
         "is_draw",
         "winner",
@@ -49,10 +52,13 @@ class MatchAdmin(admin.ModelAdmin):
         "ruleset_version",
         "rules_snapshot",
         "ai_review_enabled",
+        "integrity_monitor_enabled",
+        "integrity_policy_snapshot",
         "created_at",
         "updated_at",
         "timeline_version",
         "timeline_link",
+        "fair_play_link",
     )
     inlines = (MatchPlayerInline, MatchProblemInline)
 
@@ -63,6 +69,16 @@ class MatchAdmin(admin.ModelAdmin):
         return format_html(
             '<a href="{}?match__id__exact={}">Xem sự kiện trận</a>',
             reverse("admin:matches_matchevent_changelist"),
+            obj.pk,
+        )
+
+    @admin.display(description="Fair Play")
+    def fair_play_link(self, obj):
+        if not obj.pk:
+            return "—"
+        return format_html(
+            '<a href="{}?player__match__id__exact={}">Xem dữ liệu Fair Play</a>',
+            reverse("admin:matches_matchintegritystate_changelist"),
             obj.pk,
         )
 
@@ -94,6 +110,55 @@ class MatchEventAdmin(ReadOnlyAuditAdmin):
     list_filter = ("kind",)
     search_fields = ("match__room_code", "actor_name_snapshot", "target_name_snapshot")
     list_select_related = ("match",)
+    ordering = ("-id",)
+
+
+@admin.register(MatchIntegrityState)
+class MatchIntegrityStateAdmin(ReadOnlyAuditAdmin):
+    list_display = (
+        "player",
+        "is_flagged",
+        "flag_reason",
+        "strike_count",
+        "away_seconds",
+        "paste_count",
+        "paste_character_count",
+        "last_heartbeat_at",
+    )
+    list_filter = (
+        "is_flagged",
+        "flag_reason",
+        ("player__match", admin.RelatedOnlyFieldListFilter),
+    )
+    search_fields = ("player__match__room_code", "player__user__username")
+    list_select_related = ("player__match", "player__user")
+    ordering = ("-flagged_at", "-id")
+
+    @admin.display(description="Thời gian vắng (giây)")
+    def away_seconds(self, obj):
+        return round(obj.away_duration_ms / 1000, 1)
+
+
+@admin.register(MatchIntegrityEvent)
+class MatchIntegrityEventAdmin(ReadOnlyAuditAdmin):
+    list_display = (
+        "id",
+        "match",
+        "player",
+        "kind",
+        "severity",
+        "duration_ms",
+        "value",
+        "recorded_at",
+    )
+    list_filter = (
+        "kind",
+        "severity",
+        "recorded_at",
+        ("match", admin.RelatedOnlyFieldListFilter),
+    )
+    search_fields = ("match__room_code", "player__user__username")
+    list_select_related = ("match", "player__user")
     ordering = ("-id",)
 
 

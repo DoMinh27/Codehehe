@@ -10,7 +10,13 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import PlayerActivityDay
-from matches.models import Match, MatchPlayer, Submission, SubmissionAIReview
+from matches.models import (
+    Match,
+    MatchIntegrityState,
+    MatchPlayer,
+    Submission,
+    SubmissionAIReview,
+)
 
 
 LATENCY_SAMPLE_LIMIT = 2000
@@ -268,6 +274,18 @@ def collect_dashboard_metrics(*, now):
     ai_failure_cutoff = now - timedelta(
         seconds=settings.OPERATIONS_AI_FAILURE_WINDOW_SECONDS
     )
+    integrity_cutoff = now - timedelta(
+        seconds=settings.OPERATIONS_INTEGRITY_ALERT_WINDOW_SECONDS
+    )
+    flagged_integrity_matches = (
+        MatchIntegrityState.objects.filter(
+            is_flagged=True,
+            flagged_at__gte=integrity_cutoff,
+        )
+        .values("player__match_id")
+        .distinct()
+        .count()
+    )
 
     alert_metrics = {
         "stale_submissions": Submission.objects.filter(
@@ -303,6 +321,7 @@ def collect_dashboard_metrics(*, now):
             status=SubmissionAIReview.Status.FAILED,
             updated_at__gte=ai_failure_cutoff,
         ).count(),
+        "fair_play_flags": flagged_integrity_matches,
     }
 
     counters = {
@@ -321,6 +340,7 @@ def collect_dashboard_metrics(*, now):
                 SubmissionAIReview.Status.PROCESSING,
             )
         ).count(),
+        "fair_play_flags": flagged_integrity_matches,
     }
 
     today, day_start, day_end = _today_bounds(now)

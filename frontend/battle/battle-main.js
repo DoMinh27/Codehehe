@@ -1,5 +1,6 @@
 import {createBattleApi} from "./api.js";
 import {createEditors} from "./editor.js";
+import {createIntegrityController} from "./integrity-controller.js";
 import {createPolling} from "./polling.js";
 import {createSkillController} from "./skill-controller.js";
 import {createStateRenderer} from "./state-renderer.js";
@@ -11,7 +12,24 @@ function defaultRandomUUID(windowObject) {
     if (windowObject.crypto?.randomUUID) {
         return windowObject.crypto.randomUUID();
     }
-    return `${Date.now()}-${Math.random()}`;
+    const bytes = new Uint8Array(16);
+    if (windowObject.crypto?.getRandomValues) {
+        windowObject.crypto.getRandomValues(bytes);
+    } else {
+        for (let index = 0; index < bytes.length; index += 1) {
+            bytes[index] = Math.floor(Math.random() * 256);
+        }
+    }
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = Array.from(bytes, (value) => value.toString(16).padStart(2, "0"));
+    return [
+        hex.slice(0, 4).join(""),
+        hex.slice(4, 6).join(""),
+        hex.slice(6, 8).join(""),
+        hex.slice(8, 10).join(""),
+        hex.slice(10).join(""),
+    ].join("-");
 }
 
 
@@ -51,14 +69,40 @@ export function bootstrapBattle({
 
     const config = JSON.parse(configElement.textContent);
     const identity = {userId: config.userId, matchId: config.matchId};
+    const csrfToken = documentRoot.querySelector(
+        ".submission-form [name='csrfmiddlewaretoken']",
+    ).value;
+    const integrityNotice = documentRoot.getElementById("integrity-notice");
+    let integrityNoticeHandle = null;
+    function showIntegrityNotice(notice) {
+        if (!integrityNotice) return;
+        windowObject.clearTimeout(integrityNoticeHandle);
+        integrityNotice.textContent = notice.message;
+        integrityNotice.hidden = false;
+        integrityNoticeHandle = windowObject.setTimeout(() => {
+            integrityNotice.hidden = true;
+        }, 5000);
+    }
+    const integrityController = config.integrity
+        ? createIntegrityController({
+            documentRoot,
+            windowObject,
+            api,
+            config,
+            csrfToken,
+            identity,
+            randomUUID,
+            onNotice: showIntegrityNotice,
+        })
+        : null;
     const editorRegistry = createEditors({
         textareas: documentRoot.querySelectorAll(".source-code-input"),
         storage: windowObject.sessionStorage,
         identity,
+        onPaste: (characterCount) => (
+            integrityController?.recordPaste(characterCount)
+        ),
     });
-    const csrfToken = documentRoot.querySelector(
-        ".submission-form [name='csrfmiddlewaretoken']",
-    ).value;
     let finalizeInFlight = false;
     let hasLeftBattle = false;
     let skillController;
@@ -68,6 +112,8 @@ export function bootstrapBattle({
     function stop() {
         polling?.stop();
         windowObject.clearInterval(timerHandle);
+        windowObject.clearTimeout(integrityNoticeHandle);
+        integrityController?.stop();
         documentRoot.removeEventListener(
             "visibilitychange",
             handleVisibilityChange,
@@ -203,6 +249,7 @@ export function bootstrapBattle({
     renderer.renderTimer();
     timerHandle = windowObject.setInterval(renderer.renderTimer, 1000);
     polling.start();
+    integrityController?.start();
     documentRoot.addEventListener(
         "visibilitychange",
         handleVisibilityChange,

@@ -11,6 +11,7 @@ from django.utils import timezone
 from matches.models import (
     Match,
     MatchEvent,
+    MatchIntegrityState,
     MatchPlayer,
     MatchProblem,
     MatchSkill,
@@ -24,6 +25,7 @@ from problems.models import Problem
 
 from .db import retry_transient_db_lock
 from .events import record_event, record_match_finished
+from .integrity import finalize_match_integrity
 from .scoring import ScoringService
 
 
@@ -211,6 +213,16 @@ class StartMatchService:
                 payload={"duration_seconds": match.duration_seconds},
                 now=match.started_at,
             )
+            if match.integrity_monitor_enabled:
+                MatchIntegrityState.objects.bulk_create(
+                    [
+                        MatchIntegrityState(
+                            player=player,
+                            last_heartbeat_at=match.started_at,
+                        )
+                        for player in players
+                    ]
+                )
             return match
 
 
@@ -336,6 +348,11 @@ class FinishMatchService:
                     "updated_at",
                 ]
             )
+            finalize_match_integrity(
+                match=match,
+                players=players,
+                now=match.ended_at,
+            )
             MatchPlayer.objects.filter(match=match).update(is_active=False)
             record_match_finished(match=match, players=players)
             return match
@@ -410,6 +427,11 @@ class SurrenderMatchService:
                     "is_draw",
                     "updated_at",
                 ]
+            )
+            finalize_match_integrity(
+                match=match,
+                players=players,
+                now=match.ended_at,
             )
             MatchPlayer.objects.filter(match=match).update(is_active=False)
             record_event(

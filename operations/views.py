@@ -60,6 +60,10 @@ def dashboard(request):
             ("Người chơi trong trận", snapshot["counters"]["playing_players"]),
             ("Submission pending", snapshot["counters"]["pending_submissions"]),
             ("AI Review đang xử lý", snapshot["counters"]["active_ai_reviews"]),
+            (
+                "Fair Play bị gắn cờ",
+                snapshot["counters"].get("fair_play_flags", 0),
+            ),
             ("Cảnh báo", snapshot["counters"]["alerts"]),
         ),
         "kpi_items": (

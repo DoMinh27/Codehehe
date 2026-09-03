@@ -55,6 +55,7 @@ def _empty_snapshot(*, now, judge_health, database_health):
             "playing_players": 0,
             "pending_submissions": 0,
             "active_ai_reviews": 0,
+            "fair_play_flags": 0,
             "alerts": 1,
         },
         "alerts": [

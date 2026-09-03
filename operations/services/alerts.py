@@ -86,6 +86,16 @@ def build_alerts(*, now, health, metrics):
                 "matches", "submissionaireview", status__exact="FAILED"
             ),
         )
+    if metrics["fair_play_flags"]:
+        add(
+            "warning",
+            "FAIR_PLAY_FLAGS_24H",
+            "Có trận bị gắn cờ Fair Play trong 24 giờ gần nhất.",
+            metrics["fair_play_flags"],
+            _admin_changelist(
+                "matches", "matchintegritystate", is_flagged__exact="1"
+            ),
+        )
     for key, code, label, url in (
         (
             "ai_worker",

@@ -3,11 +3,13 @@
 from dataclasses import dataclass, field
 from datetime import timedelta
 
+from django.conf import settings
 from django.db import IntegrityError, connection, transaction
 from django.db.models import F
 from django.urls import reverse
 from django.utils import timezone
 
+from matches.integrity import current_integrity_policy
 from matches.models import Match, MatchPlayer, RematchRequest
 from matches.services.db import retry_transient_db_lock
 from matches.services.room import (
@@ -237,6 +239,9 @@ class RematchService:
 
     def _create_pair(self, invitation):
         rules = self.room_service.rules_provider()
+        integrity_policy = (
+            current_integrity_policy() if settings.MATCH_INTEGRITY_ENABLED else None
+        )
         for _ in range(self.room_service.max_attempts):
             code = normalize_room_code(self.room_service.code_generator())
             try:
@@ -247,6 +252,7 @@ class RematchService:
                         user=invitation.requester,
                         room_code=code,
                         rules=rules,
+                        integrity_policy=integrity_policy,
                     )
                     MatchPlayer.objects.create(
                         match=match,

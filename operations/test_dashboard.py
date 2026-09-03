@@ -14,6 +14,7 @@ from django.utils import timezone
 from accounts.models import PlayerActivityDay
 from matches.models import (
     Match,
+    MatchIntegrityState,
     MatchPlayer,
     MatchProblem,
     Submission,
@@ -48,6 +49,7 @@ def dashboard_payload():
             "playing_players": 0,
             "pending_submissions": 0,
             "active_ai_reviews": 0,
+            "fair_play_flags": 0,
             "alerts": 0,
         },
         "alerts": [],
@@ -421,6 +423,19 @@ class DashboardSnapshotTests(TestCase):
             started_at=self.now - timedelta(minutes=10),
             duration_seconds=300,
         )
+        MatchIntegrityState.objects.create(
+            player=player,
+            is_flagged=True,
+            flagged_at=self.now,
+            flag_reason=MatchIntegrityState.FlagReason.STRIKES,
+        )
+        second_player = MatchPlayer.objects.get(match=playing, user=self.guest)
+        MatchIntegrityState.objects.create(
+            player=second_player,
+            is_flagged=True,
+            flagged_at=self.now,
+            flag_reason=MatchIntegrityState.FlagReason.AWAY_TIME,
+        )
         waiting_host = get_user_model().objects.create_user(username="waiting-host")
         waiting, _waiting_player, _waiting_problem = self.create_match(
             status=Match.Status.WAITING,
@@ -449,9 +464,11 @@ class DashboardSnapshotTests(TestCase):
         self.assertEqual(snapshot["counters"]["playing_matches"], 1)
         self.assertEqual(snapshot["counters"]["waiting_matches"], 1)
         self.assertEqual(snapshot["counters"]["playing_players"], 2)
+        self.assertEqual(snapshot["counters"]["fair_play_flags"], 1)
         self.assertIn("STALE_SUBMISSIONS", codes)
         self.assertIn("OVERDUE_MATCHES", codes)
         self.assertIn("STALE_WAITING_MATCHES", codes)
+        self.assertIn("FAIR_PLAY_FLAGS_24H", codes)
         self.assertNotIn("SOURCE_SECRET", serialized)
         self.assertNotIn("REFERENCE_SECRET", serialized)
         self.assertNotIn("SNAPSHOT_SECRET", serialized)

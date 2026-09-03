@@ -12,8 +12,10 @@ from django.utils import timezone
 from problems.models import Problem
 from problems.services.judge import FakeJudgeService
 
+from .integrity import current_integrity_policy
 from .models import (
     Match,
+    MatchIntegrityState,
     MatchPlayer,
     MatchProblem,
     MatchSkill,
@@ -134,6 +136,24 @@ class StartMatchServiceTests(TestCase):
         snapshot = MatchProblem.objects.get(match=match, problem=problem)
         self.assertEqual(snapshot.title_snapshot, "Easy 0")
         self.assertEqual(snapshot.reference_solution_snapshot, frozen_reference)
+
+    def test_start_creates_integrity_state_for_enabled_match(self):
+        self.match.integrity_monitor_enabled = True
+        self.match.integrity_policy_snapshot = current_integrity_policy().to_snapshot()
+        self.match.save(
+            update_fields=[
+                "integrity_monitor_enabled",
+                "integrity_policy_snapshot",
+            ]
+        )
+
+        match = StartMatchService().start(user=self.host, match_id=self.match.pk)
+
+        states = MatchIntegrityState.objects.filter(player__match=match)
+        self.assertEqual(states.count(), 2)
+        self.assertTrue(
+            all(state.last_heartbeat_at == match.started_at for state in states)
+        )
 
     def test_start_keeps_the_skill_catalog_from_an_existing_snapshot(self):
         snapshot = deepcopy(self.match.rules_snapshot)
@@ -735,6 +755,39 @@ class FinishMatchServiceTests(LifecycleFixtureMixin, TestCase):
 
         self.assertTrue(finished.is_draw)
         self.assertIsNone(finished.winner)
+
+    def test_timeout_closes_integrity_absence_at_match_end(self):
+        self.expire_match()
+        self.match.integrity_monitor_enabled = True
+        self.match.integrity_policy_snapshot = current_integrity_policy().to_snapshot()
+        self.match.save(
+            update_fields=[
+                "integrity_monitor_enabled",
+                "integrity_policy_snapshot",
+            ]
+        )
+        state = MatchIntegrityState.objects.create(
+            player=self.host_player,
+            last_heartbeat_at=self.match.ends_at - timedelta(seconds=10),
+            active_absence_started_at=self.match.ends_at - timedelta(seconds=4),
+            active_absence_kind=MatchIntegrityState.AbsenceKind.PAGE,
+            active_absence_id="finish-absence",
+        )
+        MatchIntegrityState.objects.create(
+            player=self.opponent_player,
+            last_heartbeat_at=self.match.ends_at,
+        )
+
+        finished = self.service.finalize(
+            match_id=self.match.pk,
+            now=self.match.ends_at + timedelta(seconds=10),
+        )
+
+        state.refresh_from_db()
+        self.assertEqual(finished.ended_at, self.match.ends_at)
+        self.assertIsNone(state.active_absence_started_at)
+        self.assertEqual(state.away_duration_ms, 4000)
+        self.assertEqual(state.strike_count, 1)
 
     def test_both_players_solving_all_problems_finishes_early(self):
         self.solve_all()

@@ -8,6 +8,7 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 from django.views.decorators.cache import never_cache
 
+from matches.integrity import IntegrityPolicy
 from matches.models import (
     Match,
     MatchPlayer,
@@ -98,6 +99,20 @@ def battle(request, match_id):
         (player for player in players if player.pk != current_player.pk),
         None,
     )
+    integrity_config = None
+    if match.integrity_monitor_enabled:
+        integrity_policy = IntegrityPolicy.from_snapshot(
+            match.integrity_policy_snapshot
+        )
+        integrity_config = {
+            "url": reverse(
+                "integrity-events",
+                kwargs={"match_id": match.pk},
+            ),
+            "heartbeatMs": integrity_policy.heartbeat_seconds * 1000,
+            "requestTimeoutMs": 5000,
+            "maxQueueSize": 50,
+        }
     return render(
         request,
         "matches/battle.html",
@@ -141,6 +156,7 @@ def battle(request, match_id):
                         "challenge_id": 999999,
                     },
                 ).replace("999999", "__challenge__"),
+                "integrity": integrity_config,
             },
         },
     )

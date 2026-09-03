@@ -4,6 +4,7 @@ const COUNTER_LABELS = {
     playing_players: "Người chơi trong trận",
     pending_submissions: "Submission pending",
     active_ai_reviews: "AI Review đang xử lý",
+    fair_play_flags: "Fair Play bị gắn cờ",
     alerts: "Cảnh báo",
 };
 

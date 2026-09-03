@@ -1,4 +1,4 @@
-import {afterEach, describe, expect, it} from "vitest";
+import {afterEach, describe, expect, it, vi} from "vitest";
 
 import {createEditors} from "./editor.js";
 
@@ -28,6 +28,29 @@ describe("battle editor lock", () => {
         editors.setEditable(true);
         expect(textarea.readOnly).toBe(false);
         expect(document.querySelector(".code-editor").dataset.editorLocked).toBe("false");
+        editors.destroy();
+    });
+
+    it("reports pasted character count from the textarea fallback", () => {
+        const textarea = document.createElement("textarea");
+        textarea.dataset.matchProblemId = "12";
+        document.body.append(textarea);
+        const onPaste = vi.fn();
+        const editors = createEditors({
+            textareas: [textarea],
+            storage: window.sessionStorage,
+            identity: {userId: 1, matchId: 2},
+            onPaste,
+        });
+        const event = new Event("paste", {bubbles: true, cancelable: true});
+        Object.defineProperty(event, "clipboardData", {
+            value: {getData: () => "print('hello')"},
+        });
+
+        textarea.dispatchEvent(event);
+
+        expect(onPaste).toHaveBeenCalledWith(14);
+        expect(event.defaultPrevented).toBe(false);
         editors.destroy();
     });
 });

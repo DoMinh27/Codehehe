@@ -9,6 +9,7 @@ from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
+from matches.integrity import current_integrity_policy
 from matches.models import Match, MatchPlayer
 from matches.rules import MatchRules, current_match_rules
 
@@ -100,6 +101,9 @@ class CreateRoomService:
             raise ActiveMatchExistsError(active_player.match)
 
         rules = self.rules_provider()
+        integrity_policy = (
+            current_integrity_policy() if settings.MATCH_INTEGRITY_ENABLED else None
+        )
         for _ in range(self.max_attempts):
             room_code = normalize_room_code(self.code_generator())
             try:
@@ -108,6 +112,7 @@ class CreateRoomService:
                         user=user,
                         room_code=room_code,
                         rules=rules,
+                        integrity_policy=integrity_policy,
                     )
                 )
             except IntegrityError:
@@ -126,6 +131,7 @@ class CreateRoomService:
         user,
         room_code: str,
         rules: MatchRules,
+        integrity_policy,
     ) -> Match:
         with transaction.atomic():
             match = Match.objects.create(
@@ -136,6 +142,10 @@ class CreateRoomService:
                 ruleset_version=rules.version,
                 rules_snapshot=rules.to_snapshot(),
                 ai_review_enabled=settings.AI_REVIEW_ENABLED,
+                integrity_monitor_enabled=integrity_policy is not None,
+                integrity_policy_snapshot=(
+                    integrity_policy.to_snapshot() if integrity_policy else {}
+                ),
             )
             MatchPlayer.objects.create(
                 match=match,

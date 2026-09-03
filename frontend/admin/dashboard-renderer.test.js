@@ -35,6 +35,7 @@ function snapshot() {
             playing_players: 6,
             pending_submissions: 1,
             active_ai_reviews: 4,
+            fair_play_flags: 1,
             alerts: 2,
         },
         alerts: [{
@@ -92,6 +93,7 @@ describe("operations dashboard renderer", () => {
         expect(root.querySelectorAll('.ops-health-card[data-status="error"]')).toHaveLength(1);
         expect(root.querySelector("#ops-counters").textContent).toContain("Người chơi trong trận");
         expect(root.querySelector("#ops-counters").textContent).toContain("6");
+        expect(root.querySelector("#ops-counters").textContent).toContain("Fair Play bị gắn cờ");
         expect(root.querySelector("#ops-live-matches").textContent).toContain("u1 2 — admin 1");
         expect(root.querySelector("#ops-submissions").textContent).toContain("50%");
         expect(root.querySelector("#ops-ai-reviews").textContent).toContain("openrouter/free");

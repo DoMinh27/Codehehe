@@ -8,8 +8,14 @@ import {githubLight} from "@uiw/codemirror-theme-github";
 import {loadDraft, saveDraft} from "./storage.js";
 
 
-export function createEditors({textareas, storage, identity}) {
+export function createEditors({
+    textareas,
+    storage,
+    identity,
+    onPaste = () => {},
+}) {
     const entries = [];
+    const fallbackPasteHandlers = [];
 
     for (const textarea of textareas) {
         const problemId = Number(textarea.dataset.matchProblemId);
@@ -24,6 +30,11 @@ export function createEditors({textareas, storage, identity}) {
         const mount = document.createElement("div");
         mount.className = "code-editor";
         textarea.insertAdjacentElement("afterend", mount);
+        const handleTextareaPaste = (event) => {
+            onPaste(event.clipboardData?.getData("text/plain")?.length || 0);
+        };
+        textarea.addEventListener("paste", handleTextareaPaste);
+        fallbackPasteHandlers.push([textarea, handleTextareaPaste]);
 
         try {
             const view = new EditorView({
@@ -47,6 +58,16 @@ export function createEditors({textareas, storage, identity}) {
                                 new Event("input", {bubbles: true}),
                             );
                             saveDraft(storage, draftIdentity, sourceCode);
+                        }),
+                        EditorView.domEventHandlers({
+                            paste(event) {
+                                onPaste(
+                                    event.clipboardData
+                                        ?.getData("text/plain")
+                                        ?.length || 0,
+                                );
+                                return false;
+                            },
                         }),
                     ],
                 }),
@@ -102,6 +123,9 @@ export function createEditors({textareas, storage, identity}) {
         destroy() {
             for (const entry of entries) {
                 entry.view.destroy();
+            }
+            for (const [textarea, handler] of fallbackPasteHandlers) {
+                textarea.removeEventListener("paste", handler);
             }
         },
     };

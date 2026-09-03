@@ -57,6 +57,8 @@ class Match(models.Model):
     )
     rules_snapshot = models.JSONField(default=default_v3_rules_snapshot)
     ai_review_enabled = models.BooleanField(default=False)
+    integrity_monitor_enabled = models.BooleanField(default=False)
+    integrity_policy_snapshot = models.JSONField(default=dict, blank=True)
     timeline_version = models.PositiveSmallIntegerField(default=0)
     winner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -211,6 +213,114 @@ class MatchPlayer(models.Model):
 
     def __str__(self):
         return f"{self.user.username} in {self.match.room_code}"
+
+
+class MatchIntegrityState(models.Model):
+    """Server-owned aggregate and state machine for one player's Fair Play data."""
+
+    class AbsenceKind(models.TextChoices):
+        TAB = "TAB", "Rời tab"
+        PAGE = "PAGE", "Rời trang"
+
+    class FlagReason(models.TextChoices):
+        STRIKES = "STRIKES", "Vượt số lần vi phạm"
+        AWAY_TIME = "AWAY_TIME", "Vượt tổng thời gian vắng mặt"
+        CONNECTION_GAP = "CONNECTION_GAP", "Mất heartbeat"
+
+    player = models.OneToOneField(
+        MatchPlayer,
+        on_delete=models.CASCADE,
+        related_name="integrity_state",
+    )
+    last_heartbeat_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    active_absence_started_at = models.DateTimeField(null=True, blank=True)
+    active_absence_kind = models.CharField(
+        max_length=8,
+        choices=AbsenceKind.choices,
+        blank=True,
+    )
+    active_absence_id = models.CharField(max_length=36, blank=True)
+    strike_count = models.PositiveIntegerField(default=0)
+    away_duration_ms = models.PositiveBigIntegerField(default=0)
+    paste_count = models.PositiveIntegerField(default=0)
+    paste_character_count = models.PositiveBigIntegerField(default=0)
+    is_flagged = models.BooleanField(default=False, db_index=True)
+    flagged_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    flag_reason = models.CharField(
+        max_length=24,
+        choices=FlagReason.choices,
+        blank=True,
+    )
+    processed_event_ids = models.JSONField(default=list, blank=True, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["player_id"]
+
+    def __str__(self):
+        return f"Fair Play state for {self.player}"
+
+
+class MatchIntegrityEvent(models.Model):
+    """Append-only, privacy-safe Fair Play audit event."""
+
+    class Kind(models.TextChoices):
+        TAB_AWAY = "TAB_AWAY", "Rời tab"
+        PAGE_AWAY = "PAGE_AWAY", "Rời trang"
+        CONNECTION_GAP = "CONNECTION_GAP", "Mất heartbeat"
+        PASTE = "PASTE", "Paste vào trình soạn thảo"
+        FLAGGED = "FLAGGED", "Gắn cờ Fair Play"
+
+    class Severity(models.TextChoices):
+        INFO = "INFO", "Thông tin"
+        WARNING = "WARNING", "Cảnh báo"
+
+    match = models.ForeignKey(
+        Match,
+        on_delete=models.CASCADE,
+        related_name="integrity_events",
+    )
+    player = models.ForeignKey(
+        MatchPlayer,
+        on_delete=models.CASCADE,
+        related_name="integrity_events",
+    )
+    kind = models.CharField(max_length=24, choices=Kind.choices, db_index=True)
+    severity = models.CharField(
+        max_length=12,
+        choices=Severity.choices,
+        default=Severity.INFO,
+        db_index=True,
+    )
+    event_key = models.CharField(max_length=96)
+    started_at = models.DateTimeField()
+    ended_at = models.DateTimeField(null=True, blank=True)
+    duration_ms = models.PositiveBigIntegerField(default=0)
+    value = models.PositiveBigIntegerField(default=0)
+    recorded_at = models.DateTimeField(default=timezone.now, db_index=True)
+
+    class Meta:
+        ordering = ["id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["match", "player", "event_key"],
+                name="integrity_event_key_unique",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["match", "player", "id"],
+                name="integrity_match_player_idx",
+            ),
+            models.Index(
+                fields=["kind", "recorded_at"],
+                name="integrity_kind_time_idx",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.match_id} · {self.player_id} · {self.kind}"
 
 
 class MatchEvent(models.Model):

@@ -155,6 +155,21 @@
     font-size: 0.65rem;
 }
 
+.integrity-notice {
+    background: #fff7df;
+    border: 1px solid #d6a52e;
+    border-radius: var(--radius-small);
+    box-shadow: var(--shadow-medium);
+    color: #684b00;
+    font-weight: 650;
+    max-width: min(28rem, calc(100vw - 2rem));
+    padding: 0.75rem 1rem;
+    position: fixed;
+    right: 1rem;
+    top: 5rem;
+    z-index: 80;
+}
+
 .skill-panel {
     align-items: center;
     background: var(--bg-surface);

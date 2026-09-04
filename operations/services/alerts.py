@@ -18,7 +18,18 @@ def _admin_changelist(app_label, model_name, **filters):
 def build_alerts(*, now, health, metrics):
     alerts = []
 
-    def add(severity, code, message, count, url=""):
+    def add(
+        severity,
+        code,
+        message,
+        count,
+        *,
+        category,
+        action_label="Kiểm tra",
+        oldest_at=None,
+        url="",
+        url_permission="",
+    ):
         alerts.append(
             {
                 "severity": severity,
@@ -26,19 +37,35 @@ def build_alerts(*, now, health, metrics):
                 "message": message,
                 "count": count,
                 "checked_at": _iso(now),
+                "category": category,
+                "action_label": action_label,
+                "oldest_at": oldest_at,
                 "url": url,
+                "url_permission": url_permission,
             }
         )
 
     if health["judge0"]["status"] == "unavailable":
-        add("critical", "JUDGE0_UNAVAILABLE", health["judge0"]["detail"], 1)
+        add(
+            "critical",
+            "JUDGE0_UNAVAILABLE",
+            health["judge0"]["detail"],
+            1,
+            category="system",
+            action_label="Kiểm tra Judge0",
+            oldest_at=_iso(now),
+        )
     if metrics["stale_submissions"]:
         add(
             "critical",
             "STALE_SUBMISSIONS",
             "Submission pending quá thời gian phục hồi cho phép.",
             metrics["stale_submissions"],
-            _admin_changelist("matches", "submission", verdict__exact="PENDING"),
+            category="queue",
+            action_label="Xem hàng đợi",
+            oldest_at=metrics["stale_submissions_oldest_at"],
+            url=_admin_changelist("matches", "submission", verdict__exact="PENDING"),
+            url_permission="matches.view_submission",
         )
     if metrics["overdue_matches"]:
         add(
@@ -46,7 +73,11 @@ def build_alerts(*, now, health, metrics):
             "OVERDUE_MATCHES",
             "Trận vẫn đang chơi sau thời điểm phải kết thúc.",
             metrics["overdue_matches"],
-            _admin_changelist("matches", "match", status__exact="PLAYING"),
+            category="matches",
+            action_label="Xem trận",
+            oldest_at=metrics["overdue_matches_oldest_at"],
+            url=_admin_changelist("matches", "match", status__exact="PLAYING"),
+            url_permission="matches.view_match",
         )
     if metrics["stale_waiting_matches"]:
         add(
@@ -54,7 +85,11 @@ def build_alerts(*, now, health, metrics):
             "STALE_WAITING_MATCHES",
             "Phòng chờ tồn tại lâu hơn ngưỡng cấu hình.",
             metrics["stale_waiting_matches"],
-            _admin_changelist("matches", "match", status__exact="WAITING"),
+            category="matches",
+            action_label="Xem phòng chờ",
+            oldest_at=metrics["stale_waiting_matches_oldest_at"],
+            url=_admin_changelist("matches", "match", status__exact="WAITING"),
+            url_permission="matches.view_match",
         )
     if metrics["stale_ai_processing"]:
         add(
@@ -62,9 +97,13 @@ def build_alerts(*, now, health, metrics):
             "STALE_AI_PROCESSING",
             "AI Review ở trạng thái xử lý quá lâu.",
             metrics["stale_ai_processing"],
-            _admin_changelist(
+            category="queue",
+            action_label="Xem hàng đợi",
+            oldest_at=metrics["stale_ai_processing_oldest_at"],
+            url=_admin_changelist(
                 "matches", "submissionaireview", status__exact="PROCESSING"
             ),
+            url_permission="matches.view_submissionaireview",
         )
     if metrics["delayed_ai_queue"]:
         add(
@@ -72,9 +111,13 @@ def build_alerts(*, now, health, metrics):
             "DELAYED_AI_QUEUE",
             "AI Review đã đến hạn nhưng vẫn chờ quá lâu.",
             metrics["delayed_ai_queue"],
-            _admin_changelist(
+            category="queue",
+            action_label="Xem hàng đợi",
+            oldest_at=metrics["delayed_ai_queue_oldest_at"],
+            url=_admin_changelist(
                 "matches", "submissionaireview", status__exact="PENDING"
             ),
+            url_permission="matches.view_submissionaireview",
         )
     if metrics["recent_ai_failures"] >= settings.OPERATIONS_AI_FAILURE_WARNING_COUNT:
         add(
@@ -82,9 +125,13 @@ def build_alerts(*, now, health, metrics):
             "AI_FAILURE_SPIKE",
             "Số AI Review thất bại gần đây vượt ngưỡng cảnh báo.",
             metrics["recent_ai_failures"],
-            _admin_changelist(
+            category="queue",
+            action_label="Xem nhật ký",
+            oldest_at=metrics["recent_ai_failures_oldest_at"],
+            url=_admin_changelist(
                 "matches", "submissionaireview", status__exact="FAILED"
             ),
+            url_permission="matches.view_submissionaireview",
         )
     if metrics["fair_play_flags"]:
         add(
@@ -92,9 +139,13 @@ def build_alerts(*, now, health, metrics):
             "FAIR_PLAY_FLAGS_24H",
             "Có trận bị gắn cờ Fair Play trong 24 giờ gần nhất.",
             metrics["fair_play_flags"],
-            _admin_changelist(
+            category="fair_play",
+            action_label="Xem Fair Play",
+            oldest_at=metrics["fair_play_flags_oldest_at"],
+            url=_admin_changelist(
                 "matches", "matchintegritystate", is_flagged__exact="1"
             ),
+            url_permission="matches.view_matchintegritystate",
         )
     for key, code, label, url in (
         (
@@ -120,6 +171,18 @@ def build_alerts(*, now, health, metrics):
                 code,
                 f"{label}: {health[key]['detail']}",
                 1,
-                url,
+                category="system",
+                action_label="Xem nhật ký",
+                oldest_at=_iso(now),
+                url=url,
+                url_permission="operations.view_workerheartbeat",
             )
-    return alerts
+    severity_order = {"critical": 0, "warning": 1, "info": 2}
+    return sorted(
+        alerts,
+        key=lambda alert: (
+            severity_order.get(alert["severity"], 3),
+            alert["oldest_at"] or alert["checked_at"],
+            alert["code"],
+        ),
+    )

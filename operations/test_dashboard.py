@@ -75,6 +75,8 @@ def dashboard_payload():
             "errors": [],
             "last_completed_at": None,
         },
+        "fair_play": {"flagged_players": []},
+        "links": {},
         "kpis": {
             "new_accounts": 0,
             "active_players": 0,
@@ -143,12 +145,23 @@ class DashboardPermissionTests(TestCase):
         self.staff.user_permissions.add(permission)
         self.client.force_login(self.staff)
         payload = dashboard_payload()
-        payload["alerts"] = [{"url": "/admin/matches/submission/"}]
+        payload["alerts"] = [
+            {
+                "url": "/admin/matches/submission/",
+                "url_permission": "matches.view_submission",
+            }
+        ]
         payload["live_matches"] = [
-            {"url": "/admin/matches/match/1/change/"}
+            {
+                "url": "/admin/matches/match/1/change/",
+                "url_permission": "matches.view_match",
+            }
         ]
         payload["submissions"]["internal_errors"] = [
-            {"url": "/admin/matches/submission/2/change/"}
+            {
+                "url": "/admin/matches/submission/2/change/",
+                "url_permission": "matches.view_submission",
+            }
         ]
 
         with patch(
@@ -166,7 +179,12 @@ class DashboardPermissionTests(TestCase):
     def test_superuser_keeps_admin_drilldown_links(self):
         self.client.force_login(self.superuser)
         payload = dashboard_payload()
-        payload["alerts"] = [{"url": "/admin/matches/submission/"}]
+        payload["alerts"] = [
+            {
+                "url": "/admin/matches/submission/",
+                "url_permission": "matches.view_submission",
+            }
+        ]
 
         with patch(
             "operations.views.get_dashboard_snapshot",
@@ -178,6 +196,51 @@ class DashboardPermissionTests(TestCase):
             response.json()["alerts"][0]["url"],
             "/admin/matches/submission/",
         )
+
+    def test_staff_only_receives_shortcuts_for_models_they_can_view(self):
+        dashboard_permission = Permission.objects.get(
+            codename="view_operations_dashboard"
+        )
+        submission_permission = Permission.objects.get(
+            content_type__app_label="matches",
+            content_type__model="submission",
+            codename="view_submission",
+        )
+        self.staff.user_permissions.add(dashboard_permission, submission_permission)
+        self.client.force_login(self.staff)
+        payload = dashboard_payload()
+        payload["links"] = {
+            "submissions": {
+                "url": "/admin/matches/submission/",
+                "url_permission": "matches.view_submission",
+            },
+            "matches": {
+                "url": "/admin/matches/match/",
+                "url_permission": "matches.view_match",
+            },
+        }
+        payload["fair_play"] = {
+            "flagged_players": [
+                {
+                    "url": "/admin/matches/matchintegritystate/1/change/",
+                    "url_permission": "matches.view_matchintegritystate",
+                    "timeline_url": "/admin/matches/matchintegrityevent/",
+                    "timeline_url_permission": "matches.view_matchintegrityevent",
+                }
+            ]
+        }
+
+        with patch(
+            "operations.views.get_dashboard_snapshot",
+            return_value=payload,
+        ):
+            response = self.client.get(self.state_url)
+
+        body = response.json()
+        self.assertEqual(body["links"]["submissions"]["url"], "/admin/matches/submission/")
+        self.assertEqual(body["links"]["matches"]["url"], "")
+        self.assertEqual(body["fair_play"]["flagged_players"][0]["url"], "")
+        self.assertEqual(body["fair_play"]["flagged_players"][0]["timeline_url"], "")
 
     def test_superuser_can_open_dashboard(self):
         self.client.force_login(self.superuser)
@@ -191,9 +254,9 @@ class DashboardPermissionTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("private", response["Cache-Control"])
         self.assertIn("no-store", response["Cache-Control"])
-        self.assertContains(response, "Web App")
-        self.assertContains(response, "Phòng đang chờ")
-        self.assertContains(response, "Submission và Judge0")
+        self.assertContains(response, "Tổng quan")
+        self.assertContains(response, "Fair Play")
+        self.assertContains(response, "Submission &amp; Judge0")
 
     def test_manual_state_refresh_bypasses_snapshot_cache(self):
         self.client.force_login(self.superuser)
@@ -469,6 +532,18 @@ class DashboardSnapshotTests(TestCase):
         self.assertIn("OVERDUE_MATCHES", codes)
         self.assertIn("STALE_WAITING_MATCHES", codes)
         self.assertIn("FAIR_PLAY_FLAGS_24H", codes)
+        self.assertTrue(
+            all(
+                {"category", "action_label", "oldest_at"}.issubset(alert)
+                for alert in snapshot["alerts"]
+            )
+        )
+        self.assertEqual(
+            snapshot["live_matches"][0]["timing_status"],
+            "OVERDUE",
+        )
+        self.assertEqual(snapshot["live_matches"][0]["fair_play_flag_count"], 2)
+        self.assertEqual(len(snapshot["fair_play"]["flagged_players"]), 2)
         self.assertNotIn("SOURCE_SECRET", serialized)
         self.assertNotIn("REFERENCE_SECRET", serialized)
         self.assertNotIn("SNAPSHOT_SECRET", serialized)
@@ -565,6 +640,23 @@ class DashboardSnapshotTests(TestCase):
         self.assertEqual(snapshot["ai_reviews"]["tokens"]["input"], 100)
         self.assertEqual(snapshot["kpis"]["active_players"], 1)
         self.assertEqual(snapshot["kpis"]["finished_matches"], 1)
+
+    @patch("operations.dashboard._judge_health")
+    def test_live_matches_without_fair_play_state_are_still_visible(self, judge_health):
+        judge_health.return_value = {
+            "status": "ok",
+            "label": "Hoạt động",
+            "detail": "OK",
+        }
+        self.create_match(
+            status=Match.Status.PLAYING,
+            started_at=self.now,
+        )
+
+        snapshot = build_dashboard_snapshot(now=self.now)
+
+        self.assertEqual(len(snapshot["live_matches"]), 1)
+        self.assertEqual(snapshot["live_matches"][0]["fair_play_flag_count"], 0)
 
     @patch("operations.dashboard._judge_health")
     def test_ai_queue_warning_uses_time_job_became_eligible(self, judge_health):

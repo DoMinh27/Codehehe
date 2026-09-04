@@ -1,5 +1,6 @@
 import {createDashboardController} from "./dashboard-controller.js";
 import {createDashboardRenderer} from "./dashboard-renderer.js";
+import {createDashboardSidebarToggle, createDashboardTabs} from "./dashboard-tabs.js";
 
 
 export function startOperationsDashboard({documentRoot = document, windowObject = window} = {}) {
@@ -15,6 +16,8 @@ export function startOperationsDashboard({documentRoot = document, windowObject 
         initialState = {};
     }
     const renderer = createDashboardRenderer({root, documentRoot});
+    const tabs = createDashboardTabs({root, documentRoot, windowObject});
+    const sidebarToggle = createDashboardSidebarToggle({root, documentRoot});
     const controller = createDashboardController({
         root,
         renderer,
@@ -22,8 +25,17 @@ export function startOperationsDashboard({documentRoot = document, windowObject 
         windowObject,
         fetchImpl: windowObject.fetch.bind(windowObject),
     });
+    tabs.start();
+    sidebarToggle.start();
     controller.start(initialState);
-    return controller;
+    return {
+        ...controller,
+        stop() {
+            controller.stop();
+            tabs.stop();
+            sidebarToggle.stop();
+        },
+    };
 }
 
 

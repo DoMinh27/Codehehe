@@ -19,7 +19,7 @@ from .services.health import (
 from .services.metrics import collect_dashboard_metrics
 
 
-SNAPSHOT_CACHE_KEY = "operations:dashboard:snapshot:v1"
+SNAPSHOT_CACHE_KEY = "operations:dashboard:snapshot:v2"
 logger = logging.getLogger(__name__)
 
 
@@ -65,7 +65,11 @@ def _empty_snapshot(*, now, judge_health, database_health):
                 "message": "Không thể đọc dữ liệu vận hành từ database.",
                 "count": 1,
                 "checked_at": _iso(now),
+                "category": "system",
+                "action_label": "Kiểm tra",
+                "oldest_at": _iso(now),
                 "url": "",
+                "url_permission": "",
             }
         ],
         "live_matches": [],
@@ -92,6 +96,8 @@ def _empty_snapshot(*, now, judge_health, database_health):
             "errors": [],
             "last_completed_at": None,
         },
+        "fair_play": {"flagged_players": []},
+        "links": {},
         "kpis": {
             "new_accounts": 0,
             "active_players": 0,
@@ -133,7 +139,9 @@ def build_dashboard_snapshot(*, now=None):
         "live_matches": metrics["live_matches"],
         "submissions": metrics["submissions"],
         "ai_reviews": metrics["ai_reviews"],
+        "fair_play": metrics["fair_play"],
         "kpis": metrics["kpis"],
+        "links": metrics["links"],
     }
 
 

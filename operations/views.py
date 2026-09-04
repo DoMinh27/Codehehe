@@ -21,18 +21,30 @@ def _no_store(response):
 
 
 def _snapshot_for_user(snapshot, user):
-    """Hide links to sensitive ModelAdmin pages from limited operators."""
+    """Keep only shortcuts whose underlying ModelAdmin is viewable by the user."""
     if user.is_superuser:
         return snapshot
 
-    sanitized = deepcopy(snapshot)
-    for alert in sanitized.get("alerts", []):
-        alert["url"] = ""
-    for match in sanitized.get("live_matches", []):
-        match["url"] = ""
-    for item in sanitized.get("submissions", {}).get("internal_errors", []):
-        item["url"] = ""
-    return sanitized
+    def sanitize(value):
+        if isinstance(value, list):
+            return [sanitize(item) for item in value]
+        if not isinstance(value, dict):
+            return value
+
+        cleaned = {}
+        for key, item in value.items():
+            if key.endswith("_permission"):
+                continue
+            if key == "url" or key.endswith("_url"):
+                permission = value.get(f"{key}_permission") or value.get(
+                    "url_permission"
+                )
+                cleaned[key] = item if permission and user.has_perm(permission) else ""
+                continue
+            cleaned[key] = sanitize(item)
+        return cleaned
+
+    return sanitize(deepcopy(snapshot))
 
 
 @require_GET
@@ -43,35 +55,6 @@ def dashboard(request):
         **admin.site.each_context(request),
         "title": "Dashboard vận hành",
         "snapshot": snapshot,
-        "health_items": (
-            ("web", "Web App", snapshot["health"]["web"]),
-            ("database", "Database", snapshot["health"]["database"]),
-            ("judge0", "Judge0", snapshot["health"]["judge0"]),
-            ("ai_worker", "AI Worker", snapshot["health"]["ai_worker"]),
-            (
-                "match_sweeper",
-                "Match Sweeper",
-                snapshot["health"]["match_sweeper"],
-            ),
-        ),
-        "counter_items": (
-            ("Phòng đang chờ", snapshot["counters"]["waiting_matches"]),
-            ("Trận đang chơi", snapshot["counters"]["playing_matches"]),
-            ("Người chơi trong trận", snapshot["counters"]["playing_players"]),
-            ("Submission pending", snapshot["counters"]["pending_submissions"]),
-            ("AI Review đang xử lý", snapshot["counters"]["active_ai_reviews"]),
-            (
-                "Fair Play bị gắn cờ",
-                snapshot["counters"].get("fair_play_flags", 0),
-            ),
-            ("Cảnh báo", snapshot["counters"]["alerts"]),
-        ),
-        "kpi_items": (
-            ("Tài khoản mới", snapshot["kpis"]["new_accounts"]),
-            ("Người có hoạt động", snapshot["kpis"]["active_players"]),
-            ("Trận hoàn thành", snapshot["kpis"]["finished_matches"]),
-            ("Trận bị hủy", snapshot["kpis"]["cancelled_matches"]),
-        ),
         "refresh_seconds": settings.OPERATIONS_DASHBOARD_REFRESH_SECONDS,
         "hidden_refresh_seconds": (
             settings.OPERATIONS_DASHBOARD_HIDDEN_REFRESH_SECONDS

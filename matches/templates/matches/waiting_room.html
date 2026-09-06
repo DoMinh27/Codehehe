@@ -35,7 +35,7 @@
   <header class="section-heading">
     <div>
       <h2 id="players-heading">Người chơi</h2>
-      <p>Trận đấu bắt đầu khi đủ hai người.</p>
+      <p>Trận đấu bắt đầu khi đủ hai người</p>
     </div>
   </header>
   <ol id="player-list" class="player-list">
@@ -132,7 +132,7 @@
     async function refreshRoom() {
       try {
         const response = await fetch(stateUrl, {headers: {"Accept": "application/json"}});
-        if (!response.ok) throw new Error("Không thể cập nhật phòng.");
+        if (!response.ok) throw new Error("Không thể cập nhật phòng");
         const state = await response.json();
         if (state.battle_url) {
           window.location.assign(state.battle_url);

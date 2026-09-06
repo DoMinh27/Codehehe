@@ -70,7 +70,7 @@ describe("skill controller", () => {
         await controller.useSkill({code: "STEAL", target_mode: "OPPONENT"}, button);
 
         expect(document.getElementById("skill-notice").textContent).toBe(
-            "Đã đánh cắp: Làm mờ đề.",
+            "Đã đánh cắp: Làm mờ đề",
         );
     });
 
@@ -89,7 +89,7 @@ describe("skill controller", () => {
         );
 
         expect(document.getElementById("skill-notice").textContent).toBe(
-            "Skill đã bị Shield của đối thủ chặn.",
+            "Skill đã bị Shield của đối thủ chặn",
         );
     });
 

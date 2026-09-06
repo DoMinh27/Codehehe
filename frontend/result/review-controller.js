@@ -40,7 +40,7 @@ export function createReviewController({
             syncPolling(payload);
         } catch (error) {
             renderer.showTemporaryError(
-                error.message || "Chưa thể cập nhật phân tích AI.",
+                error.message || "Chưa thể cập nhật phân tích AI",
             );
         }
     }
@@ -75,7 +75,7 @@ export function createReviewController({
             button.disabled = false;
             button.removeAttribute("aria-busy");
             renderer.showTemporaryError(
-                error.message || "Chưa thể gửi yêu cầu phân tích AI.",
+                error.message || "Chưa thể gửi yêu cầu phân tích AI",
             );
         }
     }

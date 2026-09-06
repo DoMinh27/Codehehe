@@ -433,7 +433,7 @@ class ShieldStateApiAndTimelineTests(ShieldFixtureMixin, TestCase):
         self.assertEqual(shield["target_mode"], SELF)
         self.assertEqual(shield["ui_group"], "DEFENSIVE")
         self.assertEqual(shield["unavailable_code"], "EFFECT_ALREADY_ACTIVE")
-        self.assertEqual(shield["unavailable_reason"], "Hiệu ứng này đang hoạt động.")
+        self.assertEqual(shield["unavailable_reason"], "Hiệu ứng này đang hoạt động")
         self.assertIn(SHIELD, [effect["code"] for effect in payload["active_effects"]])
 
     def test_api_and_timeline_report_blocked_outcome_without_sensitive_data(self):

@@ -34,7 +34,7 @@ export function createRematchController({
         if (!payload || !STATUSES.has(payload.status)
             || !Array.isArray(payload.actions) || payload.actions.some((a) => !ACTIONS.has(a))
             || typeof payload.terminal !== "boolean" || typeof payload.is_requester !== "boolean") {
-            throw new Error("Máy chủ trả về trạng thái tái đấu không hợp lệ.");
+            throw new Error("Máy chủ trả về trạng thái tái đấu không hợp lệ");
         }
         return payload;
     }
@@ -99,12 +99,12 @@ export function createRematchController({
         const timeout = new Promise((resolve, reject) => {
             cancel = () => {
                 controller.abort();
-                reject(new Error("Yêu cầu đã bị hủy."));
+                reject(new Error("Yêu cầu đã bị hủy"));
             };
             cancelRequest = cancel;
             timer = windowObject.setTimeout(() => {
                 controller.abort();
-                reject(new Error("Yêu cầu quá 10 giây. Trạng thái có thể đã thay đổi; hãy cập nhật lại."));
+                reject(new Error("Yêu cầu quá 10 giây. Trạng thái có thể đã thay đổi; hãy cập nhật lại"));
             }, 10000);
         });
         try {
@@ -129,7 +129,7 @@ export function createRematchController({
                 : api.getJson(stateUrl, {signal}));
             if (!disposed && generation === requestGeneration) applyState(payload);
         } catch (error) {
-            if (!disposed && generation === requestGeneration) errorNotice.textContent = error.message || "Chưa thể cập nhật tái đấu. Vui lòng thử lại.";
+            if (!disposed && generation === requestGeneration) errorNotice.textContent = error.message || "Chưa thể cập nhật tái đấu. Vui lòng thử lại";
         } finally {
             if (!disposed && generation === requestGeneration) {
                 busy = false;

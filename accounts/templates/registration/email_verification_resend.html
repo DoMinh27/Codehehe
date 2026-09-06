@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}{% if form.errors %}Lỗi: {% endif %}Gửi lại email xác minh | CodeHehe{% endblock %}
+{% block body_class %}auth-page{% endblock %}
+{% block main_class %}site-main--narrow{% endblock %}
+
+{% block content %}
+<div class="auth-shell">
+  <section class="card auth-card" aria-labelledby="verification-resend-title">
+    <div class="auth-card__heading">
+      <h1 id="verification-resend-title">Gửi lại email xác minh</h1>
+      <p>Nhập email đã dùng khi đăng ký</p>
+    </div>
+    <form method="post" class="stack" data-auth-form novalidate>
+      {% csrf_token %}
+      {% include "accounts/_auth_form_fields.html" %}
+      <button class="button button--primary button--block" type="submit">Gửi hướng dẫn</button>
+    </form>
+    <p class="auth-card__switch"><a href="{% url 'login' %}">Quay lại đăng nhập</a></p>
+  </section>
+</div>
+{% endblock %}

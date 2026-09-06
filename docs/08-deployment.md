@@ -80,6 +80,21 @@ DJANGO_SECURE_SSL_REDIRECT=False
 DJANGO_SECURE_COOKIES=False
 DJANGO_HSTS_SECONDS=0
 DJANGO_HSTS_PRELOAD=False
+DJANGO_EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+DJANGO_EMAIL_HOST=<SMTP_HOST>
+DJANGO_EMAIL_PORT=587
+DJANGO_EMAIL_HOST_USER=<SMTP_USERNAME>
+DJANGO_EMAIL_HOST_PASSWORD=<SMTP_PASSWORD>
+DJANGO_EMAIL_USE_TLS=True
+DJANGO_EMAIL_USE_SSL=False
+DJANGO_EMAIL_TIMEOUT_SECONDS=10
+DJANGO_DEFAULT_FROM_EMAIL="CodeHehe <no-reply@<VERIFIED_SENDER_DOMAIN>>"
+PASSWORD_RESET_TIMEOUT_SECONDS=3600
+EMAIL_VERIFICATION_TIMEOUT_SECONDS=300
+PENDING_REGISTRATION_RETENTION_SECONDS=7200
+ACCOUNT_EMAIL_RATE_LIMIT_WINDOW_SECONDS=3600
+ACCOUNT_EMAIL_RATE_LIMIT_PER_IP=10
+ACCOUNT_EMAIL_RATE_LIMIT_PER_ADDRESS=3
 AI_REVIEW_ENABLED=True
 AI_REVIEW_PROVIDER=groq
 GROQ_API_KEY=<GROQ_API_KEY>
@@ -107,6 +122,28 @@ JUDGE0_BASE_URL=http://127.0.0.1:2358
 JUDGE0_API_KEY=
 ```
 
+`DJANGO_EMAIL_HOST_PASSWORD` is a provider SMTP credential or app password,
+not the mailbox login password. Verify the sender/domain with the SMTP provider
+before enabling registration. For port 587 use TLS and keep SSL disabled; for
+port 465 use SSL and disable TLS. Never enable both options.
+
+Test delivery from the production service account before opening registration:
+
+```bash
+sudo -u codehehe bash -c '
+  set -a
+  source /etc/codehehe/codehehe.env
+  set +a
+  cd /opt/codehehe/app
+  /opt/codehehe/venv/bin/python manage.py shell -c \
+    "from django.core.mail import send_mail; send_mail(\"CodeHehe SMTP test\", \"SMTP is ready.\", None, [\"<ADMIN_TEST_EMAIL>\"], fail_silently=False)"
+'
+```
+
+Do not deploy the password-recovery release until this command succeeds and the
+message arrives. Application logs intentionally omit recipient addresses and
+SMTP secrets.
+
 Generate `DJANGO_SECRET_KEY` with:
 
 ```bash
@@ -119,6 +156,8 @@ Install the tracked service and Nginx templates:
 sudo cp /opt/codehehe/app/deploy/codehehe.service /etc/systemd/system/codehehe.service
 sudo cp /opt/codehehe/app/deploy/codehehe-sweep.service /etc/systemd/system/codehehe-sweep.service
 sudo cp /opt/codehehe/app/deploy/codehehe-sweep.timer /etc/systemd/system/codehehe-sweep.timer
+sudo cp /opt/codehehe/app/deploy/codehehe-account-cleanup.service /etc/systemd/system/codehehe-account-cleanup.service
+sudo cp /opt/codehehe/app/deploy/codehehe-account-cleanup.timer /etc/systemd/system/codehehe-account-cleanup.timer
 sudo cp /opt/codehehe/app/deploy/codehehe-ai-review.service /etc/systemd/system/codehehe-ai-review.service
 sudo cp /opt/codehehe/app/deploy/codehehe-ai-review.timer /etc/systemd/system/codehehe-ai-review.timer
 sed "s/CODEHEHE_FQDN/<CODEHEHE_FQDN>/g" \
@@ -155,10 +194,12 @@ sudo -u codehehe /opt/codehehe/venv/bin/python manage.py judge0_spike
 sudo systemctl enable --now codehehe
 sudo systemctl enable --now codehehe-sweep.timer
 sudo systemctl enable --now codehehe-ai-review.timer
+sudo systemctl enable --now codehehe-account-cleanup.timer
 sudo systemctl enable --now nginx
 sudo systemctl status codehehe --no-pager
 sudo systemctl status codehehe-sweep.timer --no-pager
 sudo systemctl status codehehe-ai-review.timer --no-pager
+sudo systemctl status codehehe-account-cleanup.timer --no-pager
 curl --fail http://127.0.0.1:8000/health/
 curl --fail http://127.0.0.1:8000/health/ready/
 ```
@@ -183,6 +224,7 @@ DJANGO_HSTS_PRELOAD=False
 sudo systemctl restart codehehe
 sudo systemctl restart codehehe-sweep.timer
 sudo systemctl restart codehehe-ai-review.timer
+sudo systemctl restart codehehe-account-cleanup.timer
 curl --fail https://<CODEHEHE_FQDN>/health/
 curl --fail https://<CODEHEHE_FQDN>/health/ready/
 ```
@@ -265,6 +307,7 @@ sudo systemctl start codehehe
 sudo systemctl status codehehe --no-pager
 sudo systemctl status codehehe-sweep.timer --no-pager
 sudo systemctl status codehehe-ai-review.timer --no-pager
+sudo systemctl status codehehe-account-cleanup.timer --no-pager
 sudo journalctl -u codehehe -n 100 --no-pager
 sudo nginx -t
 sudo certbot certificates

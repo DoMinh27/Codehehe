@@ -118,7 +118,7 @@ def waiting_room(request, room_code):
     if match.status == Match.Status.FINISHED:
         return redirect("match-result", match_id=match.pk)
     if match.status == Match.Status.CANCELLED:
-        messages.info(request, "Phòng đã bị hủy.")
+        messages.info(request, "Phòng đã bị hủy")
         return redirect("lobby")
     players = _room_players(match)
     current_player = next(
@@ -209,7 +209,7 @@ def leave_room(request, room_code):
             status=409,
         )
     if match.status == Match.Status.CANCELLED:
-        messages.info(request, "Phòng đã được hủy.")
+        messages.info(request, "Phòng đã được hủy")
     else:
-        messages.info(request, "Bạn đã rời phòng.")
+        messages.info(request, "Bạn đã rời phòng")
     return redirect("lobby")

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Xác minh email | CodeHehe{% endblock %}
+{% block body_class %}auth-page{% endblock %}
+{% block main_class %}site-main--narrow{% endblock %}
+
+{% block content %}
+<div class="auth-shell">
+  <section class="card auth-card" aria-labelledby="verification-confirm-title">
+    <div class="auth-card__heading">
+      <h1 id="verification-confirm-title">Xác minh email</h1>
+      {% if verification_status == "valid" %}
+        <p>Liên kết hợp lệ. Xác nhận để tạo tài khoản của bạn</p>
+      {% elif verification_status == "verified" %}
+        <p>Email đã được xác minh. Tài khoản của bạn đã sẵn sàng</p>
+      {% endif %}
+    </div>
+    {% if verification_status == "valid" %}
+      <form method="post">
+        {% csrf_token %}
+        <button class="button button--primary button--block" type="submit">Xác minh và tạo tài khoản</button>
+      </form>
+    {% elif verification_status == "verified" %}
+      <a class="button button--primary button--block" href="{% url 'login' %}">Đăng nhập</a>
+    {% else %}
+      <div class="stack" data-auth-form>
+        <div class="alert alert-error auth-form-alert" role="alert" tabindex="-1" data-auth-form-alert>
+          {% if verification_status == "expired" %}
+            <p>Liên kết xác minh đã hết hạn. Hãy yêu cầu một liên kết mới</p>
+          {% elif verification_status == "conflict" %}
+            <p>Không thể tạo tài khoản vì thông tin đăng ký không còn khả dụng. Hãy đăng ký lại</p>
+          {% else %}
+            <p>Liên kết xác minh không hợp lệ hoặc đã được sử dụng. Hãy đăng ký lại hoặc yêu cầu một liên kết mới</p>
+          {% endif %}
+        </div>
+        {% if verification_status == "expired" %}
+          <a class="button button--primary button--block" href="{% url 'email-verification-resend' %}">Gửi lại email</a>
+        {% else %}
+          <a class="button button--primary button--block" href="{% url 'register' %}">Đăng ký lại</a>
+        {% endif %}
+      </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

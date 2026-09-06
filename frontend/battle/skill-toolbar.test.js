@@ -185,31 +185,31 @@ describe("skill toolbar", () => {
 
         resolveRequest();
         await vi.waitFor(() => expect(trigger.disabled).toBe(false));
-        expect(status.textContent).toBe("Sẵn sàng sử dụng.");
+        expect(status.textContent).toBe("Sẵn sàng sử dụng");
     });
 
     test.each([
         [
             availableState({energy: 0}),
-            "Không đủ năng lượng.",
+            "Không đủ năng lượng",
         ],
         [
             availableState({
                 skills: [{...skills[0], quantity: 0}, skills[1]],
             }),
-            "Đã hết lượt sử dụng.",
+            "Đã hết lượt sử dụng",
         ],
         [
             availableState({actionLocked: true}),
-            "Hành động đang bị khóa bởi Thử thách gõ chữ.",
+            "Hành động đang bị khóa bởi Thử thách gõ chữ",
         ],
         [
             availableState({timedOut: true}),
-            "Bạn đã hết thời gian.",
+            "Bạn đã hết thời gian",
         ],
         [
             availableState({hasOpponent: false}),
-            "Chưa có đối thủ để sử dụng skill.",
+            "Chưa có đối thủ để sử dụng skill",
         ],
     ])("disables unavailable skills and explains why", (state, reason) => {
         toolbar.update(state);

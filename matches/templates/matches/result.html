@@ -21,15 +21,15 @@
   </div>
   <p class="result-outcome">
     {% if match.is_draw %}
-      Trận đấu kết thúc với tỷ số hòa.
+      Trận đấu kết thúc với tỷ số hòa
     {% elif match.surrendered_by %}
-      {{ match.winner.username }} thắng do {{ match.surrendered_by.username }} đã đầu hàng.
+      {{ match.winner.username }} thắng do {{ match.surrendered_by.username }} đã đầu hàng
     {% elif match.finish_reason == "TIMEOUT" %}
-      {{ match.winner.username }} thắng khi hết giờ.
+      {{ match.winner.username }} thắng khi hết giờ
     {% elif match.finish_reason == "ALL_SOLVED" %}
-      {{ match.winner.username }} chiến thắng khi hoàn thành toàn bộ thử thách.
+      {{ match.winner.username }} chiến thắng khi hoàn thành toàn bộ thử thách
     {% else %}
-      {{ match.winner.username }} chiến thắng.
+      {{ match.winner.username }} chiến thắng
     {% endif %}
   </p>
   <div class="result-summary__footer">
@@ -43,7 +43,7 @@
     <div>
       <h2 id="rematch-heading">Tái đấu</h2>
       <p data-rematch-notice role="status">Đang tải trạng thái tái đấu…</p>
-      <p class="muted">Mỗi trận có một lời mời, hiệu lực 2 phút.</p>
+      <p class="muted">Mỗi trận có một lời mời, hiệu lực 2 phút</p>
       <p data-rematch-error role="status" class="result-rematch__error"></p>
     </div>
     <div class="result-rematch__actions">
@@ -55,7 +55,7 @@
       <button type="button" class="button button-secondary button-small" data-rematch-refresh>Cập nhật</button>
     </div>
     <form id="rematch-csrf" hidden>{% csrf_token %}</form>
-    <noscript>Cần bật JavaScript để gửi và nhận lời mời tái đấu.</noscript>
+    <noscript>Cần bật JavaScript để gửi và nhận lời mời tái đấu</noscript>
   </section>
   {{ rematch_config|json_script:"rematch-config" }}
 {% endif %}
@@ -139,7 +139,7 @@
       </nav>
     {% endif %}
   {% else %}
-    <p class="muted">Trận này chưa có dữ liệu diễn biến.</p>
+    <p class="muted">Trận này chưa có dữ liệu diễn biến</p>
   {% endif %}
 </section>
 

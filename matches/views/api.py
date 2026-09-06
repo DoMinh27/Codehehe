@@ -29,11 +29,15 @@ def parse_json_object(request) -> dict:
     return payload
 
 
+def clean_ui_message(message: str) -> str:
+    return message.removesuffix(".")
+
+
 def api_error(*, code: str, message: str, status: int) -> JsonResponse:
     return JsonResponse(
         {
             "code": code,
-            "message": message,
+            "message": clean_ui_message(message),
         },
         status=status,
     )

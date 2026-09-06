@@ -15,7 +15,7 @@ async function parseResponse(response) {
     } catch (cause) {
         throw new ApiError({
             code: "INVALID_RESPONSE",
-            message: "Máy chủ trả về dữ liệu không hợp lệ.",
+            message: "Máy chủ trả về dữ liệu không hợp lệ",
             status: response.status,
             cause,
         });
@@ -31,7 +31,7 @@ export function createBattleApi({fetchImpl = window.fetch.bind(window)} = {}) {
         } catch (cause) {
             throw new ApiError({
                 code: "NETWORK_ERROR",
-                message: "Không thể kết nối đến máy chủ.",
+                message: "Không thể kết nối đến máy chủ",
                 cause,
             });
         }
@@ -40,7 +40,7 @@ export function createBattleApi({fetchImpl = window.fetch.bind(window)} = {}) {
         if (!response.ok) {
             throw new ApiError({
                 code: payload?.code || "REQUEST_FAILED",
-                message: payload?.message || "Yêu cầu không thành công.",
+                message: payload?.message || "Yêu cầu không thành công",
                 status: response.status,
             });
         }

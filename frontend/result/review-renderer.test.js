@@ -82,7 +82,7 @@ describe("AI review renderer", () => {
         });
 
         expect(document.body.textContent).toContain(
-            "Không có điểm cần cải thiện đáng kể.",
+            "Không có điểm cần cải thiện đáng kể",
         );
         expect(document.querySelectorAll("ul")).toHaveLength(1);
     });

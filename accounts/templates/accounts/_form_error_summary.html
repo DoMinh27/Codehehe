@@ -1,0 +1,5 @@
+{% if form.non_field_errors %}
+  <div class="alert alert-error auth-form-alert" role="alert" tabindex="-1" data-auth-form-alert>
+    {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+  </div>
+{% endif %}

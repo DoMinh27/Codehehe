@@ -981,7 +981,7 @@ class MatchLifecycleViewTests(LifecycleFixtureMixin, TestCase):
         )
         self.assertContains(
             response,
-            "Trận đấu kết thúc với tỷ số hòa.",
+            "Trận đấu kết thúc với tỷ số hòa",
         )
         self.assertContains(response, "Người giải đầu tiên")
         self.assertNotContains(response, "First-solve")

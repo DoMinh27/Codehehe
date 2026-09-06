@@ -40,7 +40,7 @@ from matches.services.match_state import (
 from matches.services.scoring import ScoringService
 from matches.services.submission import PendingSubmissionRecoveryService
 
-from .api import api_error
+from .api import api_error, clean_ui_message
 
 
 @login_required
@@ -211,7 +211,7 @@ def finalize_match(request, match_id):
         match = FinishMatchService().finalize(match_id=match_id)
     except MatchHasPendingSubmissionsError as error:
         return JsonResponse(
-            {"status": "PENDING", "message": str(error)},
+            {"status": "PENDING", "message": clean_ui_message(str(error))},
             status=202,
         )
     except MatchNotReadyToFinishError as error:

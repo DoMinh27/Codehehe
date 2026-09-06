@@ -23,7 +23,12 @@ from matches.services.submission import (
     SubmissionService,
     UnavailableJudgeService,
 )
-from matches.views.api import ApiPayloadError, api_error, parse_json_object
+from matches.views.api import (
+    ApiPayloadError,
+    api_error,
+    clean_ui_message,
+    parse_json_object,
+)
 from problems.services.judge import Judge0ConfigurationError, Judge0Service
 
 
@@ -90,16 +95,18 @@ def run_code(request, match_id, match_problem_id):
         )
 
     messages = {
-        "COMPLETED": "Program completed.",
-        "COMPILATION_ERROR": "Compilation error.",
-        "RUNTIME_ERROR": "Runtime error.",
-        "TIME_LIMIT_EXCEEDED": "Time limit exceeded.",
+        "COMPLETED": "Program completed",
+        "COMPILATION_ERROR": "Compilation error",
+        "RUNTIME_ERROR": "Runtime error",
+        "TIME_LIMIT_EXCEEDED": "Time limit exceeded",
     }
     return JsonResponse(
         {
             "verdict": result.verdict,
             "stdout": result.stdout,
-            "message": result.diagnostic or messages[result.verdict],
+            "message": clean_ui_message(
+                result.diagnostic or messages[result.verdict]
+            ),
         }
     )
 
@@ -175,8 +182,8 @@ def submit_submission(request, match_id, match_problem_id):
                 if submission.completed_at is not None
                 else None
             ),
-            "message": (
-                submission.judge_message or "Submission is still being judged."
+            "message": clean_ui_message(
+                submission.judge_message or "Submission is still being judged"
             ),
         },
         status=201,

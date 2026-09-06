@@ -1,0 +1,13 @@
+[Unit]
+Description=CodeHehe expired pending registration cleanup
+After=codehehe.service
+
+[Service]
+Type=oneshot
+Group=codehehe
+User=codehehe
+WorkingDirectory=/opt/codehehe/app
+EnvironmentFile=/etc/codehehe/codehehe.env
+ExecStart=/opt/codehehe/venv/bin/python manage.py cleanup_pending_registrations
+TimeoutStartSec=60
+UMask=0077

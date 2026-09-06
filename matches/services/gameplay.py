@@ -83,12 +83,12 @@ class StartMatchService:
             try:
                 match = Match.objects.select_for_update().get(pk=match_id)
             except Match.DoesNotExist as error:
-                raise MatchNotFoundError("Không tìm thấy trận đấu.") from error
+                raise MatchNotFoundError("Không tìm thấy trận đấu") from error
 
             if match.host_id != user.id:
-                raise MatchPermissionError("Chỉ host được bắt đầu trận.")
+                raise MatchPermissionError("Chỉ host được bắt đầu trận")
             if match.status != Match.Status.WAITING or match.started_at is not None:
-                raise MatchStateError("Trận đấu không còn ở trạng thái chờ.")
+                raise MatchStateError("Trận đấu không còn ở trạng thái chờ")
             rules = rules_for_match(match)
 
             players = list(
@@ -97,7 +97,7 @@ class StartMatchService:
                 .order_by("joined_at", "id")
             )
             if len(players) != 2:
-                raise MatchPlayerCountError("Phòng cần đúng hai người để bắt đầu.")
+                raise MatchPlayerCountError("Phòng cần đúng hai người để bắt đầu")
 
             active_skills = {
                 skill.code: skill
@@ -107,7 +107,7 @@ class StartMatchService:
                 )
             }
             if set(active_skills) != set(rules.required_skill_codes):
-                raise InsufficientSkillsError("Cấu hình Skill Battle chưa đầy đủ.")
+                raise InsufficientSkillsError("Cấu hình Skill Battle chưa đầy đủ")
 
             eligible_problems = (
                 Problem.objects.annotate(
@@ -133,7 +133,7 @@ class StartMatchService:
                 )
                 if len(candidates) < required_count:
                     raise InsufficientProblemsError(
-                        "Ngân hàng bài tập không đủ cho ruleset của trận."
+                        "Ngân hàng bài tập không đủ cho ruleset của trận"
                     )
                 selected_problems.extend(
                     self.problem_selector(candidates, required_count)
@@ -254,13 +254,13 @@ class FinishMatchService:
             try:
                 match = Match.objects.select_for_update().get(pk=match_id)
             except Match.DoesNotExist as error:
-                raise MatchNotFoundError("Không tìm thấy trận đấu.") from error
+                raise MatchNotFoundError("Không tìm thấy trận đấu") from error
 
             if match.status == Match.Status.FINISHED:
                 MatchPlayer.objects.filter(match=match).update(is_active=False)
                 return match
             if match.status != Match.Status.PLAYING or match.ends_at is None:
-                raise MatchStateError("Trận đấu không ở trạng thái đang chơi.")
+                raise MatchStateError("Trận đấu không ở trạng thái đang chơi")
 
             players = list(
                 MatchPlayer.objects.select_for_update()
@@ -268,7 +268,7 @@ class FinishMatchService:
                 .order_by("id")
             )
             if len(players) != 2:
-                raise MatchPlayerCountError("Trận đấu cần đúng hai người để kết thúc.")
+                raise MatchPlayerCountError("Trận đấu cần đúng hai người để kết thúc")
             problem_count = MatchProblem.objects.filter(match=match).count()
             solved_counts = {
                 row["player_id"]: row["count"]
@@ -294,14 +294,14 @@ class FinishMatchService:
                 for player in players
             )
             if not all_players_terminal:
-                raise MatchNotReadyToFinishError("Trận đấu chưa đủ điều kiện kết thúc.")
+                raise MatchNotReadyToFinishError("Trận đấu chưa đủ điều kiện kết thúc")
 
             if Submission.objects.filter(
                 match=match,
                 verdict=Submission.Verdict.PENDING,
             ).exists():
                 raise MatchHasPendingSubmissionsError(
-                    "Đang chờ submission hợp lệ hoàn tất."
+                    "Đang chờ submission hợp lệ hoàn tất"
                 )
 
             if Submission.objects.filter(
@@ -309,7 +309,7 @@ class FinishMatchService:
                 is_score_processed=False,
             ).exists():
                 raise MatchHasPendingSubmissionsError(
-                    "Đang hoàn tất tính điểm submission."
+                    "Đang hoàn tất tính điểm submission"
                 )
 
             highest_score = max(player.score for player in players)
@@ -383,7 +383,7 @@ class SurrenderMatchService:
             try:
                 match = Match.objects.select_for_update().get(pk=match_id)
             except Match.DoesNotExist as error:
-                raise MatchNotFoundError("Không tìm thấy trận đấu.") from error
+                raise MatchNotFoundError("Không tìm thấy trận đấu") from error
 
             players = list(
                 MatchPlayer.objects.select_for_update()
@@ -395,7 +395,7 @@ class SurrenderMatchService:
                 None,
             )
             if current_player is None:
-                raise MatchPermissionError("Bạn không thuộc trận đấu này.")
+                raise MatchPermissionError("Bạn không thuộc trận đấu này")
             if (
                 match.status == Match.Status.FINISHED
                 and match.finish_reason == Match.FinishReason.SURRENDER
@@ -404,9 +404,9 @@ class SurrenderMatchService:
                 MatchPlayer.objects.filter(match=match).update(is_active=False)
                 return match
             if match.status != Match.Status.PLAYING:
-                raise MatchStateError("Trận đấu không ở trạng thái đang chơi.")
+                raise MatchStateError("Trận đấu không ở trạng thái đang chơi")
             if len(players) != 2:
-                raise MatchPlayerCountError("Trận đấu cần đúng hai người để đầu hàng.")
+                raise MatchPlayerCountError("Trận đấu cần đúng hai người để đầu hàng")
 
             opponent = next(
                 player for player in players if player.pk != current_player.pk

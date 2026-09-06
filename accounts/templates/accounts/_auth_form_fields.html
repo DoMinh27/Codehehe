@@ -1,0 +1,15 @@
+{% include "accounts/_form_error_summary.html" %}
+{% for field in form %}
+  <div class="form-field{% if field.errors %} form-field--error{% endif %}">
+    {{ field.label_tag }}
+    {{ field }}
+    {% if field.help_text %}<span class="form-help" id="id_{{ field.name }}_help">{{ field.help_text|safe }}</span>{% endif %}
+    <span class="form-error-slot" data-auth-error-slot>
+      {% if field.errors %}
+        <span class="form-error" id="id_{{ field.name }}_error" data-auth-field-error>
+          {% for error in field.errors %}<span>{{ error }}</span>{% endfor %}
+        </span>
+      {% endif %}
+    </span>
+  </div>
+{% endfor %}

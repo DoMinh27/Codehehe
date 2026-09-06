@@ -191,7 +191,7 @@ def _close_absence(*, state, match, player, policy, now):
     return IntegrityNotice(
         code="FOCUS_VIOLATION_RECORDED",
         message=(
-            f"Hệ thống đã ghi nhận bạn rời màn hình trong {seconds} giây."
+            f"Hệ thống đã ghi nhận bạn rời màn hình trong {seconds} giây"
         ),
     )
 
@@ -229,7 +229,7 @@ def _record_connection_gap(*, state, match, player, policy, now):
     seconds = max(1, round(duration_ms / 1000))
     return IntegrityNotice(
         code="CONNECTION_GAP_RECORDED",
-        message=f"Hệ thống đã ghi nhận kết nối bị gián đoạn trong {seconds} giây.",
+        message=f"Hệ thống đã ghi nhận kết nối bị gián đoạn trong {seconds} giây",
     )
 
 

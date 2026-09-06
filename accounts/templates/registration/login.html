@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Đăng nhập | CodeHehe{% endblock %}
+{% block title %}{% if form.errors %}Lỗi: {% endif %}Đăng nhập | CodeHehe{% endblock %}
 {% block body_class %}auth-page{% endblock %}
 {% block main_class %}site-main--narrow{% endblock %}
 
@@ -13,19 +13,11 @@
     </div>
     <div class="auth-card__heading">
       <h1 id="login-title">Đăng nhập</h1>
-      <p>Tiếp tục hành trình chinh phục các thử thách lập trình.</p>
     </div>
 
-    <form method="post" class="stack">
+    <form method="post" class="stack" data-auth-form novalidate>
       {% csrf_token %}
-      {% for field in form %}
-        <div class="form-field{% if field.errors %} form-field--error{% endif %}">
-          {{ field.label_tag }}
-          {{ field }}
-          {% if field.help_text %}<span class="form-help">{{ field.help_text }}</span>{% endif %}
-          {% for error in field.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
-        </div>
-      {% endfor %}
+      {% include "accounts/_auth_form_fields.html" %}
       {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
       <button class="button button--primary button--block" type="submit">
         <svg aria-hidden="true"><use href="{% static 'matches/ui/icons.svg' %}#icon-login"></use></svg>
@@ -33,6 +25,8 @@
       </button>
     </form>
 
+    <p class="auth-card__switch"><a href="{% url 'password_reset' %}">Quên mật khẩu?</a></p>
+    <p class="auth-card__switch"><a href="{% url 'email-verification-resend' %}">Chưa nhận email xác minh?</a></p>
     <p class="auth-card__switch">Chưa có tài khoản? <a href="{% url 'register' %}">Đăng ký ngay</a></p>
   </section>
 </div>

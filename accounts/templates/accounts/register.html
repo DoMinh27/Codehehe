@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Đăng ký | CodeHehe{% endblock %}
+{% block title %}{% if form.errors %}Lỗi: {% endif %}Đăng ký | CodeHehe{% endblock %}
 {% block body_class %}auth-page{% endblock %}
 {% block main_class %}site-main--narrow{% endblock %}
 
@@ -13,19 +13,12 @@
     </div>
     <div class="auth-card__heading">
       <h1 id="register-title">Tạo tài khoản</h1>
-      <p>Đăng ký nhanh để bắt đầu một trận đấu CodeHehe.</p>
+      <p>Đăng ký và xác minh email để bắt đầu một trận đấu CodeHehe</p>
     </div>
 
-    <form method="post" class="stack">
+    <form method="post" class="stack" data-auth-form novalidate>
       {% csrf_token %}
-      {% for field in form %}
-        <div class="form-field{% if field.errors %} form-field--error{% endif %}">
-          {{ field.label_tag }}
-          {{ field }}
-          {% if field.help_text %}<span class="form-help">{{ field.help_text|safe }}</span>{% endif %}
-          {% for error in field.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
-        </div>
-      {% endfor %}
+      {% include "accounts/_auth_form_fields.html" %}
       <button class="button button--primary button--block" type="submit">
         <svg aria-hidden="true"><use href="{% static 'matches/ui/icons.svg' %}#icon-plus"></use></svg>
         Tạo tài khoản

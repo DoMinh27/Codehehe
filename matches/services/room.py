@@ -52,7 +52,7 @@ class ActiveMatchExistsError(RoomError):
 
     def __init__(self, match: Match):
         self.match = match
-        super().__init__("Bạn đang có một phòng hoặc trận đấu chưa kết thúc.")
+        super().__init__("Bạn đang có một phòng hoặc trận đấu chưa kết thúc")
 
 
 class RoomLeaveError(RoomError):
@@ -65,14 +65,14 @@ def generate_room_code() -> str:
 
 def normalize_room_code(room_code: str) -> str:
     if not isinstance(room_code, str):
-        raise InvalidRoomCodeError("Mã phòng không hợp lệ.")
+        raise InvalidRoomCodeError("Mã phòng không hợp lệ")
 
     normalized = room_code.strip().upper()
     if (
         len(normalized) != ROOM_CODE_LENGTH
         or any(character not in ROOM_CODE_ALPHABET for character in normalized)
     ):
-        raise InvalidRoomCodeError("Mã phòng phải gồm 6 chữ cái hoặc chữ số.")
+        raise InvalidRoomCodeError("Mã phòng phải gồm 6 chữ cái hoặc chữ số")
     return normalized
 
 
@@ -123,7 +123,7 @@ class CreateRoomService:
                     continue
                 raise
 
-        raise RoomCodeGenerationError("Không thể tạo mã phòng. Vui lòng thử lại.")
+        raise RoomCodeGenerationError("Không thể tạo mã phòng. Vui lòng thử lại")
 
     @staticmethod
     def _create_once(
@@ -163,7 +163,7 @@ class JoinRoomService:
         active_player = get_active_match_player(user=user)
         if active_player is not None:
             if active_player.match.room_code == normalized_code:
-                raise AlreadyJoinedError("Bạn đã tham gia phòng này.")
+                raise AlreadyJoinedError("Bạn đã tham gia phòng này")
             raise ActiveMatchExistsError(active_player.match)
 
         try:
@@ -174,14 +174,14 @@ class JoinRoomService:
             active_player = get_active_match_player(user=user)
             if active_player is not None:
                 if active_player.match.room_code == normalized_code:
-                    raise AlreadyJoinedError("Bạn đã tham gia phòng này.") from None
+                    raise AlreadyJoinedError("Bạn đã tham gia phòng này") from None
                 raise ActiveMatchExistsError(active_player.match) from None
             try:
                 match = Match.objects.get(room_code=normalized_code)
             except Match.DoesNotExist as error:
-                raise RoomNotFoundError("Không tìm thấy phòng.") from error
+                raise RoomNotFoundError("Không tìm thấy phòng") from error
             if match.players.filter(slot=2).exists():
-                raise RoomFullError("Phòng đã đầy.") from None
+                raise RoomFullError("Phòng đã đầy") from None
             raise
 
     @staticmethod
@@ -190,14 +190,14 @@ class JoinRoomService:
             try:
                 match = Match.objects.select_for_update().get(room_code=room_code)
             except Match.DoesNotExist as error:
-                raise RoomNotFoundError("Không tìm thấy phòng.") from error
+                raise RoomNotFoundError("Không tìm thấy phòng") from error
 
             if match.status != Match.Status.WAITING:
-                raise RoomNotWaitingError("Phòng không còn ở trạng thái chờ.")
+                raise RoomNotWaitingError("Phòng không còn ở trạng thái chờ")
             if MatchPlayer.objects.filter(match=match, user=user).exists():
-                raise AlreadyJoinedError("Bạn đã tham gia phòng này.")
+                raise AlreadyJoinedError("Bạn đã tham gia phòng này")
             if MatchPlayer.objects.filter(match=match, slot=2).exists():
-                raise RoomFullError("Phòng đã đầy.")
+                raise RoomFullError("Phòng đã đầy")
 
             return MatchPlayer.objects.create(
                 match=match,
@@ -223,16 +223,16 @@ class LeaveRoomService:
             try:
                 match = Match.objects.select_for_update().get(room_code=room_code)
             except Match.DoesNotExist as error:
-                raise RoomNotFoundError("Không tìm thấy phòng.") from error
+                raise RoomNotFoundError("Không tìm thấy phòng") from error
             try:
                 player = MatchPlayer.objects.select_for_update().get(
                     match=match,
                     user=user,
                 )
             except MatchPlayer.DoesNotExist as error:
-                raise RoomLeaveError("Bạn không thuộc phòng này.") from error
+                raise RoomLeaveError("Bạn không thuộc phòng này") from error
             if match.status != Match.Status.WAITING:
-                raise RoomLeaveError("Chỉ có thể rời phòng trước khi trận bắt đầu.")
+                raise RoomLeaveError("Chỉ có thể rời phòng trước khi trận bắt đầu")
 
             if player.is_host:
                 match.status = Match.Status.CANCELLED

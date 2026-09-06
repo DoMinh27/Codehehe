@@ -133,7 +133,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = "en-us"
 
 TIME_ZONE = os.getenv("DJANGO_TIME_ZONE", "UTC")
 
@@ -187,6 +187,63 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "lobby"
 LOGOUT_REDIRECT_URL = "login"
+
+EMAIL_BACKEND = os.getenv(
+    "DJANGO_EMAIL_BACKEND",
+    (
+        "django.core.mail.backends.console.EmailBackend"
+        if DEBUG
+        else "django.core.mail.backends.smtp.EmailBackend"
+    ),
+)
+EMAIL_HOST = os.getenv("DJANGO_EMAIL_HOST", "")
+EMAIL_PORT = int(os.getenv("DJANGO_EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.getenv("DJANGO_EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("DJANGO_EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = env_bool("DJANGO_EMAIL_USE_TLS", default=True)
+EMAIL_USE_SSL = env_bool("DJANGO_EMAIL_USE_SSL")
+EMAIL_TIMEOUT = int(os.getenv("DJANGO_EMAIL_TIMEOUT_SECONDS", "10"))
+DEFAULT_FROM_EMAIL = os.getenv(
+    "DJANGO_DEFAULT_FROM_EMAIL",
+    "CodeHehe <no-reply@localhost>",
+)
+PASSWORD_RESET_TIMEOUT = int(os.getenv("PASSWORD_RESET_TIMEOUT_SECONDS", "3600"))
+EMAIL_VERIFICATION_TIMEOUT_SECONDS = int(
+    os.getenv("EMAIL_VERIFICATION_TIMEOUT_SECONDS", "300")
+)
+PENDING_REGISTRATION_RETENTION_SECONDS = int(
+    os.getenv("PENDING_REGISTRATION_RETENTION_SECONDS", "7200")
+)
+ACCOUNT_EMAIL_RATE_LIMIT_WINDOW_SECONDS = int(
+    os.getenv("ACCOUNT_EMAIL_RATE_LIMIT_WINDOW_SECONDS", "3600")
+)
+ACCOUNT_EMAIL_RATE_LIMIT_PER_IP = int(
+    os.getenv("ACCOUNT_EMAIL_RATE_LIMIT_PER_IP", "10")
+)
+ACCOUNT_EMAIL_RATE_LIMIT_PER_ADDRESS = int(
+    os.getenv("ACCOUNT_EMAIL_RATE_LIMIT_PER_ADDRESS", "3")
+)
+if EMAIL_USE_TLS and EMAIL_USE_SSL:
+    raise ImproperlyConfigured(
+        "DJANGO_EMAIL_USE_TLS and DJANGO_EMAIL_USE_SSL cannot both be enabled."
+    )
+for setting_name in (
+    "EMAIL_PORT",
+    "EMAIL_TIMEOUT",
+    "PASSWORD_RESET_TIMEOUT",
+    "EMAIL_VERIFICATION_TIMEOUT_SECONDS",
+    "PENDING_REGISTRATION_RETENTION_SECONDS",
+    "ACCOUNT_EMAIL_RATE_LIMIT_WINDOW_SECONDS",
+    "ACCOUNT_EMAIL_RATE_LIMIT_PER_IP",
+    "ACCOUNT_EMAIL_RATE_LIMIT_PER_ADDRESS",
+):
+    if globals()[setting_name] <= 0:
+        raise ImproperlyConfigured(f"{setting_name} must be greater than zero.")
+if PENDING_REGISTRATION_RETENTION_SECONDS < EMAIL_VERIFICATION_TIMEOUT_SECONDS:
+    raise ImproperlyConfigured(
+        "PENDING_REGISTRATION_RETENTION_SECONDS must be greater than or equal "
+        "to EMAIL_VERIFICATION_TIMEOUT_SECONDS."
+    )
 
 MATCH_PENDING_SUBMISSION_TIMEOUT_SECONDS = int(
     os.getenv("MATCH_PENDING_SUBMISSION_TIMEOUT_SECONDS", "120")

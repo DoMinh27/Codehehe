@@ -318,11 +318,11 @@ class PurifyStealStateAndApiTests(PurifyStealFixtureMixin, TestCase):
         self.assertTrue(skills[PURIFY]["can_use_while_action_locked"])
         self.assertEqual(
             skills[PURIFY]["unavailable_reason"],
-            "Không có hiệu ứng nào để thanh tẩy.",
+            "Không có hiệu ứng nào để thanh tẩy",
         )
         self.assertEqual(
             skills[STEAL]["unavailable_reason"],
-            "Đối thủ không còn skill có thể đánh cắp.",
+            "Đối thủ không còn skill có thể đánh cắp",
         )
         self.assertNotIn("opponent_skills", payload)
 

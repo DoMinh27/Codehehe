@@ -18,15 +18,15 @@ export function createSkillController({
     function skillNoticeFor(payload) {
         const outcome = payload.outcome || {};
         if (outcome.kind === "PURIFIED_EFFECT") {
-            return `Đã thanh tẩy: ${outcome.skill_name}.`;
+            return `Đã thanh tẩy: ${outcome.skill_name}`;
         }
         if (outcome.kind === "STOLEN_SKILL") {
-            return `Đã đánh cắp: ${outcome.skill_name}.`;
+            return `Đã đánh cắp: ${outcome.skill_name}`;
         }
         if (outcome.kind === "BLOCKED_BY_SHIELD") {
-            return "Skill đã bị Shield của đối thủ chặn.";
+            return "Skill đã bị Shield của đối thủ chặn";
         }
-        return "Skill đã được kích hoạt.";
+        return "Skill đã được kích hoạt";
     }
 
     async function useSkill(skill, button) {
@@ -61,7 +61,7 @@ export function createSkillController({
     function bind() {
         typingInput.addEventListener("paste", (event) => {
             event.preventDefault();
-            typingResult.textContent = "Hãy tự gõ câu thử thách.";
+            typingResult.textContent = "Hãy tự gõ câu thử thách";
         });
 
         typingForm.addEventListener("submit", async (event) => {
@@ -83,7 +83,7 @@ export function createSkillController({
                     {typed_text: typingInput.value},
                     csrfToken,
                 );
-                typingResult.textContent = "Đã hoàn thành.";
+                typingResult.textContent = "Đã hoàn thành";
                 await refreshState();
             } catch (error) {
                 typingResult.textContent = error.message;

@@ -76,7 +76,7 @@ class ApiHelperTests(SimpleTestCase):
             json.loads(response.content),
             {
                 "code": "MATCH_NOT_PLAYING",
-                "message": "Trận đấu không ở trạng thái đang chơi.",
+                "message": "Trận đấu không ở trạng thái đang chơi",
             },
         )
 

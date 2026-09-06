@@ -409,7 +409,7 @@ class Gate35ViewTests(Gate35FixtureMixin, TestCase):
             result,
             (
                 f"{self.opponent.username} thắng do "
-                f"{self.host.username} đã đầu hàng."
+                f"{self.host.username} đã đầu hàng"
             ),
             count=1,
         )

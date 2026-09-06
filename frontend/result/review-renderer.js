@@ -1,9 +1,9 @@
 const STATUS_MESSAGES = {
-    ELIGIBLE: "Bài Accepted đã sẵn sàng để phân tích.",
-    NOT_ELIGIBLE: "Chưa có bài Accepted để phân tích.",
-    PENDING: "Đang chờ đến lượt phân tích AI.",
-    PROCESSING: "AI đang phân tích bài làm.",
-    FAILED: "Phân tích chưa thành công.",
+    ELIGIBLE: "Bài Accepted đã sẵn sàng để phân tích",
+    NOT_ELIGIBLE: "Chưa có bài Accepted để phân tích",
+    PENDING: "Đang chờ đến lượt phân tích AI",
+    PROCESSING: "AI đang phân tích bài làm",
+    FAILED: "Phân tích chưa thành công",
 };
 
 const STATUS_LABELS = {
@@ -63,9 +63,9 @@ function renderCompleted(documentRoot, detail, analysis) {
     detail.append(summarySection, complexityHeading, complexity);
 
     addList(documentRoot, detail, "Điểm tốt", analysis.strengths,
-        "Không có điểm nổi bật được ghi nhận.");
+        "Không có điểm nổi bật được ghi nhận");
     addList(documentRoot, detail, "Điểm cần cải thiện", analysis.improvements,
-        "Không có điểm cần cải thiện đáng kể.");
+        "Không có điểm cần cải thiện đáng kể");
 
     const betterSection = documentRoot.createElement("section");
     betterSection.className = "review-detail review-detail--better";
@@ -119,8 +119,8 @@ export function createReviewRenderer({documentRoot = document} = {}) {
         render(payload) {
             list.replaceChildren();
             notice.textContent = payload.terminal
-                ? "Phân tích AI đã cập nhật."
-                : "Một số bài đang được xử lý.";
+                ? "Phân tích AI đã cập nhật"
+                : "Một số bài đang được xử lý";
             notice.dataset.terminal = payload.terminal ? "true" : "false";
 
             for (const player of payload.players) {
@@ -167,7 +167,7 @@ export function createReviewRenderer({documentRoot = document} = {}) {
                         const message = documentRoot.createElement("p");
                         message.className = "ai-review-card__message";
                         message.textContent = STATUS_MESSAGES[review.status]
-                            || "Trạng thái phân tích chưa xác định.";
+                            || "Trạng thái phân tích chưa xác định";
                         card.appendChild(message);
                     }
                     reviewGrid.appendChild(card);

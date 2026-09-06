@@ -7,7 +7,7 @@
   <span class="avatar profile-heading__avatar" aria-hidden="true">{{ user.username|first|upper }}</span>
   <div>
     <h1>{{ user.username }}</h1>
-    <p>Tham gia CodeHehe từ {{ user.date_joined|date:"d/m/Y" }}.</p>
+    <p>Tham gia CodeHehe từ {{ user.date_joined|date:"d/m/Y" }}</p>
   </div>
 </header>
 
@@ -15,7 +15,7 @@
   <div class="section-heading profile-section-heading">
     <div>
       <h2 id="profile-stats-heading">Thống kê thi đấu</h2>
-      <p>Chỉ tính các trận đã kết thúc.</p>
+      <p>Chỉ tính các trận đã kết thúc</p>
     </div>
     <a class="button button-secondary button-small" href="{% url 'match-history' %}">Xem lịch sử</a>
   </div>

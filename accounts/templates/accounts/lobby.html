@@ -7,7 +7,7 @@
 <header class="page-heading">
   <div>
     <h1>Lobby</h1>
-    <p>Xin chào {{ user.username }}. Tạo một trận 1v1 hoặc vào phòng bằng mã mời.</p>
+    <p>Xin chào {{ user.username }}. Tạo một trận 1v1 hoặc vào phòng bằng mã mời</p>
   </div>
 </header>
 
@@ -15,7 +15,7 @@
   <section class="panel lobby-panel" aria-labelledby="create-room-title">
     <div class="lobby-panel__copy">
       <h2 id="create-room-title">Tạo phòng</h2>
-      <p>Tạo phòng mới và gửi mã cho đối thủ.</p>
+      <p>Tạo phòng mới và gửi mã cho đối thủ</p>
     </div>
     <form method="post" action="{% url 'room-create' %}">
       {% csrf_token %}
@@ -29,7 +29,7 @@
   <section class="panel lobby-panel" aria-labelledby="join-room-title">
     <div class="lobby-panel__copy">
       <h2 id="join-room-title">Tham gia phòng</h2>
-      <p>Nhập mã phòng gồm 6 ký tự.</p>
+      <p>Nhập mã phòng gồm 6 ký tự</p>
     </div>
     <form method="post" action="{% url 'room-join' %}" class="join-room-form">
       {% csrf_token %}

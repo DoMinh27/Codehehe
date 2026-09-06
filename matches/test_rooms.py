@@ -197,7 +197,7 @@ class RoomViewTests(TestCase):
         )
 
         self.assertRedirects(response, reverse("lobby"))
-        self.assertContains(response, "Phòng đã đầy.")
+        self.assertContains(response, "Phòng đã đầy")
         self.assertEqual(self.match.players.count(), 2)
 
     def test_only_members_can_view_waiting_room_and_state(self):

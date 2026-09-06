@@ -7,7 +7,7 @@
   <div>
     <span class="eyebrow">Trận {{ match.room_code }}</span>
     <h1>Bài nộp của tôi</h1>
-    <p>Source code chỉ hiển thị cho tài khoản của bạn.</p>
+    <p>Source code chỉ hiển thị cho tài khoản của bạn</p>
   </div>
   <div class="cluster">
     <a class="button button-secondary button-small" href="{% url 'match-history' %}">Lịch sử</a>
@@ -32,7 +32,7 @@
     <div class="section-heading">
       <div>
         <h2 id="submission-problem-heading">{{ selected_problem.title_snapshot }}</h2>
-        <p>{{ page_obj.paginator.count }} lần nộp.</p>
+        <p>{{ page_obj.paginator.count }} lần nộp</p>
       </div>
     </div>
 
@@ -81,14 +81,14 @@
     {% else %}
       <div class="panel empty-state">
         <h3>Chưa có lần nộp</h3>
-        <p>Bạn chưa nộp code cho bài này trong trận đấu.</p>
+        <p>Bạn chưa nộp code cho bài này trong trận đấu</p>
       </div>
     {% endif %}
   </section>
 {% else %}
   <section class="panel empty-state">
     <h2>Không có dữ liệu bài tập</h2>
-    <p>Trận đấu này không có snapshot bài tập để hiển thị.</p>
+    <p>Trận đấu này không có snapshot bài tập để hiển thị</p>
   </section>
 {% endif %}
 {% endblock %}

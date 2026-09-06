@@ -177,30 +177,30 @@ def present_event(event, started_at):
     target = event.target_name_snapshot or "Người chơi"
     kind = event.kind
     if kind == MatchEvent.Kind.MATCH_STARTED:
-        text = "Trận đấu bắt đầu."
+        text = "Trận đấu bắt đầu"
     elif kind == MatchEvent.Kind.PROBLEM_SOLVED:
-        text = f"{actor} giải được {data['problem_title']}: +{data['points']} điểm (tổng {data['score_after']})."
+        text = f"{actor} giải được {data['problem_title']}: +{data['points']} điểm (tổng {data['score_after']})"
     elif kind == MatchEvent.Kind.FIRST_SOLVE_CONFIRMED:
-        text = f"{actor} được xác nhận giải đầu tiên bài {data['problem_title']}: +{data['points']} điểm thưởng (tổng {data['score_after']})."
+        text = f"{actor} được xác nhận giải đầu tiên bài {data['problem_title']}: +{data['points']} điểm thưởng (tổng {data['score_after']})"
     elif kind == MatchEvent.Kind.REWARD_GRANTED:
-        text = f"{actor} nhận {data['energy']} Energy và 1 lượt {data['skill_name']}."
+        text = f"{actor} nhận {data['energy']} Energy và 1 lượt {data['skill_name']}"
     elif kind == MatchEvent.Kind.SKILL_USED:
         destination = "chính mình" if event.actor_id == event.target_id else target
-        text = f"{actor} dùng {data['skill_name']} lên {destination}, tốn {data['energy_spent']} Energy."
+        text = f"{actor} dùng {data['skill_name']} lên {destination}, tốn {data['energy_spent']} Energy"
         if data.get("outcome_kind") == "PURIFIED_EFFECT":
-            text += f" Đã gỡ {data['affected_skill_name']}."
+            text += f". Đã gỡ {data['affected_skill_name']}"
         elif data.get("outcome_kind") == "STOLEN_SKILL":
-            text += f" Đã đánh cắp 1 lượt {data['affected_skill_name']}."
+            text += f". Đã đánh cắp 1 lượt {data['affected_skill_name']}"
         elif data.get("outcome_kind") == "BLOCKED_BY_SHIELD":
-            text += " Đòn tấn công đã bị Shield chặn."
+            text += ". Đòn tấn công đã bị Shield chặn"
         elif "time_penalty_seconds" in data:
-            text += f" Cộng {data['time_penalty_seconds']} giây phạt thời gian."
+            text += f". Cộng {data['time_penalty_seconds']} giây phạt thời gian"
         elif "duration_seconds" in data:
-            text += f" Hiệu ứng tối đa {data['duration_seconds']} giây."
+            text += f". Hiệu ứng tối đa {data['duration_seconds']} giây"
     elif kind == MatchEvent.Kind.TYPING_COMPLETED:
-        text = f"{actor} hoàn thành thử thách gõ chữ và được mở khóa."
+        text = f"{actor} hoàn thành thử thách gõ chữ và được mở khóa"
     elif kind == MatchEvent.Kind.PLAYER_SURRENDERED:
-        text = f"{actor} đầu hàng."
+        text = f"{actor} đầu hàng"
     elif kind == MatchEvent.Kind.MATCH_FINISHED:
         scoreline = " — ".join(f"{p['username']} {p['score']}" for p in data["scores"])
         reason = dict(Match.FinishReason.choices).get(data["reason"], "Kết thúc")
@@ -213,9 +213,9 @@ def present_event(event, started_at):
             None,
         )
         result = "Hòa" if data["is_draw"] else f"{winner} thắng"
-        text = f"{result}. {scoreline}. Lý do: {reason}."
+        text = f"{result}. {scoreline}. Lý do: {reason}"
     else:
-        text = "Sự kiện trận đấu."
+        text = "Sự kiện trận đấu"
     elapsed = (
         max(0, int((event.recorded_at - started_at).total_seconds()))
         if started_at

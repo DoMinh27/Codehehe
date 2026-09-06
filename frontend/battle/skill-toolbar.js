@@ -38,19 +38,19 @@ function unavailableReason({
         return "Đang kích hoạt…";
     }
     if (timedOut) {
-        return "Bạn đã hết thời gian.";
+        return "Bạn đã hết thời gian";
     }
     if (actionLocked && !skill.can_use_while_action_locked) {
-        return "Hành động đang bị khóa bởi Thử thách gõ chữ.";
+        return "Hành động đang bị khóa bởi Thử thách gõ chữ";
     }
     if (skill.target_mode === "OPPONENT" && !hasOpponent) {
-        return "Chưa có đối thủ để sử dụng skill.";
+        return "Chưa có đối thủ để sử dụng skill";
     }
     if (skill.quantity < 1) {
-        return "Đã hết lượt sử dụng.";
+        return "Đã hết lượt sử dụng";
     }
     if (energy < skill.energy_cost) {
-        return "Không đủ năng lượng.";
+        return "Không đủ năng lượng";
     }
     return skill.unavailable_reason || null;
 }
@@ -180,13 +180,13 @@ export function createSkillToolbar({
         item.energy.textContent = `${skill.energy_cost} năng lượng`;
         item.quantity.textContent = String(skill.quantity);
         item.quantityDetail.textContent = `${skill.quantity} lượt còn lại`;
-        item.status.textContent = reason || "Sẵn sàng sử dụng.";
+        item.status.textContent = reason || "Sẵn sàng sử dụng";
         item.status.dataset.available = isDisabled ? "false" : "true";
         item.trigger.disabled = isDisabled;
         item.trigger.setAttribute(
             "aria-label",
             `${skill.name}, ${skill.energy_cost} năng lượng, `
-            + `${skill.quantity} lượt còn lại. ${reason || "Sẵn sàng sử dụng."}`,
+            + `${skill.quantity} lượt còn lại. ${reason || "Sẵn sàng sử dụng"}`,
         );
     }
 

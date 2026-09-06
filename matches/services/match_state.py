@@ -35,19 +35,19 @@ from matches.skills.engine import (
 
 
 UNAVAILABLE_REASONS = {
-    "MATCH_NOT_PLAYING": "Trận đấu không ở trạng thái đang chơi.",
-    "PLAYER_TIMED_OUT": "Bạn đã hết thời gian.",
-    "ACTION_LOCKED": "Hành động đang bị khóa bởi Thử thách gõ chữ.",
-    "NO_QUANTITY": "Đã hết lượt sử dụng.",
-    "INSUFFICIENT_ENERGY": "Không đủ năng lượng.",
-    "EFFECT_ALREADY_ACTIVE": "Hiệu ứng này đang hoạt động.",
-    "TARGET_FINISHED": "Đối thủ đã hoàn thành hoặc hết thời gian.",
-    "NO_DISPELLABLE_EFFECT": "Không có hiệu ứng nào để thanh tẩy.",
-    "NO_STEALABLE_SKILL": "Đối thủ không còn skill có thể đánh cắp.",
-    "INVALID_STEAL_SELECTION": "Không thể chọn skill để đánh cắp.",
-    "INVALID_TARGET": "Mục tiêu skill không hợp lệ.",
-    "NO_OPPONENT": "Chưa có đối thủ để sử dụng skill.",
-    "INVALID_POLICY": "Skill tạm thời không khả dụng.",
+    "MATCH_NOT_PLAYING": "Trận đấu không ở trạng thái đang chơi",
+    "PLAYER_TIMED_OUT": "Bạn đã hết thời gian",
+    "ACTION_LOCKED": "Hành động đang bị khóa bởi Thử thách gõ chữ",
+    "NO_QUANTITY": "Đã hết lượt sử dụng",
+    "INSUFFICIENT_ENERGY": "Không đủ năng lượng",
+    "EFFECT_ALREADY_ACTIVE": "Hiệu ứng này đang hoạt động",
+    "TARGET_FINISHED": "Đối thủ đã hoàn thành hoặc hết thời gian",
+    "NO_DISPELLABLE_EFFECT": "Không có hiệu ứng nào để thanh tẩy",
+    "NO_STEALABLE_SKILL": "Đối thủ không còn skill có thể đánh cắp",
+    "INVALID_STEAL_SELECTION": "Không thể chọn skill để đánh cắp",
+    "INVALID_TARGET": "Mục tiêu skill không hợp lệ",
+    "NO_OPPONENT": "Chưa có đối thủ để sử dụng skill",
+    "INVALID_POLICY": "Skill tạm thời không khả dụng",
 }
 
 

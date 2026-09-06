@@ -18,7 +18,7 @@ export function initializeResult({documentRoot = document, windowObject = window
             controller.start(config.initialState);
             controllers.push(controller);
         } catch {
-            documentRoot.getElementById("ai-review-notice").textContent = "Chưa thể tải phân tích AI. Vui lòng tải lại trang.";
+            documentRoot.getElementById("ai-review-notice").textContent = "Chưa thể tải phân tích AI. Vui lòng tải lại trang";
         }
     }
     const rematchConfig = documentRoot.getElementById("rematch-config");
@@ -33,7 +33,7 @@ export function initializeResult({documentRoot = document, windowObject = window
             controller.start(config.initialState);
             controllers.push(controller);
         } catch {
-            documentRoot.querySelector("[data-rematch-error]").textContent = "Chưa thể tải tái đấu. Vui lòng tải lại trang.";
+            documentRoot.querySelector("[data-rematch-error]").textContent = "Chưa thể tải tái đấu. Vui lòng tải lại trang";
         }
     }
     return controllers;

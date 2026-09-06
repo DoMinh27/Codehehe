@@ -1,0 +1,6 @@
+Xin chào {{ username }},
+
+Hãy mở liên kết sau để xác minh và kích hoạt tài khoản CodeHehe:
+{{ verification_url }}
+
+Liên kết có hiệu lực trong {{ expires_minutes }} phút. Nếu bạn không đăng ký tài khoản này, hãy bỏ qua email.

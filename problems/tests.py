@@ -192,7 +192,7 @@ class ProblemPageTests(DjangoTestCase):
 
         response = self.client.get(reverse("problem-list"))
 
-        self.assertContains(response, "Hiện chưa có bài tập nào.")
+        self.assertContains(response, "Hiện chưa có bài tập nào")
 
     def test_problem_detail_uses_slug_and_shows_problem_content(self):
         self.client.force_login(self.user)

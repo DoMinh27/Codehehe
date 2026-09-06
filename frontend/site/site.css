@@ -553,6 +553,16 @@ pre {
     color: #8a550c;
 }
 
+.auth-form-alert {
+    align-items: flex-start;
+    display: block;
+    margin-bottom: 1.25rem;
+}
+
+.auth-form-alert p {
+    margin: 0;
+}
+
 .inline-form,
 .room-actions form {
     margin: 0;
@@ -620,6 +630,17 @@ summary:focus-visible {
 .form-error,
 .errorlist {
     color: var(--danger);
+}
+
+.form-error-slot {
+    display: block;
+    min-height: 1.125rem;
+}
+
+.form-error {
+    display: grid;
+    line-height: 1.125rem;
+    margin-top: 0.25rem;
 }
 
 .errorlist {

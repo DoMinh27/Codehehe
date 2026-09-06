@@ -1,12 +1,17 @@
 
 from django.contrib.auth import SESSION_KEY, get_user_model
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
+
+from .models import PendingRegistration
 
 
 User = get_user_model()
 
 
+@override_settings(
+    EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+)
 class RegisterTests(TestCase):
     password = "SafePassword-938!"
 
@@ -16,20 +21,22 @@ class RegisterTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "accounts/register.html")
 
-    def test_valid_registration_creates_user_with_hashed_password(self):
+    def test_valid_registration_creates_only_pending_registration(self):
         response = self.client.post(
             reverse("register"),
             {
                 "username": "new_player",
+                "email": "Player@Example.com",
                 "password1": self.password,
                 "password2": self.password,
             },
         )
 
-        self.assertRedirects(response, reverse("login"))
-        user = User.objects.get(username="new_player")
-        self.assertNotEqual(user.password, self.password)
-        self.assertTrue(user.check_password(self.password))
+        self.assertRedirects(response, reverse("email-verification-sent"))
+        self.assertFalse(User.objects.filter(username="new_player").exists())
+        pending = PendingRegistration.objects.get(username="new_player")
+        self.assertNotEqual(pending.password_hash, self.password)
+        self.assertEqual(pending.email, "player@example.com")
 
     def test_duplicate_username_does_not_create_another_user(self):
         User.objects.create_user(username="existing", password=self.password)
@@ -38,6 +45,7 @@ class RegisterTests(TestCase):
             reverse("register"),
             {
                 "username": "existing",
+                "email": "another@example.com",
                 "password1": self.password,
                 "password2": self.password,
             },
@@ -52,6 +60,7 @@ class RegisterTests(TestCase):
             reverse("register"),
             {
                 "username": "new_player",
+                "email": "new@example.com",
                 "password1": self.password,
                 "password2": "DifferentPassword-938!",
             },
@@ -60,6 +69,22 @@ class RegisterTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(User.objects.filter(username="new_player").exists())
         self.assertIn("password2", response.context["form"].errors)
+
+    def test_invalid_registration_values_are_explained_in_vietnamese(self):
+        response = self.client.post(
+            reverse("register"),
+            {
+                "username": "new_player",
+                "email": "not-an-email",
+                "password1": "123",
+                "password2": "123",
+            },
+        )
+
+        self.assertContains(response, "Nhập địa chỉ email hợp lệ")
+        self.assertContains(response, "Mật khẩu phải có ít nhất 8 ký tự")
+        self.assertNotContains(response, "This password")
+        self.assertNotContains(response, "Enter a valid email")
 
     def test_authenticated_user_is_redirected_from_register(self):
         user = User.objects.create_user(username="player", password=self.password)
@@ -103,6 +128,20 @@ class LoginTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertNotIn(SESSION_KEY, self.client.session)
         self.assertTrue(response.context["form"].errors)
+        self.assertContains(response, "Tên đăng nhập hoặc mật khẩu không đúng")
+        self.assertContains(response, "data-auth-form-alert")
+        self.assertContains(response, "<title>Lỗi: Đăng nhập | CodeHehe</title>", html=True)
+
+    def test_missing_login_field_shows_inline_error(self):
+        response = self.client.post(
+            reverse("login"),
+            {"username": self.user.username, "password": ""},
+        )
+
+        self.assertNotContains(response, "data-auth-form-alert")
+        self.assertContains(response, 'aria-invalid="true"')
+        self.assertContains(response, 'id="id_password_error"')
+        self.assertContains(response, "Vui lòng nhập mật khẩu")
 
     def test_authenticated_user_is_redirected_from_login(self):
         self.client.force_login(self.user)

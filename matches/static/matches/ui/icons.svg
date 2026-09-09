@@ -29,4 +29,5 @@
   <symbol id="icon-shield" viewBox="0 0 24 24"><path d="M12 3 19 6v5c0 4.7-2.8 8.2-7 10-4.2-1.8-7-5.3-7-10V6l7-3Z"/><path d="m8.5 12 2.2 2.2 4.8-4.8"/></symbol>
   <symbol id="icon-guard" viewBox="0 0 24 24"><path d="M12 3 19 6v5c0 4.7-2.8 8.2-7 10-4.2-1.8-7-5.3-7-10V6l7-3Z"/><path d="M12 8v8M8 12h8"/></symbol>
   <symbol id="icon-steal" viewBox="0 0 24 24"><path d="M4 7h11a4 4 0 1 1 0 8H9"/><path d="m8 11-4 4 4 4"/><path d="M13 10h.01M16 10h.01"/></symbol>
+  <symbol id="icon-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></symbol>
 </svg>

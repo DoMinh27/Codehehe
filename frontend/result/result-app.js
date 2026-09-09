@@ -26,14 +26,14 @@ export function initializeResult({documentRoot = document, windowObject = window
         try {
             const config = JSON.parse(rematchConfig.textContent);
             const controller = createRematchController({
-                api, stateUrl: config.stateUrl, actionUrl: config.actionUrl,
+                api, actionUrl: config.actionUrl,
                 csrfToken: documentRoot.querySelector("#rematch-csrf input[name='csrfmiddlewaretoken']")?.value,
                 documentRoot, windowObject,
             });
-            controller.start(config.initialState);
-            controllers.push(controller);
+            controller?.start(config.initialState);
+            if (controller) controllers.push(controller);
         } catch {
-            documentRoot.querySelector("[data-rematch-error]").textContent = "Chưa thể tải tái đấu. Vui lòng tải lại trang";
+            documentRoot.querySelector("[data-rematch-status]").textContent = "Chưa thể tải tái đấu";
         }
     }
     return controllers;

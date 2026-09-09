@@ -470,6 +470,16 @@ pre {
     background: rgb(17 24 39 / 6%);
 }
 
+.icon-button svg {
+    fill: none;
+    height: 1.2rem;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.8;
+    width: 1.2rem;
+}
+
 .badge {
     align-items: center;
     background: var(--bg-subtle);
@@ -993,8 +1003,179 @@ summary:focus-visible {
     resize: vertical;
 }
 
+.notification-center,
 .account-menu {
     position: relative;
+}
+
+.notification-trigger {
+    color: var(--text-secondary);
+    height: 2.5rem;
+    position: relative;
+    width: 2.5rem;
+}
+
+.notification-trigger[aria-expanded="true"],
+.notification-trigger:hover {
+    background: var(--bg-hover);
+    color: var(--primary);
+}
+
+.notification-badge {
+    align-items: center;
+    background: var(--danger);
+    border: 2px solid var(--bg-surface);
+    border-radius: 999px;
+    color: #fff;
+    display: inline-flex;
+    font-size: 0.6rem;
+    font-weight: 750;
+    justify-content: center;
+    line-height: 1;
+    min-height: 1.15rem;
+    min-width: 1.15rem;
+    padding-inline: 0.2rem;
+    position: absolute;
+    right: -0.1rem;
+    top: -0.1rem;
+}
+
+.notification-panel {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-medium);
+    box-shadow: var(--shadow-medium);
+    max-height: min(32rem, 70vh);
+    overflow-y: auto;
+    position: absolute;
+    right: 0;
+    top: calc(100% + 0.5rem);
+    width: min(22.5rem, calc(100vw - 2rem));
+    z-index: 40;
+}
+
+.notification-panel__header {
+    align-items: center;
+    border-bottom: 1px solid var(--border-default);
+    display: flex;
+    justify-content: space-between;
+    min-height: 3.25rem;
+    padding: 0.7rem 0.9rem;
+}
+
+.notification-panel__header h2 {
+    font-size: 1rem;
+    margin: 0;
+}
+
+.notification-panel__header [role="status"] {
+    color: var(--warning);
+    font-size: 0.7rem;
+}
+
+.notification-list {
+    display: grid;
+}
+
+.notification-item {
+    align-items: start;
+    border-bottom: 1px solid var(--border-default);
+    display: grid;
+    gap: 0.7rem;
+    grid-template-columns: auto minmax(0, 1fr);
+    padding: 0.85rem 0.9rem;
+}
+
+.notification-item__avatar {
+    height: 2.25rem;
+    width: 2.25rem;
+}
+
+.notification-item__body {
+    min-width: 0;
+}
+
+.notification-item__title,
+.notification-item__detail,
+.notification-item__time,
+.notification-item__unavailable {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.notification-item__title {
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.notification-item__detail,
+.notification-item__time {
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    margin-top: 0.18rem;
+}
+
+.notification-item__unavailable {
+    color: var(--warning);
+    font-size: 0.72rem;
+    margin-top: 0.35rem;
+}
+
+.notification-item__actions {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.65rem;
+}
+
+.notification-item__actions .button {
+    min-height: 2rem;
+}
+
+.notification-item__context-link {
+    color: var(--text-secondary);
+    font-size: 0.72rem;
+    font-weight: 650;
+    margin-left: auto;
+}
+
+.notification-empty {
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    margin: 0;
+    padding: 1.5rem 1rem;
+    text-align: center;
+}
+
+.notification-toast-stack {
+    display: grid;
+    gap: 0.5rem;
+    position: fixed;
+    right: 1.5rem;
+    top: 1.5rem;
+    width: min(22rem, calc(100vw - 3rem));
+    z-index: 80;
+}
+
+.notification-toast {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-left: 3px solid var(--primary);
+    border-radius: var(--radius-small);
+    box-shadow: var(--shadow-medium);
+    color: var(--text-primary);
+    font-size: 0.82rem;
+    opacity: 1;
+    padding: 0.75rem 0.85rem;
+    transform: translateX(0);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.notification-toast--leaving {
+    opacity: 0;
+    transform: translateX(0.75rem);
 }
 
 .account-menu > summary {
@@ -1377,6 +1558,21 @@ summary:focus-visible {
         position: fixed;
         right: 1rem;
         top: 3.75rem;
+    }
+
+    .notification-panel {
+        left: 0.75rem;
+        max-height: min(32rem, calc(100vh - 5rem));
+        position: fixed;
+        right: 0.75rem;
+        top: 3.75rem;
+        width: auto;
+    }
+
+    .notification-toast-stack {
+        right: 0.75rem;
+        top: 0.75rem;
+        width: calc(100vw - 1.5rem);
     }
 
     .profile-stats-grid {

@@ -21,6 +21,29 @@
       {% if user.is_authenticated %}
         <div class="nav-actions">
           <a class="nav-link" href="{% url 'problem-list' %}">Bài tập</a>
+          {% if not disable_social_notifications %}
+            <div class="notification-center" data-notification-center
+                 data-state-url="{% url 'social:notification-state' %}"
+                 data-visible-poll-seconds="{{ social_notification_visible_poll_seconds }}"
+                 data-hidden-poll-seconds="{{ social_notification_hidden_poll_seconds }}">
+              <button class="icon-button notification-trigger" type="button"
+                      data-notification-trigger aria-expanded="false"
+                      aria-controls="notification-panel" aria-label="Thông báo">
+                <svg aria-hidden="true"><use href="{% static 'matches/ui/icons.svg' %}#icon-bell"></use></svg>
+                <span class="notification-badge" data-notification-badge hidden>0</span>
+              </button>
+              <section id="notification-panel" class="notification-panel" data-notification-panel
+                       aria-labelledby="notification-heading" hidden>
+                <header class="notification-panel__header">
+                  <h2 id="notification-heading">Lời mời</h2>
+                  <span data-notification-status role="status" hidden></span>
+                </header>
+                <div class="notification-list" data-notification-list></div>
+                <p class="notification-empty" data-notification-empty>Không có lời mời đang chờ</p>
+              </section>
+              <form hidden>{% csrf_token %}</form>
+            </div>
+          {% endif %}
           <details class="account-menu">
             <summary class="user-chip" aria-label="Mở menu tài khoản của {{ user.username }}">
               <span class="avatar" aria-hidden="true">{{ user.username|first|upper }}</span>
@@ -65,6 +88,11 @@
   <footer class="site-footer">
     <span>© 2026 CodeHehe</span>
   </footer>
+
+  {% if user.is_authenticated and not disable_social_notifications %}
+    <section class="notification-toast-stack" data-notification-toasts
+             aria-label="Thông báo mới" aria-live="polite"></section>
+  {% endif %}
 
   {% if user.is_authenticated and not disable_active_match_redirect %}
     <script>

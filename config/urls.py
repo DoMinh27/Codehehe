@@ -28,5 +28,6 @@ urlpatterns = [
     path("accounts/", include("accounts.urls")),
     path("matches/", include("matches.urls")),
     path("problems/", include("problems.urls")),
+    path("", include("social.urls")),
     path("", lobby, name="lobby"),
 ]

@@ -1,7 +1,14 @@
+import {createBattleApi} from "../battle/api.js";
+import {createNotificationController} from "./notification-controller.js";
+
+
 export function createSiteController({
     documentRoot = document,
     clipboard = navigator.clipboard,
+    windowObject = window,
+    api = null,
 } = {}) {
+    let notificationController = null;
     function bindDismissibleAlerts() {
         for (const button of documentRoot.querySelectorAll("[data-dismiss-alert]")) {
             button.addEventListener("click", () => button.closest(".alert")?.remove());
@@ -92,6 +99,24 @@ export function createSiteController({
             bindDismissibleAlerts();
             bindCopyButtons();
             bindAuthForms();
+            const notificationRoot = documentRoot.querySelector("[data-notification-center]");
+            if (notificationRoot) {
+                notificationController = createNotificationController({
+                    api: api || createBattleApi({fetchImpl: windowObject.fetch.bind(windowObject)}),
+                    stateUrl: notificationRoot.dataset.stateUrl,
+                    csrfToken: notificationRoot.querySelector(
+                        'input[name="csrfmiddlewaretoken"]',
+                    )?.value,
+                    documentRoot,
+                    windowObject,
+                    visibleDelay: Number(notificationRoot.dataset.visiblePollSeconds) * 1000 || 5000,
+                    hiddenDelay: Number(notificationRoot.dataset.hiddenPollSeconds) * 1000 || 30000,
+                });
+                notificationController?.start();
+            }
+        },
+        stop() {
+            notificationController?.stop();
         },
     };
 }

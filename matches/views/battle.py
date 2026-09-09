@@ -121,6 +121,7 @@ def battle(request, match_id):
             "match_problems": match_problems,
             "current_player": current_player,
             "opponent": opponent,
+            "disable_social_notifications": True,
             "battle_config": {
                 "matchId": match.pk,
                 "userId": request.user.pk,
@@ -350,10 +351,8 @@ def match_result(request, match_id):
             "timeline_page": get_timeline_page(
                 match=match, page=request.GET.get("timeline_page", 1),
             ),
-            "disable_active_match_redirect": True,
             "rematch_config": (
                 {
-                    "stateUrl": reverse("rematch-state", kwargs={"match_id": match.pk}),
                     "actionUrl": reverse("rematch-action", kwargs={"match_id": match.pk}),
                     "initialState": get_rematch_state(user=request.user, match_id=match.pk),
                 }

@@ -65,6 +65,7 @@ INSTALLED_APPS = [
     'accounts',
     'matches',
     'operations',
+    'social.apps.SocialConfig',
 ]
 
 MIDDLEWARE = [
@@ -89,6 +90,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'social.context_processors.notification_settings',
             ],
         },
     },
@@ -239,11 +241,25 @@ for setting_name in (
 ):
     if globals()[setting_name] <= 0:
         raise ImproperlyConfigured(f"{setting_name} must be greater than zero.")
+
 if PENDING_REGISTRATION_RETENTION_SECONDS < EMAIL_VERIFICATION_TIMEOUT_SECONDS:
     raise ImproperlyConfigured(
         "PENDING_REGISTRATION_RETENTION_SECONDS must be greater than or equal "
         "to EMAIL_VERIFICATION_TIMEOUT_SECONDS."
     )
+
+SOCIAL_NOTIFICATION_VISIBLE_POLL_SECONDS = int(
+    os.getenv("SOCIAL_NOTIFICATION_VISIBLE_POLL_SECONDS", "5")
+)
+SOCIAL_NOTIFICATION_HIDDEN_POLL_SECONDS = int(
+    os.getenv("SOCIAL_NOTIFICATION_HIDDEN_POLL_SECONDS", "30")
+)
+for setting_name in (
+    "SOCIAL_NOTIFICATION_VISIBLE_POLL_SECONDS",
+    "SOCIAL_NOTIFICATION_HIDDEN_POLL_SECONDS",
+):
+    if globals()[setting_name] <= 0:
+        raise ImproperlyConfigured(f"{setting_name} must be greater than zero.")
 
 MATCH_PENDING_SUBMISSION_TIMEOUT_SECONDS = int(
     os.getenv("MATCH_PENDING_SUBMISSION_TIMEOUT_SECONDS", "120")

@@ -34,30 +34,21 @@
   </p>
   <div class="result-summary__footer">
     <time datetime="{{ match.ended_at|date:'c' }}">Kết thúc lúc {{ match.ended_at|date:"H:i" }} · {{ match.ended_at|date:"d/m/Y" }}</time>
-    <a class="button button-secondary button-small" href="{% url 'lobby' %}">Về Lobby</a>
+    <div class="result-summary__actions">
+      {% if rematch_config %}
+        <div id="rematch-controls" class="result-rematch-request">
+          <button type="button" class="button button-primary button-small" data-rematch-request>Mời tái đấu</button>
+          <span data-rematch-status role="status"></span>
+          <form id="rematch-csrf" hidden>{% csrf_token %}</form>
+        </div>
+      {% endif %}
+      <a class="button button-secondary button-small" href="{% url 'lobby' %}">Về Lobby</a>
+    </div>
   </div>
 </header>
 
 {% if rematch_config %}
-  <section id="rematch-controls" class="panel result-rematch" aria-labelledby="rematch-heading">
-    <div>
-      <h2 id="rematch-heading">Tái đấu</h2>
-      <p data-rematch-notice role="status">Đang tải trạng thái tái đấu…</p>
-      <p class="muted">Mỗi trận có một lời mời, hiệu lực 2 phút</p>
-      <p data-rematch-error role="status" class="result-rematch__error"></p>
-    </div>
-    <div class="result-rematch__actions">
-      <button type="button" class="button button-primary button-small" data-rematch-action="request" hidden>Tái đấu</button>
-      <button type="button" class="button button-primary button-small" data-rematch-action="accept" hidden>Đồng ý</button>
-      <button type="button" class="button button-secondary button-small" data-rematch-action="decline" hidden>Từ chối</button>
-      <button type="button" class="button button-secondary button-small" data-rematch-action="cancel" hidden>Hủy lời mời</button>
-      <a class="button button-primary button-small" data-rematch-open hidden>Vào trận tái đấu</a>
-      <button type="button" class="button button-secondary button-small" data-rematch-refresh>Cập nhật</button>
-    </div>
-    <form id="rematch-csrf" hidden>{% csrf_token %}</form>
-    <noscript>Cần bật JavaScript để gửi và nhận lời mời tái đấu</noscript>
-  </section>
-  {{ rematch_config|json_script:"rematch-config" }}
+   {{ rematch_config|json_script:"rematch-config" }}
 {% endif %}
 
 <section class="result-section" aria-labelledby="score-heading">

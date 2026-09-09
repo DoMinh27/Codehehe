@@ -118,4 +118,37 @@ describe("site controller", () => {
                 .toContain("Không thể sao chép");
         });
     });
+
+    it("starts and stops the shared notification shell when it is present", async () => {
+        document.body.innerHTML = [
+            '<div data-notification-center data-state-url="/notifications/state/">',
+            '<button data-notification-trigger aria-expanded="false"></button>',
+            '<span data-notification-badge hidden></span>',
+            '<section data-notification-panel hidden>',
+            '<span data-notification-status hidden></span>',
+            '<div data-notification-list></div>',
+            '<p data-notification-empty></p>',
+            '</section><input name="csrfmiddlewaretoken" value="csrf"></div>',
+            '<section data-notification-toasts></section>',
+        ].join("");
+        const api = {
+            getJson: vi.fn().mockResolvedValue({
+                version: 1,
+                server_time: "2026-09-09T10:00:00Z",
+                incoming_count: 0,
+                items: [],
+            }),
+            postJson: vi.fn(),
+        };
+        const controller = createSiteController({
+            documentRoot: document,
+            clipboard: {},
+            windowObject: window,
+            api,
+        });
+
+        controller.start();
+        await vi.waitFor(() => expect(api.getJson).toHaveBeenCalledOnce());
+        controller.stop();
+    });
 });

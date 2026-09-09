@@ -280,12 +280,16 @@ class RematchApiTests(RematchFixtureMixin, TestCase):
         self.client.force_login(self.host)
         response = self.client.get(url)
         self.assertContains(response, 'id="rematch-controls"')
+        self.assertContains(response, "Mời tái đấu")
+        self.assertNotContains(response, "Mỗi trận có một lời mời")
+        self.assertContains(response, "data-notification-center")
         self.assertContains(response, "result-main.bundle.js")
         self.assertNotContains(response, 'id="ai-review-config"')
-        self.assertNotContains(response, "const activeStateUrl")
+        self.assertContains(response, "const activeStateUrl")
         self.assertEqual(
             response.context["rematch_config"]["initialState"]["status"], "NONE"
         )
+        self.assertNotIn("stateUrl", response.context["rematch_config"])
         self.client.force_login(self.staff)
         self.assertNotContains(self.client.get(url), 'id="rematch-controls"')
 

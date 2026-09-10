@@ -9,11 +9,13 @@ from django.urls import reverse
 from django.utils import timezone
 
 from matches.models import Match, MatchPlayer, RematchRequest
+from social.models import FriendRequest
 
 
 NOTIFICATION_VERSION = 1
 NOTIFICATION_ITEM_LIMIT = 20
 INCOMING_TIME_BOUND_PRIORITY = 0
+INCOMING_RELATIONSHIP_PRIORITY = 1
 OUTGOING_PRIORITY = 2
 
 
@@ -28,6 +30,7 @@ class NotificationProjection:
 class NotificationBatch:
     incoming_count: int
     projections: tuple[NotificationProjection, ...]
+    more_url: str | None = None
 
 
 class NotificationProvider(Protocol):
@@ -172,8 +175,94 @@ class RematchNotificationProvider:
         )
 
 
+class FriendRequestNotificationProvider:
+    """Project pending friend requests while the social domain owns actions."""
+
+    def collect(self, *, user, now, limit):
+        base = (
+            FriendRequest.objects.filter(
+                Q(user_low=user) | Q(user_high=user),
+                status=FriendRequest.Status.PENDING,
+                expires_at__gt=now,
+            )
+            .select_related("user_low", "user_high", "requester")
+            .only(
+                "id",
+                "user_low_id",
+                "user_low__username",
+                "user_high_id",
+                "user_high__username",
+                "requester_id",
+                "requester__username",
+                "created_at",
+                "expires_at",
+            )
+        )
+        incoming_count = base.exclude(requester=user).count()
+        total_count = base.count()
+        invitations = list(
+            base.exclude(requester=user).order_by("created_at", "id")[:limit]
+        )
+        remaining = limit - len(invitations)
+        if remaining:
+            invitations.extend(
+                base.filter(requester=user).order_by("created_at", "id")[:remaining]
+            )
+
+        projections = []
+        for invitation in invitations:
+            incoming = invitation.requester_id != user.pk
+            actor = invitation.requester if incoming else invitation.recipient
+            action_url = reverse(
+                "social:friend-request-action",
+                kwargs={"request_id": invitation.pk},
+            )
+            actions = (
+                [
+                    {"code": "ACCEPT", "url": action_url},
+                    {"code": "DECLINE", "url": action_url},
+                ]
+                if incoming
+                else [{"code": "CANCEL", "url": action_url}]
+            )
+            payload = {
+                "key": f"FRIEND_REQUEST:{invitation.pk}",
+                "kind": "FRIEND_REQUEST",
+                "direction": "INCOMING" if incoming else "OUTGOING",
+                "actor": {
+                    "username": actor.username,
+                    "initial": (actor.username[:1] or "?").upper(),
+                },
+                "created_at": invitation.created_at.isoformat(),
+                "expires_at": invitation.expires_at.isoformat(),
+                "context": {},
+                "context_url": f"{reverse('social:friends')}?tab=requests",
+                "actions": actions,
+                "unavailable_reason": "",
+            }
+            projections.append(
+                NotificationProjection(
+                    priority=(
+                        INCOMING_RELATIONSHIP_PRIORITY if incoming else OUTGOING_PRIORITY
+                    ),
+                    sort_at=invitation.created_at,
+                    payload=payload,
+                )
+            )
+        return NotificationBatch(
+            incoming_count=incoming_count,
+            projections=tuple(projections),
+            more_url=(
+                f"{reverse('social:friends')}?tab=requests"
+                if total_count > len(invitations)
+                else None
+            ),
+        )
+
+
 NOTIFICATION_PROVIDERS: tuple[NotificationProvider, ...] = (
     RematchNotificationProvider(),
+    FriendRequestNotificationProvider(),
 )
 
 
@@ -196,12 +285,18 @@ def get_notification_state(*, user, now=None):
             projection.payload["key"],
         )
     )
+    visible_projections = projections[:NOTIFICATION_ITEM_LIMIT]
+    omitted_friend_request = any(
+        projection.payload["kind"] == "FRIEND_REQUEST"
+        for projection in projections[NOTIFICATION_ITEM_LIMIT:]
+    )
+    more_url = next((batch.more_url for batch in batches if batch.more_url), None)
+    if omitted_friend_request:
+        more_url = f"{reverse('social:friends')}?tab=requests"
     return {
         "version": NOTIFICATION_VERSION,
         "server_time": now.isoformat(),
         "incoming_count": sum(batch.incoming_count for batch in batches),
-        "items": [
-            projection.payload
-            for projection in projections[:NOTIFICATION_ITEM_LIMIT]
-        ],
+        "items": [projection.payload for projection in visible_projections],
+        "more_url": more_url,
     }

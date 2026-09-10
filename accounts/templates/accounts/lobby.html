@@ -47,4 +47,32 @@
     </form>
   </section>
 </div>
+
+<section class="panel lobby-friends" aria-labelledby="ready-friends-title"
+         data-friend-presence-list data-mode="ready"
+         data-state-url="{% url 'social:friends-state' %}">
+  <div class="section-heading">
+    <div>
+      <h2 id="ready-friends-title">Bạn bè sẵn sàng</h2>
+      <p>Những người đang hoạt động và chưa vào phòng</p>
+    </div>
+    <a class="button button-secondary button-small" href="{% url 'social:friends' %}">Xem tất cả</a>
+  </div>
+  {% if ready_friends %}
+    <ul class="social-list social-list--compact" data-friend-list>
+      {% for row in ready_friends %}
+        <li class="social-row" data-friend-id="{{ row.user.id }}">
+          <span class="avatar" aria-hidden="true">{{ row.user.username|first|upper }}</span>
+          <div class="social-row__main">
+            <strong>{{ row.user.username }}</strong>
+            <span class="presence-label presence-label--ready" data-presence-label><span aria-hidden="true"></span>{{ row.status_label }}</span>
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <ul class="social-list social-list--compact" data-friend-list hidden></ul>
+  {% endif %}
+  <p class="social-empty" data-friend-empty{% if ready_friends %} hidden{% endif %}>Chưa có bạn bè nào sẵn sàng</p>
+</section>
 {% endblock %}

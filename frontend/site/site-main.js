@@ -1,5 +1,7 @@
 import {createBattleApi} from "../battle/api.js";
+import {createFriendStateController} from "./friend-state-controller.js";
 import {createNotificationController} from "./notification-controller.js";
+import {createPresenceController} from "./presence-controller.js";
 
 
 export function createSiteController({
@@ -9,6 +11,8 @@ export function createSiteController({
     api = null,
 } = {}) {
     let notificationController = null;
+    let presenceController = null;
+    let friendStateController = null;
     function bindDismissibleAlerts() {
         for (const button of documentRoot.querySelectorAll("[data-dismiss-alert]")) {
             button.addEventListener("click", () => button.closest(".alert")?.remove());
@@ -114,9 +118,39 @@ export function createSiteController({
                 });
                 notificationController?.start();
             }
+            const presenceRoot = documentRoot.querySelector("[data-presence-heartbeat]");
+            if (presenceRoot) {
+                const sharedApi = api || createBattleApi({
+                    fetchImpl: windowObject.fetch.bind(windowObject),
+                });
+                presenceController = createPresenceController({
+                    api: sharedApi,
+                    url: presenceRoot.dataset.presenceHeartbeat,
+                    csrfToken: presenceRoot.querySelector(
+                        'input[name="csrfmiddlewaretoken"]',
+                    )?.value,
+                    documentRoot,
+                    windowObject,
+                    intervalMs: Number(presenceRoot.dataset.presenceIntervalSeconds) * 1000 || 30000,
+                });
+                presenceController.start();
+            }
+            if (documentRoot.querySelector("[data-friend-presence-list]")) {
+                const sharedApi = api || createBattleApi({
+                    fetchImpl: windowObject.fetch.bind(windowObject),
+                });
+                friendStateController = createFriendStateController({
+                    api: sharedApi,
+                    documentRoot,
+                    windowObject,
+                });
+                friendStateController?.start();
+            }
         },
         stop() {
             notificationController?.stop();
+            presenceController?.stop();
+            friendStateController?.stop();
         },
     };
 }

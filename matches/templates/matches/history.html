@@ -51,6 +51,14 @@
         </dl>
 
         <div class="history-item__actions">
+          {% if row.opponent %}
+            <form method="post" action="{% url 'social:friend-request-send' %}">
+              {% csrf_token %}
+              <input type="hidden" name="username" value="{{ row.opponent.user.username }}">
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <button class="button button-secondary button-small" type="submit">Kết bạn</button>
+            </form>
+          {% endif %}
           <a class="button button-secondary button-small" href="{{ row.result_url }}">Kết quả</a>
           <a class="button button-primary button-small" href="{{ row.submissions_url }}">Bài nộp của tôi</a>
         </div>

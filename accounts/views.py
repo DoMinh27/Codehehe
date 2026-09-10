@@ -8,6 +8,7 @@ from django.views.decorators.http import require_http_methods
 
 from matches.models import Match
 from matches.services.room import get_active_match_player
+from social.services.friends import project_friend_presence
 
 from .email_services import (
     confirm_verification_token,
@@ -123,7 +124,16 @@ def lobby(request):
         if active_player.match.status == Match.Status.WAITING:
             return redirect("waiting-room", room_code=active_player.match.room_code)
         return redirect("battle", match_id=active_player.match_id)
-    return render(request, "accounts/lobby.html")
+    ready_friends = [
+        row
+        for row in project_friend_presence(user=request.user)
+        if row.status == "READY"
+    ][:5]
+    return render(
+        request,
+        "accounts/lobby.html",
+        {"ready_friends": ready_friends},
+    )
 
 
 @login_required

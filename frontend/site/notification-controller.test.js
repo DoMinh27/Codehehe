@@ -32,6 +32,20 @@ const state = {
     incoming_count: 1,
     items: [incoming, outgoing],
 };
+const friendRequest = {
+    key: "FRIEND_REQUEST:1",
+    kind: "FRIEND_REQUEST",
+    direction: "INCOMING",
+    actor: {username: "new-friend", initial: "N"},
+    created_at: "2026-09-09T10:00:00Z",
+    expires_at: "2026-10-09T10:00:00Z",
+    context: {},
+    context_url: "/friends/?tab=requests",
+    actions: [
+        {code: "ACCEPT", url: "/friends/requests/1/action/"},
+        {code: "DECLINE", url: "/friends/requests/1/action/"},
+    ],
+};
 let controllers;
 let hiddenSpy;
 
@@ -79,6 +93,16 @@ function setup(api = {getJson: vi.fn().mockResolvedValue(state), postJson: vi.fn
 
 
 describe("notification controller", () => {
+    it("renders a friend request without requiring match context", async () => {
+        const friendState = {...state, items: [friendRequest]};
+        setup({getJson: vi.fn().mockResolvedValue(friendState), postJson: vi.fn()});
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(document.body.textContent).toContain("new-friend muốn kết bạn");
+        expect(document.body.textContent).toContain("Xem bạn bè");
+        expect(document.body.textContent).not.toContain("Trận undefined");
+    });
+
     it("renders incoming and outgoing while badge counts only incoming", async () => {
         setup();
         await vi.advanceTimersByTimeAsync(0);

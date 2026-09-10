@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}Bạn bè | CodeHehe{% endblock %}
+
+{% block content %}
+<header class="page-heading friends-heading">
+  <div>
+    <h1>Bạn bè</h1>
+    <p>Kết nối bằng đúng tên đăng nhập và theo dõi trạng thái hoạt động</p>
+  </div>
+</header>
+
+<section class="panel friend-search-panel" aria-labelledby="friend-search-title">
+  <div>
+    <h2 id="friend-search-title">Thêm bạn bè</h2>
+    <p>Nhập chính xác tên đăng nhập, không sử dụng email</p>
+  </div>
+  <form method="post" action="{% url 'social:friend-request-send' %}" class="friend-search-form">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+    <label class="sr-only" for="friend-username">Tên đăng nhập</label>
+    <input id="friend-username" name="username" type="text" maxlength="150" autocomplete="off" placeholder="Tên đăng nhập" required>
+    <button class="button button-primary" type="submit">Gửi lời mời</button>
+  </form>
+</section>
+
+<nav class="social-tabs" aria-label="Danh mục bạn bè">
+  <a href="?tab=friends"{% if tab == "friends" %} aria-current="page"{% endif %}>Bạn bè</a>
+  <a href="?tab=requests"{% if tab == "requests" %} aria-current="page"{% endif %}>Lời mời</a>
+  <a href="?tab=blocked"{% if tab == "blocked" %} aria-current="page"{% endif %}>Đã chặn</a>
+</nav>
+
+{% if tab == "friends" %}
+  <section class="panel social-panel" aria-labelledby="friends-list-title"
+           data-friend-presence-list data-mode="existing"
+           data-state-url="{% url 'social:friends-state' %}">
+    <div class="section-heading social-panel__heading">
+      <div><h2 id="friends-list-title">Danh sách bạn bè</h2></div>
+      <form method="post" action="{% url 'social:presence-privacy' %}" class="presence-privacy-form">
+        {% csrf_token %}
+        <label>
+          <input type="checkbox" name="show_presence"{% if show_presence %} checked{% endif %}>
+          Hiện trạng thái với bạn bè
+        </label>
+        <button class="button button-secondary button-small" type="submit">Lưu</button>
+      </form>
+    </div>
+    {% if page_obj %}
+      <ul class="social-list">
+        {% for row in page_obj %}
+          <li class="social-row" data-friend-id="{{ row.user.id }}">
+            <span class="avatar" aria-hidden="true">{{ row.user.username|first|upper }}</span>
+            <div class="social-row__main">
+              <strong>{{ row.user.username }}</strong>
+              <span class="presence-label presence-label--{{ row.status|lower }}" data-presence-label><span aria-hidden="true"></span>{{ row.status_label }}</span>
+            </div>
+            <details class="social-row__actions">
+              <summary class="button button-secondary button-small">Tùy chọn</summary>
+              <div>
+                <form method="post" action="{% url 'social:friend-remove' row.user.id %}" onsubmit="return confirm('Hủy kết bạn với {{ row.user.username|escapejs }}?')">
+                  {% csrf_token %}<button type="submit">Hủy kết bạn</button>
+                </form>
+                <form method="post" action="{% url 'social:user-block' row.user.id %}" onsubmit="return confirm('Chặn {{ row.user.username|escapejs }}?')">
+                  {% csrf_token %}<button type="submit">Chặn</button>
+                </form>
+              </div>
+            </details>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="social-empty">Bạn chưa có bạn bè</p>
+    {% endif %}
+  </section>
+{% elif tab == "requests" %}
+  <section class="social-request-layout">
+    <div class="panel social-panel">
+      <div class="section-heading social-panel__heading"><div><h2>Đã nhận</h2></div></div>
+      {% if incoming_requests %}
+        <ul class="social-list">
+          {% for invitation in incoming_requests %}
+            <li class="social-row">
+              <span class="avatar" aria-hidden="true">{{ invitation.requester.username|first|upper }}</span>
+              <div class="social-row__main"><strong>{{ invitation.requester.username }}</strong><span class="muted">Muốn kết bạn</span></div>
+              <div class="social-inline-actions">
+                <form method="post" action="{% url 'social:friend-request-action' invitation.id %}">{% csrf_token %}<input type="hidden" name="action" value="accept"><button class="button button-primary button-small" type="submit">Đồng ý</button></form>
+                <form method="post" action="{% url 'social:friend-request-action' invitation.id %}">{% csrf_token %}<input type="hidden" name="action" value="decline"><button class="button button-secondary button-small" type="submit">Từ chối</button></form>
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}<p class="social-empty">Không có lời mời đã nhận</p>{% endif %}
+      {% if incoming_requests.paginator.num_pages > 1 %}
+        <nav class="pagination pagination--compact" aria-label="Phân trang lời mời đã nhận">
+          {% if incoming_requests.has_previous %}<a href="?tab=requests&incoming_page={{ incoming_requests.previous_page_number }}&outgoing_page={{ outgoing_requests.number }}">Trang trước</a>{% endif %}
+          <span>{{ incoming_requests.number }}/{{ incoming_requests.paginator.num_pages }}</span>
+          {% if incoming_requests.has_next %}<a href="?tab=requests&incoming_page={{ incoming_requests.next_page_number }}&outgoing_page={{ outgoing_requests.number }}">Trang sau</a>{% endif %}
+        </nav>
+      {% endif %}
+    </div>
+    <div class="panel social-panel">
+      <div class="section-heading social-panel__heading"><div><h2>Đã gửi</h2></div></div>
+      {% if outgoing_requests %}
+        <ul class="social-list">
+          {% for invitation in outgoing_requests %}
+            <li class="social-row">
+              <span class="avatar" aria-hidden="true">{{ invitation.recipient.username|first|upper }}</span>
+              <div class="social-row__main"><strong>{{ invitation.recipient.username }}</strong><span class="muted">Đang chờ phản hồi</span></div>
+              <form method="post" action="{% url 'social:friend-request-action' invitation.id %}">{% csrf_token %}<input type="hidden" name="action" value="cancel"><button class="button button-secondary button-small" type="submit">Hủy lời mời</button></form>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}<p class="social-empty">Không có lời mời đã gửi</p>{% endif %}
+      {% if outgoing_requests.paginator.num_pages > 1 %}
+        <nav class="pagination pagination--compact" aria-label="Phân trang lời mời đã gửi">
+          {% if outgoing_requests.has_previous %}<a href="?tab=requests&incoming_page={{ incoming_requests.number }}&outgoing_page={{ outgoing_requests.previous_page_number }}">Trang trước</a>{% endif %}
+          <span>{{ outgoing_requests.number }}/{{ outgoing_requests.paginator.num_pages }}</span>
+          {% if outgoing_requests.has_next %}<a href="?tab=requests&incoming_page={{ incoming_requests.number }}&outgoing_page={{ outgoing_requests.next_page_number }}">Trang sau</a>{% endif %}
+        </nav>
+      {% endif %}
+    </div>
+  </section>
+{% else %}
+  <section class="panel social-panel" aria-labelledby="blocked-list-title">
+    <div class="section-heading social-panel__heading"><div><h2 id="blocked-list-title">Tài khoản đã chặn</h2></div></div>
+    {% if page_obj %}
+      <ul class="social-list">
+        {% for block in page_obj %}
+          <li class="social-row">
+            <span class="avatar" aria-hidden="true">{{ block.blocked.username|first|upper }}</span>
+            <div class="social-row__main"><strong>{{ block.blocked.username }}</strong></div>
+            <form method="post" action="{% url 'social:user-unblock' block.blocked.id %}">{% csrf_token %}<button class="button button-secondary button-small" type="submit">Bỏ chặn</button></form>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}<p class="social-empty">Bạn chưa chặn tài khoản nào</p>{% endif %}
+  </section>
+{% endif %}
+
+{% if page_obj and page_obj.paginator.num_pages > 1 %}
+  <nav class="pagination" aria-label="Phân trang bạn bè">
+    {% if page_obj.has_previous %}<a class="button button-secondary button-small" href="?tab={{ tab }}&page={{ page_obj.previous_page_number }}">Trang trước</a>{% endif %}
+    <span>Trang {{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}<a class="button button-secondary button-small" href="?tab={{ tab }}&page={{ page_obj.next_page_number }}">Trang sau</a>{% endif %}
+  </nav>
+{% endif %}
+{% endblock %}

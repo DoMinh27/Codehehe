@@ -42,6 +42,18 @@
           <form id="rematch-csrf" hidden>{% csrf_token %}</form>
         </div>
       {% endif %}
+      {% if request.user.id == result_left.player.user_id or request.user.id == result_right.player.user_id %}
+        <form method="post" action="{% url 'social:friend-request-send' %}">
+          {% csrf_token %}
+          {% if request.user.id == result_left.player.user_id %}
+            <input type="hidden" name="username" value="{{ result_right.player.user.username }}">
+          {% else %}
+            <input type="hidden" name="username" value="{{ result_left.player.user.username }}">
+          {% endif %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <button type="submit" class="button button-secondary button-small">Kết bạn</button>
+        </form>
+      {% endif %}
       <a class="button button-secondary button-small" href="{% url 'lobby' %}">Về Lobby</a>
     </div>
   </div>

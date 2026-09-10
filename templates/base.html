@@ -40,6 +40,7 @@
                 </header>
                 <div class="notification-list" data-notification-list></div>
                 <p class="notification-empty" data-notification-empty>Không có lời mời đang chờ</p>
+                <a class="notification-more" data-notification-more href="{% url 'social:friends' %}?tab=requests" hidden>Xem tất cả lời mời</a>
               </section>
               <form hidden>{% csrf_token %}</form>
             </div>
@@ -52,6 +53,7 @@
             <div class="account-menu__popover">
               <a href="{% url 'player-profile' %}">Hồ sơ</a>
               <a href="{% url 'match-history' %}">Lịch sử</a>
+              <a href="{% url 'social:friends' %}">Bạn bè</a>
               <form method="post" action="{% url 'logout' %}">
                 {% csrf_token %}
                 <button type="submit">
@@ -92,6 +94,10 @@
   {% if user.is_authenticated and not disable_social_notifications %}
     <section class="notification-toast-stack" data-notification-toasts
              aria-label="Thông báo mới" aria-live="polite"></section>
+    <div data-presence-heartbeat="{% url 'social:presence-heartbeat' %}"
+         data-presence-interval-seconds="{{ social_presence_heartbeat_seconds }}" hidden>
+      {% csrf_token %}
+    </div>
   {% endif %}
 
   {% if user.is_authenticated and not disable_active_match_redirect %}

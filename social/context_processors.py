@@ -10,4 +10,5 @@ def notification_settings(request):
         "social_notification_hidden_poll_seconds": (
             settings.SOCIAL_NOTIFICATION_HIDDEN_POLL_SECONDS
         ),
+        "social_presence_heartbeat_seconds": settings.SOCIAL_PRESENCE_HEARTBEAT_SECONDS,
     }

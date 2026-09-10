@@ -1,7 +1,7 @@
 import {createPolling} from "../battle/polling.js";
 
 
-const ITEM_KINDS = new Set(["REMATCH"]);
+const ITEM_KINDS = new Set(["REMATCH", "FRIEND_REQUEST"]);
 const DIRECTIONS = new Set(["INCOMING", "OUTGOING"]);
 const ACTION_LABELS = new Map([
     ["ACCEPT", "Đồng ý"],
@@ -34,10 +34,14 @@ function validateState(payload, windowObject) {
             || !DIRECTIONS.has(item.direction) || typeof item.created_at !== "string"
             || typeof item.expires_at !== "string" || !item.actor
             || typeof item.actor.username !== "string" || typeof item.actor.initial !== "string"
-            || !item.context || typeof item.context.match_code !== "string"
-            || typeof item.context.score !== "string"
+            || !item.context
             || !isSafeRelativeUrl(item.context_url, windowObject)
             || !Array.isArray(item.actions)) {
+            throw new Error("Máy chủ trả về thông báo không hợp lệ");
+        }
+        if (item.kind === "REMATCH"
+            && (typeof item.context.match_code !== "string"
+                || typeof item.context.score !== "string")) {
             throw new Error("Máy chủ trả về thông báo không hợp lệ");
         }
         for (const action of item.actions) {
@@ -46,6 +50,10 @@ function validateState(payload, windowObject) {
                 throw new Error("Máy chủ trả về hành động không hợp lệ");
             }
         }
+    }
+    if (payload.more_url !== null && payload.more_url !== undefined
+        && !isSafeRelativeUrl(payload.more_url, windowObject)) {
+        throw new Error("Máy chủ trả về liên kết không hợp lệ");
     }
     return payload;
 }
@@ -88,6 +96,7 @@ export function createNotificationController({
     const badge = root.querySelector("[data-notification-badge]");
     const list = root.querySelector("[data-notification-list]");
     const empty = root.querySelector("[data-notification-empty]");
+    const more = root.querySelector("[data-notification-more]");
     const status = root.querySelector("[data-notification-status]");
     const toastStack = documentRoot.querySelector("[data-notification-toasts]");
     const seen = readSeen(windowObject.sessionStorage);
@@ -121,6 +130,9 @@ export function createNotificationController({
             0,
             Math.ceil((Date.parse(item.expires_at) - Date.parse(serverTime)) / 1000),
         );
+        if (seconds >= 86400) return `Còn ${Math.ceil(seconds / 86400)} ngày`;
+        if (seconds >= 3600) return `Còn ${Math.ceil(seconds / 3600)} giờ`;
+        if (seconds >= 60) return `Còn ${Math.ceil(seconds / 60)} phút`;
         return `Còn ${seconds} giây`;
     }
 
@@ -135,10 +147,13 @@ export function createNotificationController({
         if (!toastStack || item.direction !== "INCOMING" || seen.has(item.key)) return;
         seen.add(item.key);
         writeSeen(windowObject.sessionStorage, seen);
+        const toastText = item.kind === "FRIEND_REQUEST"
+            ? `${item.actor.username} vừa gửi lời mời kết bạn`
+            : `${item.actor.username} vừa gửi lời mời tái đấu`;
         const toast = makeElement(
             "div",
             "notification-toast",
-            `${item.actor.username} vừa gửi lời mời tái đấu`,
+            toastText,
         );
         toastStack.prepend(toast);
         windowObject.setTimeout(() => toast.classList.add("notification-toast--leaving"), 4500);
@@ -151,20 +166,28 @@ export function createNotificationController({
         const avatar = makeElement("span", "avatar notification-item__avatar", item.actor.initial);
         avatar.setAttribute("aria-hidden", "true");
         const body = makeElement("div", "notification-item__body");
+        const titleText = item.kind === "FRIEND_REQUEST"
+            ? (item.direction === "INCOMING"
+                ? `${item.actor.username} muốn kết bạn`
+                : `Đang chờ ${item.actor.username} đồng ý kết bạn`)
+            : (item.direction === "INCOMING"
+                ? `${item.actor.username} mời bạn tái đấu`
+                : `Đang chờ ${item.actor.username} phản hồi`);
         const title = makeElement(
             "p",
             "notification-item__title",
-            item.direction === "INCOMING"
-                ? `${item.actor.username} mời bạn tái đấu`
-                : `Đang chờ ${item.actor.username} phản hồi`,
-        );
-        const detail = makeElement(
-            "p",
-            "notification-item__detail",
-            `Trận ${item.context.match_code} · ${item.context.score}`,
+            titleText,
         );
         const expiry = makeElement("p", "notification-item__time", countdown(item, serverTime));
-        body.append(title, detail, expiry);
+        body.append(title);
+        if (item.kind === "REMATCH") {
+            body.append(makeElement(
+                "p",
+                "notification-item__detail",
+                `Trận ${item.context.match_code} · ${item.context.score}`,
+            ));
+        }
+        body.append(expiry);
         if (item.unavailable_reason) {
             body.append(makeElement("p", "notification-item__unavailable", item.unavailable_reason));
         }
@@ -178,7 +201,11 @@ export function createNotificationController({
             button.addEventListener("click", () => void runAction(button));
             actions.append(button);
         }
-        const contextLink = makeElement("a", "notification-item__context-link", "Xem kết quả");
+        const contextLink = makeElement(
+            "a",
+            "notification-item__context-link",
+            item.kind === "FRIEND_REQUEST" ? "Xem bạn bè" : "Xem kết quả",
+        );
         contextLink.href = item.context_url;
         actions.append(contextLink);
         body.append(actions);
@@ -209,6 +236,11 @@ export function createNotificationController({
         }
         list.replaceChildren(fragment);
         empty.hidden = payload.items.length !== 0;
+        if (more) {
+            const moreUrl = safeNavigationUrl(payload.more_url);
+            more.hidden = !moreUrl;
+            if (moreUrl) more.href = moreUrl;
+        }
         status.textContent = "";
         status.hidden = true;
         if (focusedKey && !panel.hidden) {

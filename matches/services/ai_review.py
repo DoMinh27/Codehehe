@@ -375,6 +375,8 @@ class GeminiAIReviewProvider:
 
 
 class OpenRouterAIReviewProvider:
+    DYNAMIC_ROUTER_MODELS = frozenset({"openrouter/auto", "openrouter/free"})
+
     def __init__(
         self,
         *,
@@ -426,12 +428,13 @@ class OpenRouterAIReviewProvider:
                 }
             ],
             "max_tokens": self.max_output_tokens,
-            "reasoning": {"effort": self.reasoning_effort},
             "response_format": {"type": "json_object"},
             "provider": {
                 "allow_fallbacks": True,
             },
         }
+        if self.reasoning_effort != "none":
+            payload["reasoning"] = {"effort": self.reasoning_effort}
         try:
             response = self.client.post(
                 "https://openrouter.ai/api/v1/chat/completions",
@@ -446,9 +449,17 @@ class OpenRouterAIReviewProvider:
             response.raise_for_status()
         except httpx.HTTPStatusError as error:
             status_code = error.response.status_code
+            retryable = (
+                status_code in {408, 409, 425, 429}
+                or status_code >= 500
+                or (
+                    self.model in self.DYNAMIC_ROUTER_MODELS
+                    and status_code in {400, 404}
+                )
+            )
             raise AIReviewProviderError(
                 "RATE_LIMITED" if status_code == 429 else f"PROVIDER_HTTP_{status_code}",
-                retryable=status_code == 429 or status_code >= 500,
+                retryable=retryable,
                 retry_after_seconds=GeminiAIReviewProvider._retry_after(
                     error.response
                 ),

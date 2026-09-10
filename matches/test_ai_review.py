@@ -813,7 +813,7 @@ class OpenRouterAIReviewProviderTests(TestCase):
         self.assertEqual(kwargs["headers"]["HTTP-Referer"], "https://codehehe.example")
         self.assertEqual(kwargs["headers"]["X-Title"], "CodeHehe")
         self.assertEqual(kwargs["json"]["model"], "openrouter/free")
-        self.assertEqual(kwargs["json"]["reasoning"], {"effort": "none"})
+        self.assertNotIn("reasoning", kwargs["json"])
         self.assertEqual(kwargs["json"]["response_format"], {"type": "json_object"})
         prompt = kwargs["json"]["messages"][0]["content"]
         self.assertIn("<player_code>", prompt)
@@ -835,6 +835,39 @@ class OpenRouterAIReviewProviderTests(TestCase):
         self.assertEqual(raised.exception.code, "RATE_LIMITED")
         self.assertEqual(raised.exception.retry_after_seconds, 17)
         self.assertTrue(raised.exception.retryable)
+
+    def test_free_router_bad_request_is_retryable(self):
+        request = httpx.Request("POST", "https://openrouter.ai")
+        response = httpx.Response(400, request=request)
+        client = Mock()
+        client.post.return_value = response
+
+        with self.assertRaises(AIReviewProviderError) as raised:
+            self.provider(client).review(self.review_input())
+
+        self.assertEqual(raised.exception.code, "PROVIDER_HTTP_400")
+        self.assertTrue(raised.exception.retryable)
+
+    def test_fixed_model_bad_request_is_not_retryable(self):
+        request = httpx.Request("POST", "https://openrouter.ai")
+        response = httpx.Response(400, request=request)
+        client = Mock()
+        client.post.return_value = response
+        provider = OpenRouterAIReviewProvider(
+            api_key="openrouter-key",
+            model="nvidia/nemotron-nano-9b-v2:free",
+            reasoning_effort="none",
+            max_output_tokens=800,
+            http_referer="https://codehehe.example",
+            app_title="CodeHehe",
+            client=client,
+        )
+
+        with self.assertRaises(AIReviewProviderError) as raised:
+            provider.review(self.review_input())
+
+        self.assertEqual(raised.exception.code, "PROVIDER_HTTP_400")
+        self.assertFalse(raised.exception.retryable)
 
 
 @override_settings(AI_REVIEW_PROMPT_VERSION="v1")

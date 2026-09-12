@@ -32,6 +32,12 @@ from matches.skills.engine import (
     SkillTargetError,
     validate_and_prepare,
 )
+from matches.skills.presentation import (
+    combat_feedback_for,
+    display_skill_name,
+    effect_label,
+    presentation_for,
+)
 
 
 UNAVAILABLE_REASONS = {
@@ -43,11 +49,11 @@ UNAVAILABLE_REASONS = {
     "EFFECT_ALREADY_ACTIVE": "Hiệu ứng này đang hoạt động",
     "TARGET_FINISHED": "Đối thủ đã hoàn thành hoặc hết thời gian",
     "NO_DISPELLABLE_EFFECT": "Không có hiệu ứng nào để thanh tẩy",
-    "NO_STEALABLE_SKILL": "Đối thủ không còn skill có thể đánh cắp",
-    "INVALID_STEAL_SELECTION": "Không thể chọn skill để đánh cắp",
-    "INVALID_TARGET": "Mục tiêu skill không hợp lệ",
-    "NO_OPPONENT": "Chưa có đối thủ để sử dụng skill",
-    "INVALID_POLICY": "Skill tạm thời không khả dụng",
+    "NO_STEALABLE_SKILL": "Đối thủ không còn kỹ năng có thể lấy",
+    "INVALID_STEAL_SELECTION": "Không thể chọn kỹ năng để lấy",
+    "INVALID_TARGET": "Mục tiêu kỹ năng không hợp lệ",
+    "NO_OPPONENT": "Chưa có đối thủ để sử dụng kỹ năng",
+    "INVALID_POLICY": "Kỹ năng tạm thời không khả dụng",
 }
 
 
@@ -126,7 +132,6 @@ class MatchStateService:
             )
             .select_related(
                 "skill_use__match_skill",
-                "skill_use__source_player__user",
                 "typing_challenge",
             )
             .order_by("expires_at", "id")
@@ -146,11 +151,7 @@ class MatchStateService:
         )
         recent_skill_uses = list(
             SkillUse.objects.filter(match=match)
-            .select_related(
-                "match_skill",
-                "source_player__user",
-                "target_player__user",
-            )
+            .select_related("match_skill")
             .order_by("-used_at", "-id")[:10]
         )
 
@@ -243,14 +244,39 @@ class MatchStateService:
             except (SkillEngineConfigurationError, ValueError):
                 unavailable_code = "INVALID_POLICY"
                 definition = SKILL_REGISTRY[match_skill.code_snapshot]
+            presentation = presentation_for(match_skill.code_snapshot)
             return {
                 "code": match_skill.code_snapshot,
-                "name": match_skill.name_snapshot,
-                "description": match_skill.description_snapshot,
+                "name": display_skill_name(
+                    match_skill.code_snapshot,
+                    match_skill.name_snapshot,
+                ),
+                "description": (
+                    presentation.description
+                    if presentation is not None
+                    else match_skill.description_snapshot
+                ),
                 "energy_cost": match_skill.energy_cost_snapshot,
                 "duration_seconds": match_skill.duration_seconds_snapshot,
                 "quantity": match_skill.current_quantity,
                 "target_mode": definition.target_mode,
+                "target_label": (
+                    presentation.target_label
+                    if presentation is not None
+                    else (
+                        "Bản thân"
+                        if definition.target_mode != OPPONENT
+                        else "Đối thủ"
+                    )
+                ),
+                "effect_label": effect_label(
+                    code=match_skill.code_snapshot,
+                    duration_seconds=match_skill.duration_seconds_snapshot,
+                    time_drain_seconds=rules.time_drain_seconds,
+                ),
+                "special_rule": (
+                    presentation.special_rule if presentation is not None else None
+                ),
                 "ui_group": definition.ui_group,
                 "can_use_while_action_locked": (definition.can_use_while_action_locked),
                 "unavailable_code": unavailable_code,
@@ -281,28 +307,27 @@ class MatchStateService:
             "active_effects": [
                 {
                     "id": effect.id,
-                    "skill_use_id": effect.skill_use_id,
                     "code": effect.skill_use.match_skill.code_snapshot,
-                    "source_player_id": effect.skill_use.source_player_id,
-                    "source_username": (effect.skill_use.source_player.user.username),
+                    "name": display_skill_name(
+                        effect.skill_use.match_skill.code_snapshot,
+                        effect.skill_use.match_skill.name_snapshot,
+                    ),
                     "started_at": effect.started_at.isoformat(),
                     "expires_at": effect.expires_at.isoformat(),
                 }
                 for effect in active_effects
             ],
-            "recent_skill_uses": [
-                {
-                    "id": skill_use.id,
-                    "code": skill_use.match_skill.code_snapshot,
-                    "name": skill_use.match_skill.name_snapshot,
-                    "source_player_id": skill_use.source_player_id,
-                    "source_username": (skill_use.source_player.user.username),
-                    "target_player_id": skill_use.target_player_id,
-                    "target_username": (skill_use.target_player.user.username),
-                    "used_at": skill_use.used_at.isoformat(),
-                    "outcome_kind": skill_use.outcome_snapshot.get("kind"),
-                }
+            "combat_notifications": [
+                feedback
                 for skill_use in reversed(recent_skill_uses)
+                if (
+                    feedback := combat_feedback_for(
+                        skill_use=skill_use,
+                        viewer_player=current_player,
+                        time_drain_seconds=rules.time_drain_seconds,
+                    )
+                )
+                is not None
             ],
             "my_solved_problem_ids": solved_ids(current_player),
             "opponent_solved_problem_ids": (solved_ids(opponent) if opponent else []),

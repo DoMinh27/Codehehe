@@ -9,8 +9,11 @@ const skills = [
         name: "Đảo chiều code",
         description: "Đảo chiều code của đối thủ.",
         energy_cost: 1,
+        effect_label: "35 giây",
         quantity: 1,
         target_mode: "OPPONENT",
+        target_label: "Đối thủ",
+        special_rule: null,
         can_use_while_action_locked: false,
         unavailable_reason: null,
     },
@@ -19,8 +22,11 @@ const skills = [
         name: "Thử thách gõ chữ",
         description: "Khóa hành động của đối thủ.",
         energy_cost: 2,
+        effect_label: "Tối đa 20 giây",
         quantity: 1,
         target_mode: "OPPONENT",
+        target_label: "Đối thủ",
+        special_rule: null,
         can_use_while_action_locked: false,
         unavailable_reason: null,
     },
@@ -94,8 +100,10 @@ describe("skill toolbar", () => {
         expect(tooltip.getAttribute("role")).toBe("tooltip");
         expect(tooltip.textContent).toContain("Đảo chiều code");
         expect(tooltip.textContent).toContain("Đảo chiều code của đối thủ.");
-        expect(tooltip.textContent).toContain("1 năng lượng");
-        expect(tooltip.textContent).toContain("1 lượt còn lại");
+        expect(tooltip.textContent).toContain("Đối thủ");
+        expect(tooltip.textContent).toContain("1 Năng lượng");
+        expect(tooltip.textContent).toContain("35 giây");
+        expect(tooltip.textContent).toContain("1 lượt");
         expect(tooltip.textContent).toContain("Sẵn sàng sử dụng");
         expect(tooltip.querySelector("button")).toBeNull();
     });
@@ -106,8 +114,11 @@ describe("skill toolbar", () => {
             name: "Thanh tẩy",
             description: "Gỡ hiệu ứng.",
             energy_cost: 1,
+            effect_label: "Tức thời",
             quantity: 1,
             target_mode: "SELF",
+            target_label: "Bản thân",
+            special_rule: "Không hoàn lại thời gian đã mất",
             can_use_while_action_locked: true,
             ui_group: "DEFENSIVE",
             unavailable_reason: null,
@@ -122,12 +133,12 @@ describe("skill toolbar", () => {
         );
 
         expect(defensiveGroup.getAttribute("role")).toBe("group");
-        expect(defensiveGroup.getAttribute("aria-label")).toBe("Skill phòng thủ");
+        expect(defensiveGroup.getAttribute("aria-label")).toBe("Kỹ năng phòng thủ");
         expect(defensiveGroup.querySelectorAll(".skill-trigger")).toHaveLength(1);
         expect(defensiveGroup.querySelector(".skill-toolbar__item").dataset.skillCode).toBe(
             "PURIFY",
         );
-        expect(offensiveGroup.getAttribute("aria-label")).toBe("Skill tấn công");
+        expect(offensiveGroup.getAttribute("aria-label")).toBe("Kỹ năng tấn công");
         expect(offensiveGroup.querySelectorAll(".skill-trigger")).toHaveLength(2);
         expect(container.textContent).not.toContain("Phòng thủ");
         expect(container.textContent).not.toContain("Tấn công");
@@ -136,11 +147,14 @@ describe("skill toolbar", () => {
     test("renders Shield as a defensive icon distinct from Purify", () => {
         const shield = {
             code: "SHIELD",
-            name: "Shield",
-            description: "Chặn skill tấn công tiếp theo.",
+            name: "Khiên",
+            description: "Chặn kỹ năng tấn công tiếp theo",
             energy_cost: 1,
+            effect_label: "1 đòn hoặc 45 giây",
             quantity: 1,
             target_mode: "SELF",
+            target_label: "Bản thân",
+            special_rule: null,
             can_use_while_action_locked: false,
             ui_group: "DEFENSIVE",
             unavailable_reason: null,
@@ -155,8 +169,9 @@ describe("skill toolbar", () => {
             "/static/icons.svg#icon-guard",
         );
         expect(defensiveGroup.querySelector(".skill-tooltip").textContent).toContain(
-            "Chặn skill tấn công tiếp theo.",
+            "Chặn kỹ năng tấn công tiếp theo",
         );
+        expect(defensiveGroup.querySelector(".skill-tooltip__rule").hidden).toBe(true);
     });
 
     test("uses the icon button itself to activate the skill", () => {
@@ -209,7 +224,7 @@ describe("skill toolbar", () => {
         ],
         [
             availableState({hasOpponent: false}),
-            "Chưa có đối thủ để sử dụng skill",
+            "Chưa có đối thủ để sử dụng kỹ năng",
         ],
     ])("disables unavailable skills and explains why", (state, reason) => {
         toolbar.update(state);
@@ -335,8 +350,11 @@ describe("skill toolbar", () => {
             name: "Thanh tẩy",
             description: "Gỡ hiệu ứng.",
             energy_cost: 1,
+            effect_label: "Tức thời",
             quantity: 1,
             target_mode: "SELF",
+            target_label: "Bản thân",
+            special_rule: "Không hoàn lại thời gian đã mất",
             can_use_while_action_locked: true,
             unavailable_reason: null,
         };
@@ -350,20 +368,23 @@ describe("skill toolbar", () => {
     test("explains when Steal has no eligible target skill", () => {
         const steal = {
             code: "STEAL",
-            name: "Steal",
-            description: "Cướp skill.",
+            name: "Tước đoạt",
+            description: "Lấy ngẫu nhiên 1 lượt kỹ năng của đối thủ",
             energy_cost: 2,
+            effect_label: "Tức thời",
             quantity: 1,
             target_mode: "OPPONENT",
+            target_label: "Đối thủ",
+            special_rule: "Không thể lấy Tước đoạt",
             can_use_while_action_locked: false,
-            unavailable_reason: "Đối thủ không còn skill có thể đánh cắp.",
+            unavailable_reason: "Đối thủ không còn kỹ năng có thể lấy",
         };
 
         toolbar.update(availableState({skills: [steal]}));
 
         expect(container.querySelector(".skill-trigger").disabled).toBe(true);
         expect(container.querySelector(".skill-tooltip__status").textContent).toBe(
-            "Đối thủ không còn skill có thể đánh cắp.",
+            "Đối thủ không còn kỹ năng có thể lấy",
         );
     });
 });

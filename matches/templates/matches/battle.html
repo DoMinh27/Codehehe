@@ -26,6 +26,12 @@
           <svg aria-hidden="true"><use href="{% static 'matches/ui/icons.svg' %}#icon-clock"></use></svg>
           <strong id="match-timer">--:--</strong>
         </span>
+        <div
+          id="my-active-effects"
+          class="active-effect-list"
+          aria-label="Hiệu ứng đang tác động"
+          hidden
+        ></div>
       </div>
     </div>
 
@@ -66,7 +72,7 @@
 
 <section class="skill-panel" aria-labelledby="skill-heading">
   <div class="skill-panel__heading">
-    <h2 id="skill-heading">Skills</h2>
+    <h2 id="skill-heading">Kỹ năng</h2>
   </div>
   <div
     id="skill-list"
@@ -77,14 +83,21 @@
       class="skill-toolbar__group"
       data-skill-group="DEFENSIVE"
       role="group"
-      aria-label="Skill phòng thủ"
+      aria-label="Kỹ năng phòng thủ"
     ></div>
-    <p id="skill-notice" class="skill-notice" role="status"></p>
+    <p
+      id="skill-notice"
+      class="skill-notice"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+      hidden
+    ></p>
     <div
       class="skill-toolbar__group skill-toolbar__group--offensive"
       data-skill-group="OFFENSIVE"
       role="group"
-      aria-label="Skill tấn công"
+      aria-label="Kỹ năng tấn công"
     ></div>
   </div>
 </section>
@@ -94,7 +107,7 @@
     <svg aria-hidden="true"><use href="{% static 'matches/ui/icons.svg' %}#icon-keyboard"></use></svg>
     <div>
       <h2>Thử thách gõ chữ</h2>
-      <p>Gõ chính xác câu dưới đây để mở lại Run, Submit và Skill</p>
+      <p>Gõ chính xác câu dưới đây để mở lại Chạy thử, Nộp bài và Kỹ năng</p>
     </div>
     <strong><span id="typing-countdown">0</span>s</strong>
   </div>

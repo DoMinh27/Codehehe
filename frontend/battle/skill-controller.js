@@ -7,27 +7,13 @@ export function createSkillController({
     refreshState,
     getTypingChallengeId,
     restoreSkillButton,
+    combatFeedback,
 }) {
-    const skillNotice = documentRoot.getElementById("skill-notice");
     const typingForm = documentRoot.getElementById("typing-form");
     const typingInput = documentRoot.getElementById("typing-input");
     const typingResult = documentRoot.getElementById("typing-result");
     const activeSkills = new Set();
     let typingInFlight = false;
-
-    function skillNoticeFor(payload) {
-        const outcome = payload.outcome || {};
-        if (outcome.kind === "PURIFIED_EFFECT") {
-            return `Đã thanh tẩy: ${outcome.skill_name}`;
-        }
-        if (outcome.kind === "STOLEN_SKILL") {
-            return `Đã đánh cắp: ${outcome.skill_name}`;
-        }
-        if (outcome.kind === "BLOCKED_BY_SHIELD") {
-            return "Skill đã bị Shield của đối thủ chặn";
-        }
-        return "Skill đã được kích hoạt";
-    }
 
     async function useSkill(skill, button) {
         const skillCode = skill.code;
@@ -48,10 +34,15 @@ export function createSkillController({
                 },
                 csrfToken,
             );
-            skillNotice.textContent = skillNoticeFor(payload);
+            combatFeedback.show(payload.feedback || {
+                id: payload.id,
+                text: "Kỹ năng đã được kích hoạt",
+                cue: "SKILL_USED",
+                tone: "SUCCESS",
+            });
             await refreshState();
         } catch (error) {
-            skillNotice.textContent = error.message;
+            combatFeedback.showError(error.message);
             restoreSkillButton(button);
         } finally {
             activeSkills.delete(skillCode);

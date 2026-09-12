@@ -6,6 +6,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from matches.models import MatchPlayer, SkillEffect
+from matches.rules import rules_for_match
 from matches.services.gameplay import FinishMatchService
 from matches.skills.service import (
     InvalidSkillUseError,
@@ -14,6 +15,7 @@ from matches.skills.service import (
     SkillUseNotFoundError,
     SkillUsePermissionError,
 )
+from matches.skills.presentation import combat_feedback_for
 from matches.skills.typing import (
     InvalidTypingChallengeError,
     TypingChallengeConflictError,
@@ -71,6 +73,7 @@ def use_skill(request, match_id, skill_code):
         pk=skill_use.target_player_id
     )
     now = timezone.now()
+    rules = rules_for_match(source.match)
 
     def remaining_seconds(player):
         deadline = player.personal_ends_at
@@ -88,6 +91,11 @@ def use_skill(request, match_id, skill_code):
             "target_player_id": skill_use.target_player_id,
             "energy_spent": skill_use.energy_spent,
             "outcome": skill_use.outcome_snapshot,
+            "feedback": combat_feedback_for(
+                skill_use=skill_use,
+                viewer_player=source,
+                time_drain_seconds=rules.time_drain_seconds,
+            ),
             "used_at": skill_use.used_at.isoformat(),
             "effect": (
                 {

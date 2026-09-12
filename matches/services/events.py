@@ -5,6 +5,8 @@ from django.db import connection
 from django.utils import timezone
 
 from matches.models import Match, MatchEvent
+from matches.skills.definitions import PURIFY, SHIELD, STEAL, TIME_DRAIN_60
+from matches.skills.presentation import display_skill_name
 
 
 PAYLOAD_FIELDS = {
@@ -183,20 +185,39 @@ def present_event(event, started_at):
     elif kind == MatchEvent.Kind.FIRST_SOLVE_CONFIRMED:
         text = f"{actor} được xác nhận giải đầu tiên bài {data['problem_title']}: +{data['points']} điểm thưởng (tổng {data['score_after']})"
     elif kind == MatchEvent.Kind.REWARD_GRANTED:
-        text = f"{actor} nhận {data['energy']} Energy và 1 lượt {data['skill_name']}"
+        skill_name = display_skill_name(
+            data.get("skill_code"),
+            data["skill_name"],
+        )
+        text = f"{actor} nhận {data['energy']} Energy và 1 lượt {skill_name}"
     elif kind == MatchEvent.Kind.SKILL_USED:
-        destination = "chính mình" if event.actor_id == event.target_id else target
-        text = f"{actor} dùng {data['skill_name']} lên {destination}, tốn {data['energy_spent']} Energy"
-        if data.get("outcome_kind") == "PURIFIED_EFFECT":
-            text += f". Đã gỡ {data['affected_skill_name']}"
-        elif data.get("outcome_kind") == "STOLEN_SKILL":
-            text += f". Đã đánh cắp 1 lượt {data['affected_skill_name']}"
-        elif data.get("outcome_kind") == "BLOCKED_BY_SHIELD":
-            text += ". Đòn tấn công đã bị Shield chặn"
-        elif "time_penalty_seconds" in data:
-            text += f". Cộng {data['time_penalty_seconds']} giây phạt thời gian"
+        skill_code = data.get("skill_code")
+        skill_name = display_skill_name(skill_code, data["skill_name"])
+        affected_name = display_skill_name(
+            data.get("affected_skill_code"),
+            data.get("affected_skill_name", "kỹ năng"),
+        )
+        outcome_kind = data.get("outcome_kind")
+        if outcome_kind == "BLOCKED_BY_SHIELD":
+            text = f"Khiên của {target} chặn {skill_name} từ {actor}"
+        elif skill_code == SHIELD:
+            text = f"{actor} kích hoạt Khiên"
+        elif skill_code == PURIFY:
+            text = f"{actor} dùng Thanh tẩy và hóa giải {affected_name}"
+        elif skill_code == STEAL:
+            text = (
+                f"{actor} dùng Tước đoạt và lấy 1 lượt "
+                f"{affected_name} từ {target}"
+            )
+        elif skill_code == TIME_DRAIN_60:
+            text = f"{actor} trừ {data['time_penalty_seconds']} giây của {target}"
         elif "duration_seconds" in data:
-            text += f". Hiệu ứng tối đa {data['duration_seconds']} giây"
+            text = (
+                f"{actor} dùng {skill_name} với {target} · "
+                f"tối đa {data['duration_seconds']} giây"
+            )
+        else:
+            text = f"{actor} dùng {skill_name} với {target}"
     elif kind == MatchEvent.Kind.TYPING_COMPLETED:
         text = f"{actor} hoàn thành thử thách gõ chữ và được mở khóa"
     elif kind == MatchEvent.Kind.PLAYER_SURRENDERED:

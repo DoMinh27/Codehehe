@@ -456,6 +456,16 @@ class ShieldStateApiAndTimelineTests(ShieldFixtureMixin, TestCase):
         self.assertEqual(response.status_code, 201)
         body = response.json()
         self.assertEqual(body["outcome"]["kind"], "BLOCKED_BY_SHIELD")
+        self.assertEqual(
+            body["feedback"],
+            {
+                "id": body["id"],
+                "text": "Đòn đã bị chặn",
+                "cue": "SHIELD_BLOCKED_ATTACK",
+                "tone": "WARNING",
+                "created_at": body["used_at"],
+            },
+        )
         self.assertIsNone(body["effect"])
         self.assertNotIn("inventory", response.content.decode())
         event = self.match.events.get(
@@ -465,7 +475,7 @@ class ShieldStateApiAndTimelineTests(ShieldFixtureMixin, TestCase):
         self.assertEqual(event.payload["outcome_kind"], "BLOCKED_BY_SHIELD")
         self.assertNotIn("duration_seconds", event.payload)
         self.assertIn(
-            "đã bị Shield chặn",
+            "Khiên của",
             present_event(event, self.match.started_at)["text"],
         )
 
@@ -473,8 +483,9 @@ class ShieldStateApiAndTimelineTests(ShieldFixtureMixin, TestCase):
             user=self.host,
             match_id=self.match.pk,
         )
-        blocked_use = defender_state["recent_skill_uses"][-1]
-        self.assertEqual(blocked_use["outcome_kind"], "BLOCKED_BY_SHIELD")
+        blocked_use = defender_state["combat_notifications"][-1]
+        self.assertEqual(blocked_use["text"], "Khiên đã chặn Đảo chiều code")
+        self.assertEqual(blocked_use["cue"], "SHIELD_BLOCK")
         self.assertNotIn("opponent_skills", defender_state)
 
 

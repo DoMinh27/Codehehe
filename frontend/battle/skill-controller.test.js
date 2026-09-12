@@ -10,7 +10,8 @@ function makeController(api) {
         <input id="typing-input">
         <p id="typing-result"></p>
     `;
-    return createSkillController({
+    const combatFeedback = {show: vi.fn(), showError: vi.fn()};
+    const controller = createSkillController({
         documentRoot: document,
         api,
         config: {
@@ -24,14 +25,16 @@ function makeController(api) {
         refreshState: vi.fn(),
         getTypingChallengeId: () => 9,
         restoreSkillButton: vi.fn(),
+        combatFeedback,
     });
+    return {combatFeedback, controller};
 }
 
 
 describe("skill controller", () => {
     it("suppresses duplicate use of the same skill", () => {
         const api = {postJson: vi.fn(() => new Promise(() => {}))};
-        const controller = makeController(api);
+        const {controller} = makeController(api);
         const button = document.createElement("button");
 
         const skill = {code: "BLUR", target_mode: "OPPONENT"};
@@ -42,8 +45,10 @@ describe("skill controller", () => {
     });
 
     it("uses the current player as the target for self skills", async () => {
-        const api = {postJson: vi.fn().mockResolvedValue({outcome: {}})};
-        const controller = makeController(api);
+        const api = {postJson: vi.fn().mockResolvedValue({
+            feedback: {id: 1, text: "Khiên đã sẵn sàng"},
+        })};
+        const {combatFeedback, controller} = makeController(api);
         const button = document.createElement("button");
 
         await controller.useSkill({code: "PURIFY", target_mode: "SELF"}, button);
@@ -53,34 +58,48 @@ describe("skill controller", () => {
             {target_player_id: 1, idempotency_key: "skill-1"},
             "csrf",
         );
+        expect(combatFeedback.show).toHaveBeenCalledWith({
+            id: 1,
+            text: "Khiên đã sẵn sàng",
+        });
     });
 
     it("shows a structured outcome after a successful skill use", async () => {
         const api = {
             postJson: vi.fn().mockResolvedValue({
-                outcome: {
-                    kind: "STOLEN_SKILL",
-                    skill_name: "Làm mờ đề",
+                feedback: {
+                    id: 3,
+                    text: "Nhận được 1 lượt Che mờ đề",
+                    cue: "STEAL_GAIN",
+                    tone: "SUCCESS",
                 },
             }),
         };
-        const controller = makeController(api);
+        const {combatFeedback, controller} = makeController(api);
         const button = document.createElement("button");
 
         await controller.useSkill({code: "STEAL", target_mode: "OPPONENT"}, button);
 
-        expect(document.getElementById("skill-notice").textContent).toBe(
-            "Đã đánh cắp: Làm mờ đề",
-        );
+        expect(combatFeedback.show).toHaveBeenCalledWith({
+            id: 3,
+            text: "Nhận được 1 lượt Che mờ đề",
+            cue: "STEAL_GAIN",
+            tone: "SUCCESS",
+        });
     });
 
     it("explains when an offensive skill is blocked by Shield", async () => {
         const api = {
             postJson: vi.fn().mockResolvedValue({
-                outcome: {kind: "BLOCKED_BY_SHIELD"},
+                feedback: {
+                    id: 4,
+                    text: "Đòn đã bị chặn",
+                    cue: "SHIELD_BLOCKED_ATTACK",
+                    tone: "WARNING",
+                },
             }),
         };
-        const controller = makeController(api);
+        const {combatFeedback, controller} = makeController(api);
         const button = document.createElement("button");
 
         await controller.useSkill(
@@ -88,14 +107,17 @@ describe("skill controller", () => {
             button,
         );
 
-        expect(document.getElementById("skill-notice").textContent).toBe(
-            "Skill đã bị Shield của đối thủ chặn",
-        );
+        expect(combatFeedback.show).toHaveBeenCalledWith({
+            id: 4,
+            text: "Đòn đã bị chặn",
+            cue: "SHIELD_BLOCKED_ATTACK",
+            tone: "WARNING",
+        });
     });
 
     it("suppresses duplicate typing completion", () => {
         const api = {postJson: vi.fn(() => new Promise(() => {}))};
-        const controller = makeController(api);
+        const {controller} = makeController(api);
         controller.bind();
         const form = document.getElementById("typing-form");
 

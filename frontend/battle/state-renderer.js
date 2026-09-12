@@ -1,4 +1,5 @@
-import {activeEffectCodes, newestSkillUseId} from "./effects.js";
+import {activeEffectCodes} from "./effects.js";
+import {createSkillIcon} from "./skill-icons.js";
 import {createSkillToolbar} from "./skill-toolbar.js";
 import {typingActionLocked, typingSecondsRemaining} from "./typing.js";
 
@@ -16,6 +17,7 @@ export function createStateRenderer({
     now = () => Date.now(),
     config,
     editorRegistry,
+    combatFeedback,
     onUseSkill,
     onFinalize,
 }) {
@@ -23,7 +25,9 @@ export function createStateRenderer({
     const opponentTimer = documentRoot.getElementById("opponent-timer");
     const problemsContainer = documentRoot.getElementById("battle-problems");
     const skillList = documentRoot.getElementById("skill-list");
-    const skillNotice = documentRoot.getElementById("skill-notice");
+    const activeEffectsContainer = documentRoot.getElementById(
+        "my-active-effects",
+    );
     const typingPanel = documentRoot.getElementById("typing-challenge");
     const typingPrompt = documentRoot.getElementById("typing-prompt");
     const typingCountdown = documentRoot.getElementById("typing-countdown");
@@ -40,7 +44,7 @@ export function createStateRenderer({
     let opponentRemainingSeconds = null;
     let typingRemainingSeconds = 0;
     let lastStateAt = now();
-    let newestRenderedSkillUseId = 0;
+    let activeEffectClockOffset = 0;
     let currentState = null;
     let typingChallengeId = null;
 
@@ -135,27 +139,40 @@ export function createStateRenderer({
         editorRegistry.setEditable(false);
     }
 
-    function renderSkillEvents(skillUses) {
-        if (!skillUses.length) {
-            return;
-        }
-        const newestId = newestSkillUseId(skillUses);
-        const newUses = skillUses.filter(
-            (skillUse) => Number(skillUse.id) > newestRenderedSkillUseId,
+    function activeEffectSeconds(effect) {
+        const serverNow = now() + activeEffectClockOffset;
+        return Math.max(
+            0,
+            Math.ceil((Date.parse(effect.expires_at) - serverNow) / 1000),
         );
-        if (newUses.length) {
-            const latest = newUses.at(-1);
-            skillNotice.textContent = latest.outcome_kind === "BLOCKED_BY_SHIELD"
-                ? `${latest.name} của ${latest.source_username} đã bị Shield chặn`
-                : (
-                    `${latest.source_username} đã dùng ${latest.name} lên `
-                    + `${latest.target_username}`
-                );
-        }
-        newestRenderedSkillUseId = Math.max(
-            newestRenderedSkillUseId,
-            newestId,
+    }
+
+    function renderActiveEffects() {
+        if (!activeEffectsContainer || !currentState) return;
+        const effects = currentState.active_effects.filter(
+            (effect) => activeEffectSeconds(effect) > 0,
         );
+        activeEffectsContainer.replaceChildren();
+        activeEffectsContainer.hidden = effects.length === 0;
+        for (const effect of effects) {
+            const seconds = activeEffectSeconds(effect);
+            const chip = documentRoot.createElement("span");
+            chip.className = "active-effect-chip";
+            chip.dataset.effectCode = effect.code;
+            chip.setAttribute(
+                "aria-label",
+                `${effect.name} còn ${seconds} giây`,
+            );
+            chip.appendChild(createSkillIcon(
+                documentRoot,
+                skillList.dataset.iconSpriteUrl,
+                effect.code,
+            ));
+            const label = documentRoot.createElement("span");
+            label.textContent = `${effect.name} ${seconds}s`;
+            chip.appendChild(label);
+            activeEffectsContainer.appendChild(chip);
+        }
     }
 
     function applyEffects(payload) {
@@ -198,6 +215,7 @@ export function createStateRenderer({
         );
         const typingRemaining = displayedRemaining(typingRemainingSeconds);
         typingCountdown.textContent = String(typingRemaining ?? 0);
+        renderActiveEffects();
         if (
             typingChallengeId !== null
             && typingRemaining === 0
@@ -222,6 +240,7 @@ export function createStateRenderer({
         remainingSeconds = payload.remaining_seconds;
         opponentRemainingSeconds = payload.opponent_remaining_seconds;
         lastStateAt = now();
+        activeEffectClockOffset = Date.parse(payload.server_time) - now();
         documentRoot.getElementById("my-score").textContent = payload.my_score;
         documentRoot.getElementById("opponent-score").textContent = (
             payload.opponent_score
@@ -230,7 +249,7 @@ export function createStateRenderer({
         renderTypingChallenge(payload);
         applyEffects(payload);
         updateActionAvailability(payload);
-        renderSkillEvents(payload.recent_skill_uses);
+        combatFeedback.ingest(payload.combat_notifications || []);
         renderTimer();
     }
 
@@ -240,6 +259,9 @@ export function createStateRenderer({
         moveTypingPopupToVisibleEditor,
         getTypingChallengeId: () => typingChallengeId,
         getCurrentState: () => currentState,
+        destroy() {
+            skillToolbar.destroy();
+        },
         restoreSkillButton(button) {
             if (currentState) {
                 applyEffects(currentState);

@@ -1,6 +1,6 @@
 import {describe, expect, it} from "vitest";
 
-import {activeEffectCodes, newestSkillUseId} from "./effects.js";
+import {activeEffectCodes} from "./effects.js";
 
 
 describe("Skill effect state", () => {
@@ -21,9 +21,5 @@ describe("Skill effect state", () => {
         );
 
         expect([...codes]).toEqual(["MIRROR_CODE"]);
-    });
-
-    it("finds the newest public Skill use", () => {
-        expect(newestSkillUseId([{id: 2}, {id: 9}, {id: 5}])).toBe(9);
     });
 });

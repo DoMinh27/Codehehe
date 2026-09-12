@@ -1,29 +1,12 @@
-const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
-const SKILL_ICONS = {
-    MIRROR_CODE: "icon-mirror",
-    BLUR_STATEMENT: "icon-sparkles",
-    TIME_DRAIN_60: "icon-timer",
-    TYPING_CHALLENGE: "icon-keyboard",
-    PURIFY: "icon-shield",
-    STEAL: "icon-steal",
-    SHIELD: "icon-guard",
-};
+import {createSkillIcon} from "./skill-icons.js";
+
+
 const DEFENSIVE_GROUP = "DEFENSIVE";
 const OFFENSIVE_GROUP = "OFFENSIVE";
 const SKILL_GROUPS = [
-    [DEFENSIVE_GROUP, "Skill phòng thủ"],
-    [OFFENSIVE_GROUP, "Skill tấn công"],
+    [DEFENSIVE_GROUP, "Kỹ năng phòng thủ"],
+    [OFFENSIVE_GROUP, "Kỹ năng tấn công"],
 ];
-
-
-function createIcon(documentRoot, spriteUrl, symbolId) {
-    const icon = documentRoot.createElementNS(SVG_NAMESPACE, "svg");
-    icon.setAttribute("aria-hidden", "true");
-    const use = documentRoot.createElementNS(SVG_NAMESPACE, "use");
-    use.setAttribute("href", `${spriteUrl}#${symbolId}`);
-    icon.appendChild(use);
-    return icon;
-}
 
 
 function unavailableReason({
@@ -44,7 +27,7 @@ function unavailableReason({
         return "Hành động đang bị khóa bởi Thử thách gõ chữ";
     }
     if (skill.target_mode === "OPPONENT" && !hasOpponent) {
-        return "Chưa có đối thủ để sử dụng skill";
+        return "Chưa có đối thủ để sử dụng kỹ năng";
     }
     if (skill.quantity < 1) {
         return "Đã hết lượt sử dụng";
@@ -177,16 +160,22 @@ export function createSkillToolbar({
 
         item.heading.textContent = skill.name;
         item.description.textContent = skill.description;
-        item.energy.textContent = `${skill.energy_cost} năng lượng`;
+        item.target.textContent = skill.target_label;
+        item.energy.textContent = `${skill.energy_cost} Năng lượng`;
+        item.effect.textContent = skill.effect_label;
         item.quantity.textContent = String(skill.quantity);
-        item.quantityDetail.textContent = `${skill.quantity} lượt còn lại`;
+        item.quantityDetail.textContent = `${skill.quantity} lượt`;
+        item.specialRule.textContent = skill.special_rule || "";
+        item.specialRule.hidden = !skill.special_rule;
         item.status.textContent = reason || "Sẵn sàng sử dụng";
         item.status.dataset.available = isDisabled ? "false" : "true";
         item.trigger.disabled = isDisabled;
         item.trigger.setAttribute(
             "aria-label",
-            `${skill.name}, ${skill.energy_cost} năng lượng, `
-            + `${skill.quantity} lượt còn lại. ${reason || "Sẵn sàng sử dụng"}`,
+            `${skill.name}, ${skill.target_label}, `
+            + `${skill.energy_cost} Năng lượng, ${skill.effect_label}, `
+            + `${skill.quantity} lượt. ${skill.special_rule || ""} `
+            + `${reason || "Sẵn sàng sử dụng"}`,
         );
     }
 
@@ -215,10 +204,10 @@ export function createSkillToolbar({
         trigger.className = "skill-trigger";
         trigger.type = "button";
         trigger.setAttribute("aria-describedby", `skill-tooltip-${skill.code}`);
-        trigger.appendChild(createIcon(
+        trigger.appendChild(createSkillIcon(
             documentRoot,
             iconSpriteUrl,
-            SKILL_ICONS[skill.code] || "icon-bolt",
+            skill.code,
         ));
 
         const quantity = documentRoot.createElement("span");
@@ -236,12 +225,16 @@ export function createSkillToolbar({
         description.className = "skill-tooltip__description";
         const details = documentRoot.createElement("div");
         details.className = "skill-tooltip__details";
+        const target = documentRoot.createElement("span");
         const energy = documentRoot.createElement("span");
+        const effect = documentRoot.createElement("span");
         const quantityDetail = documentRoot.createElement("span");
-        details.append(energy, quantityDetail);
+        details.append(target, energy, effect, quantityDetail);
+        const specialRule = documentRoot.createElement("p");
+        specialRule.className = "skill-tooltip__rule";
         const status = documentRoot.createElement("p");
         status.className = "skill-tooltip__status";
-        tooltip.append(heading, description, details, status);
+        tooltip.append(heading, description, details, specialRule, status);
 
         trigger.addEventListener("click", () => activateSkill(skill.code));
         item.addEventListener("mouseenter", () => activateTooltip(itemState));
@@ -264,10 +257,13 @@ export function createSkillToolbar({
             description,
             element: item,
             energy,
+            effect,
             heading,
             quantity,
             quantityDetail,
+            specialRule,
             status,
+            target,
             trigger,
             tooltip,
         };

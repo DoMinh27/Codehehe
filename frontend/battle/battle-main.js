@@ -1,4 +1,5 @@
 import {createBattleApi} from "./api.js";
+import {createCombatFeedback} from "./combat-feedback.js";
 import {createEditors} from "./editor.js";
 import {createIntegrityController} from "./integrity-controller.js";
 import {createPolling} from "./polling.js";
@@ -95,6 +96,7 @@ export function bootstrapBattle({
             onNotice: showIntegrityNotice,
         })
         : null;
+    const combatFeedback = createCombatFeedback({documentRoot, windowObject});
     const editorRegistry = createEditors({
         textareas: documentRoot.querySelectorAll(".source-code-input"),
         storage: windowObject.sessionStorage,
@@ -114,6 +116,8 @@ export function bootstrapBattle({
         windowObject.clearInterval(timerHandle);
         windowObject.clearTimeout(integrityNoticeHandle);
         integrityController?.stop();
+        combatFeedback.destroy();
+        renderer.destroy();
         documentRoot.removeEventListener(
             "visibilitychange",
             handleVisibilityChange,
@@ -152,6 +156,7 @@ export function bootstrapBattle({
         documentRoot,
         config,
         editorRegistry,
+        combatFeedback,
         onUseSkill: (skill, button) => (
             skillController.useSkill(skill, button)
         ),
@@ -187,6 +192,7 @@ export function bootstrapBattle({
         refreshState: () => polling.refresh(),
         getTypingChallengeId: renderer.getTypingChallengeId,
         restoreSkillButton: renderer.restoreSkillButton,
+        combatFeedback,
     });
     skillController.bind();
 

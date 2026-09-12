@@ -7,7 +7,13 @@ from django.urls import reverse
 from django.utils import timezone
 
 from matches.models import Match, MatchPlayer, RematchRequest
-from social.models import FriendRequest, Friendship, UserBlock, UserPresence
+from social.models import (
+    DirectMatchInvitation,
+    FriendRequest,
+    Friendship,
+    UserBlock,
+    UserPresence,
+)
 from social.services.friends import (
     SocialConflict,
     act_on_friend_request,
@@ -124,13 +130,20 @@ class FriendServiceTests(TestCase):
             recipient=self.bob,
             expires_at=timezone.now() + timedelta(minutes=2),
         )
+        direct = DirectMatchInvitation.objects.create(
+            inviter=self.alice,
+            invitee=self.bob,
+            expires_at=timezone.now() + timedelta(minutes=2),
+        )
 
         block_user(actor=self.alice, other_user_id=self.bob.pk)
 
         self.assertFalse(Friendship.objects.filter(pk=friendship.pk).exists())
         self.assertTrue(UserBlock.objects.filter(blocker=self.alice, blocked=self.bob).exists())
         rematch.refresh_from_db()
+        direct.refresh_from_db()
         self.assertEqual(rematch.status, RematchRequest.Status.CANCELLED)
+        self.assertEqual(direct.status, DirectMatchInvitation.Status.CANCELLED)
         self.assertEqual(invitation.status, FriendRequest.Status.PENDING)
 
     def test_database_rejects_noncanonical_friendship(self):

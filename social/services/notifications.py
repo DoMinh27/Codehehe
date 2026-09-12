@@ -9,7 +9,8 @@ from django.urls import reverse
 from django.utils import timezone
 
 from matches.models import Match, MatchPlayer, RematchRequest
-from social.models import FriendRequest
+from social.models import DirectMatchInvitation, FriendRequest
+from social.services.match_invitations import ready_user_ids
 
 
 NOTIFICATION_VERSION = 1
@@ -260,7 +261,100 @@ class FriendRequestNotificationProvider:
         )
 
 
+class DirectMatchInvitationNotificationProvider:
+    """Project pending friend challenges without exposing friend inventories."""
+
+    def collect(self, *, user, now, limit):
+        base = DirectMatchInvitation.objects.filter(
+            Q(inviter=user) | Q(invitee=user),
+            status=DirectMatchInvitation.Status.PENDING,
+            expires_at__gt=now,
+        )
+        incoming_count = base.filter(invitee=user).count()
+        projected = base.select_related("inviter", "invitee").only(
+            "id",
+            "inviter_id",
+            "inviter__username",
+            "invitee_id",
+            "invitee__username",
+            "created_at",
+            "expires_at",
+        )
+        invitations = list(
+            projected.filter(invitee=user).order_by("expires_at", "created_at", "id")[:limit]
+        )
+        remaining = limit - len(invitations)
+        if remaining:
+            invitations.extend(
+                projected.filter(inviter=user).order_by(
+                    "expires_at", "created_at", "id"
+                )[:remaining]
+            )
+
+        participant_ids = {
+            participant_id
+            for invitation in invitations
+            for participant_id in (invitation.inviter_id, invitation.invitee_id)
+        }
+        ready_ids = ready_user_ids(participant_ids, now=now)
+        projections = []
+        for invitation in invitations:
+            incoming = invitation.invitee_id == user.pk
+            actor = invitation.inviter if incoming else invitation.invitee
+            available = {
+                invitation.inviter_id,
+                invitation.invitee_id,
+            }.issubset(ready_ids)
+            action_url = reverse(
+                "social:match-invitation-action",
+                kwargs={"invitation_id": invitation.pk},
+            )
+            actions = (
+                [
+                    {"code": "ACCEPT", "url": action_url},
+                    {"code": "DECLINE", "url": action_url},
+                ]
+                if incoming
+                else [{"code": "CANCEL", "url": action_url}]
+            )
+            if incoming and not available:
+                actions.pop(0)
+            payload = {
+                "key": f"MATCH_INVITE:{invitation.pk}",
+                "kind": "MATCH_INVITE",
+                "direction": "INCOMING" if incoming else "OUTGOING",
+                "actor": {
+                    "username": actor.username,
+                    "initial": (actor.username[:1] or "?").upper(),
+                },
+                "created_at": invitation.created_at.isoformat(),
+                "expires_at": invitation.expires_at.isoformat(),
+                "context": {"mode": "Classic 1v1"},
+                "context_url": reverse("social:friends"),
+                "actions": actions,
+                "unavailable_reason": (
+                    "Một người chơi không còn ở trạng thái Sẵn sàng"
+                    if not available
+                    else ""
+                ),
+            }
+            projections.append(
+                NotificationProjection(
+                    priority=(
+                        INCOMING_TIME_BOUND_PRIORITY if incoming else OUTGOING_PRIORITY
+                    ),
+                    sort_at=invitation.expires_at,
+                    payload=payload,
+                )
+            )
+        return NotificationBatch(
+            incoming_count=incoming_count,
+            projections=tuple(projections),
+        )
+
+
 NOTIFICATION_PROVIDERS: tuple[NotificationProvider, ...] = (
+    DirectMatchInvitationNotificationProvider(),
     RematchNotificationProvider(),
     FriendRequestNotificationProvider(),
 )
@@ -286,12 +380,12 @@ def get_notification_state(*, user, now=None):
         )
     )
     visible_projections = projections[:NOTIFICATION_ITEM_LIMIT]
-    omitted_friend_request = any(
-        projection.payload["kind"] == "FRIEND_REQUEST"
+    omitted_social_item = any(
+        projection.payload["kind"] in {"FRIEND_REQUEST", "MATCH_INVITE"}
         for projection in projections[NOTIFICATION_ITEM_LIMIT:]
     )
     more_url = next((batch.more_url for batch in batches if batch.more_url), None)
-    if omitted_friend_request:
+    if omitted_social_item:
         more_url = f"{reverse('social:friends')}?tab=requests"
     return {
         "version": NOTIFICATION_VERSION,

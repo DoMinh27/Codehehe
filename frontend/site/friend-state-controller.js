@@ -11,13 +11,19 @@ const STATUS_CLASSES = [
 
 
 function validateState(payload) {
-    if (!payload || !Array.isArray(payload.friends)) {
+    if (!payload || !Array.isArray(payload.friends)
+        || typeof payload.match_invitation_url !== "string") {
         throw new Error("Dữ liệu trạng thái không hợp lệ");
     }
     for (const friend of payload.friends) {
         if (!friend || !Number.isInteger(friend.id)
             || typeof friend.username !== "string" || typeof friend.initial !== "string"
-            || !STATUSES.has(friend.status) || typeof friend.status_label !== "string") {
+            || !STATUSES.has(friend.status) || typeof friend.status_label !== "string"
+            || typeof friend.can_invite !== "boolean"
+            || (friend.match_invitation !== null
+                && (!friend.match_invitation
+                    || !["INCOMING", "OUTGOING"].includes(friend.match_invitation.direction)
+                    || typeof friend.match_invitation.action_url !== "string"))) {
             throw new Error("Dữ liệu trạng thái không hợp lệ");
         }
     }
@@ -45,7 +51,72 @@ export function createFriendStateController({
         label.replaceChildren(dot, friend.status_label);
     }
 
-    function makeReadyRow(friend) {
+    function hiddenInput(name, value) {
+        const input = documentRoot.createElement("input");
+        input.type = "hidden";
+        input.name = name;
+        input.value = value;
+        return input;
+    }
+
+    function postForm(root, action, fields, label, primary = false) {
+        const form = documentRoot.createElement("form");
+        form.method = "post";
+        form.action = action;
+        const csrf = root.querySelector("[data-social-csrf] input")?.value || "";
+        form.append(hiddenInput("csrfmiddlewaretoken", csrf));
+        for (const [name, value] of Object.entries(fields)) {
+            form.append(hiddenInput(name, String(value)));
+        }
+        const button = documentRoot.createElement("button");
+        button.type = "submit";
+        button.className = `button button-small ${primary ? "button-primary" : "button-secondary"}`;
+        button.textContent = label;
+        form.append(button);
+        return form;
+    }
+
+    function renderInviteActions(container, root, friend, sendUrl) {
+        if (!container) return;
+        const invitation = friend.match_invitation;
+        const signature = invitation
+            ? `${invitation.id}:${invitation.direction}`
+            : `${friend.status}:${friend.can_invite}`;
+        if (container.dataset.inviteSignature === signature) return;
+        container.dataset.inviteSignature = signature;
+        const next = `${windowObject.location.pathname}${windowObject.location.search}`;
+        if (invitation?.direction === "OUTGOING") {
+            const waiting = documentRoot.createElement("span");
+            waiting.className = "muted";
+            waiting.textContent = "Đang chờ";
+            container.replaceChildren(
+                waiting,
+                postForm(root, invitation.action_url, {action: "cancel", next}, "Hủy"),
+            );
+        } else if (invitation?.direction === "INCOMING") {
+            const incoming = documentRoot.createElement("span");
+            incoming.className = "muted";
+            incoming.textContent = "Đã nhận lời mời";
+            container.replaceChildren(incoming);
+        } else if (friend.can_invite) {
+            container.replaceChildren(postForm(
+                root,
+                sendUrl,
+                {recipient_id: friend.id, next},
+                "Mời đấu",
+                true,
+            ));
+        } else {
+            const reason = documentRoot.createElement("span");
+            reason.className = "muted";
+            reason.textContent = friend.status === "READY"
+                ? "Bạn chưa sẵn sàng"
+                : "Chưa thể mời đấu";
+            container.replaceChildren(reason);
+        }
+    }
+
+    function makeReadyRow(root, friend, sendUrl) {
         const row = documentRoot.createElement("li");
         row.className = "social-row";
         row.dataset.friendId = String(friend.id);
@@ -62,7 +133,11 @@ export function createFriendStateController({
         label.dataset.presenceLabel = "";
         setStatus(label, friend);
         main.append(username, label);
-        row.append(avatar, main);
+        const actions = documentRoot.createElement("div");
+        actions.className = "social-inline-actions";
+        actions.dataset.matchInviteActions = "";
+        renderInviteActions(actions, root, friend, sendUrl);
+        row.append(avatar, main, actions);
         return row;
     }
 
@@ -72,7 +147,9 @@ export function createFriendStateController({
             if (root.dataset.mode === "ready") {
                 const ready = payload.friends.filter((friend) => friend.status === "READY").slice(0, 5);
                 const list = root.querySelector("[data-friend-list]");
-                list.replaceChildren(...ready.map(makeReadyRow));
+                list.replaceChildren(...ready.map((friend) => (
+                    makeReadyRow(root, friend, payload.match_invitation_url)
+                )));
                 list.hidden = ready.length === 0;
                 const empty = root.querySelector("[data-friend-empty]");
                 if (empty) empty.hidden = ready.length !== 0;
@@ -82,6 +159,14 @@ export function createFriendStateController({
                 const friend = friendById.get(row.dataset.friendId);
                 const label = row.querySelector("[data-presence-label]");
                 if (friend && label) setStatus(label, friend);
+                if (friend) {
+                    renderInviteActions(
+                        row.querySelector("[data-match-invite-actions]"),
+                        root,
+                        friend,
+                        payload.match_invitation_url,
+                    );
+                }
             }
         }
     }

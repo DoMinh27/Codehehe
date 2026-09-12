@@ -157,6 +157,47 @@ class CreateRoomService:
             return match
 
 
+@dataclass
+class CreatePairRoomService:
+    """Create a waiting room with an inviter as host and one invited guest.
+
+    The caller owns the surrounding transaction and availability checks. This
+    service owns room-code collision retries and guarantees that a failed guest
+    membership rolls back the room savepoint.
+    """
+
+    room_service: CreateRoomService
+
+    def create(self, *, host, guest) -> Match:
+        rules = self.room_service.rules_provider()
+        integrity_policy = (
+            current_integrity_policy() if settings.MATCH_INTEGRITY_ENABLED else None
+        )
+        for _ in range(self.room_service.max_attempts):
+            room_code = normalize_room_code(self.room_service.code_generator())
+            try:
+                with transaction.atomic():
+                    match = self.room_service._create_once(
+                        user=host,
+                        room_code=room_code,
+                        rules=rules,
+                        integrity_policy=integrity_policy,
+                    )
+                    MatchPlayer.objects.create(
+                        match=match,
+                        user=guest,
+                        is_host=False,
+                        slot=2,
+                        is_active=True,
+                    )
+                    return match
+            except IntegrityError:
+                if Match.objects.filter(room_code=room_code).exists():
+                    continue
+                raise
+        raise RoomCodeGenerationError("Không thể tạo mã phòng. Vui lòng thử lại")
+
+
 class JoinRoomService:
     def join(self, *, user, room_code: str) -> MatchPlayer:
         normalized_code = normalize_room_code(room_code)

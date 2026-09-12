@@ -50,7 +50,9 @@
 
 <section class="panel lobby-friends" aria-labelledby="ready-friends-title"
          data-friend-presence-list data-mode="ready"
-         data-state-url="{% url 'social:friends-state' %}">
+         data-state-url="{% url 'social:friends-state' %}"
+         data-match-invitation-url="{% url 'social:match-invitation-send' %}">
+  <form data-social-csrf hidden>{% csrf_token %}</form>
   <div class="section-heading">
     <div>
       <h2 id="ready-friends-title">Bạn bè sẵn sàng</h2>
@@ -66,6 +68,26 @@
           <div class="social-row__main">
             <strong>{{ row.user.username }}</strong>
             <span class="presence-label presence-label--ready" data-presence-label><span aria-hidden="true"></span>{{ row.status_label }}</span>
+          </div>
+          <div class="social-inline-actions" data-match-invite-actions>
+            {% if row.match_invitation %}
+              {% if row.match_invitation.inviter_id == user.id %}
+                <span class="muted">Đang chờ</span>
+                <form method="post" action="{% url 'social:match-invitation-action' row.match_invitation.id %}">
+                  {% csrf_token %}<input type="hidden" name="action" value="cancel"><input type="hidden" name="next" value="{% url 'lobby' %}">
+                  <button class="button button-secondary button-small" type="submit">Hủy</button>
+                </form>
+              {% else %}
+                <span class="muted">Đã nhận lời mời</span>
+              {% endif %}
+            {% elif viewer_ready %}
+              <form method="post" action="{% url 'social:match-invitation-send' %}">
+                {% csrf_token %}<input type="hidden" name="recipient_id" value="{{ row.user.id }}"><input type="hidden" name="next" value="{% url 'lobby' %}">
+                <button class="button button-primary button-small" type="submit">Mời đấu</button>
+              </form>
+            {% else %}
+              <span class="muted">Bạn chưa sẵn sàng</span>
+            {% endif %}
           </div>
         </li>
       {% endfor %}

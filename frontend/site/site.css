@@ -1160,23 +1160,27 @@ summary:focus-visible {
 
 .notification-toast-stack {
     display: grid;
-    gap: 0.5rem;
+    gap: 0.625rem;
     position: fixed;
-    right: 1.5rem;
-    top: 1.5rem;
-    width: min(22rem, calc(100vw - 3rem));
+    right: clamp(1.5rem, 3.35vw, 4rem);
+    top: 4.875rem;
+    width: min(25rem, calc(100vw - 3rem));
     z-index: 80;
 }
 
 .notification-toast {
+    align-items: center;
     background: var(--bg-surface);
     border: 1px solid var(--border-default);
     border-left: 3px solid var(--primary);
     border-radius: var(--radius-small);
     box-shadow: var(--shadow-medium);
     color: var(--text-primary);
+    display: flex;
     font-size: 0.82rem;
+    min-height: 3.375rem;
     opacity: 1;
+    overflow-wrap: anywhere;
     padding: 0.75rem 0.85rem;
     transform: translateX(0);
     transition: opacity 0.3s ease, transform 0.3s ease;
@@ -1798,7 +1802,7 @@ summary:focus-visible {
 
     .notification-toast-stack {
         right: 0.75rem;
-        top: 0.75rem;
+        top: 4.75rem;
         width: calc(100vw - 1.5rem);
     }
 

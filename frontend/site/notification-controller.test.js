@@ -46,6 +46,21 @@ const friendRequest = {
         {code: "DECLINE", url: "/friends/requests/1/action/"},
     ],
 };
+const matchInvite = {
+    key: "MATCH_INVITE:1",
+    kind: "MATCH_INVITE",
+    direction: "INCOMING",
+    actor: {username: "challenger", initial: "C"},
+    created_at: "2026-09-09T10:00:00Z",
+    expires_at: "2026-09-09T10:02:00Z",
+    context: {mode: "Classic 1v1"},
+    context_url: "/friends/",
+    actions: [
+        {code: "ACCEPT", url: "/match-invitations/1/action/"},
+        {code: "DECLINE", url: "/match-invitations/1/action/"},
+    ],
+    unavailable_reason: "",
+};
 let controllers;
 let hiddenSpy;
 
@@ -93,6 +108,31 @@ function setup(api = {getJson: vi.fn().mockResolvedValue(state), postJson: vi.fn
 
 
 describe("notification controller", () => {
+    it("renders and accepts a direct match invitation", async () => {
+        const inviteState = {...state, items: [matchInvite]};
+        const api = {
+            getJson: vi.fn().mockResolvedValue(inviteState),
+            postJson: vi.fn().mockResolvedValue({room_url: "/matches/rooms/ABC123/"}),
+        };
+        const {navigate} = setup(api);
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(document.body.textContent).toContain("challenger mời bạn thi đấu");
+        expect(document.body.textContent).toContain("Classic 1v1");
+        const accept = [...document.querySelectorAll("[data-notification-action]")]
+            .find((button) => button.dataset.notificationAction === "ACCEPT");
+        accept.click();
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(api.postJson).toHaveBeenCalledWith(
+            "/match-invitations/1/action/",
+            {action: "accept"},
+            "csrf",
+            expect.any(Object),
+        );
+        expect(navigate).toHaveBeenCalledWith("http://localhost:3000/matches/rooms/ABC123/");
+    });
+
     it("renders a friend request without requiring match context", async () => {
         const friendState = {...state, items: [friendRequest]};
         setup({getJson: vi.fn().mockResolvedValue(friendState), postJson: vi.fn()});
@@ -129,15 +169,37 @@ describe("notification controller", () => {
         expect(document.querySelectorAll(".notification-toast")).toHaveLength(0);
     });
 
+    it("stacks consecutive incoming notifications from top to bottom", async () => {
+        const secondInvite = {
+            ...matchInvite,
+            key: "MATCH_INVITE:2",
+            actor: {username: "u2", initial: "U"},
+        };
+        const inviteState = {
+            ...state,
+            incoming_count: 2,
+            items: [matchInvite, secondInvite],
+        };
+        setup({getJson: vi.fn().mockResolvedValue(inviteState), postJson: vi.fn()});
+        await vi.advanceTimersByTimeAsync(0);
+
+        const toasts = [...document.querySelectorAll(".notification-toast")];
+        expect(toasts).toHaveLength(2);
+        expect(toasts[0].textContent).toBe("challenger vừa mời bạn thi đấu");
+        expect(toasts[1].textContent).toBe("u2 vừa mời bạn thi đấu");
+    });
+
     it("opens with the trigger and Escape closes then restores focus", async () => {
         setup();
         await vi.advanceTimersByTimeAsync(0);
         const trigger = document.querySelector("[data-notification-trigger]");
         const panel = document.querySelector("[data-notification-panel]");
 
+        expect(document.querySelectorAll(".notification-toast")).toHaveLength(1);
         trigger.click();
         expect(panel.hidden).toBe(false);
         expect(trigger.getAttribute("aria-expanded")).toBe("true");
+        expect(document.querySelectorAll(".notification-toast")).toHaveLength(0);
         document.dispatchEvent(new KeyboardEvent("keydown", {key: "Escape", bubbles: true}));
 
         expect(panel.hidden).toBe(true);

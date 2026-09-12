@@ -3,19 +3,16 @@
 from dataclasses import dataclass, field
 from datetime import timedelta
 
-from django.conf import settings
 from django.db import IntegrityError, connection, transaction
 from django.db.models import F
 from django.urls import reverse
 from django.utils import timezone
 
-from matches.integrity import current_integrity_policy
 from matches.models import Match, MatchPlayer, RematchRequest
 from matches.services.db import retry_transient_db_lock
 from matches.services.room import (
+    CreatePairRoomService,
     CreateRoomService,
-    RoomCodeGenerationError,
-    normalize_room_code,
 )
 
 
@@ -227,7 +224,12 @@ class RematchService:
                         )
                     if action == "accept":
                         _require_available(players)
-                        invitation.new_match = self._create_pair(invitation)
+                        invitation.new_match = CreatePairRoomService(
+                            self.room_service
+                        ).create(
+                            host=invitation.requester,
+                            guest=invitation.recipient,
+                        )
                     invitation.status = desired
                     invitation.responded_at = now
                     invitation.save(
@@ -236,34 +238,3 @@ class RematchService:
             return _project(
                 match=match, players=players, invitation=invitation, user=user, now=now
             )
-
-    def _create_pair(self, invitation):
-        rules = self.room_service.rules_provider()
-        integrity_policy = (
-            current_integrity_policy() if settings.MATCH_INTEGRITY_ENABLED else None
-        )
-        for _ in range(self.room_service.max_attempts):
-            code = normalize_room_code(self.room_service.code_generator())
-            try:
-                # Savepoint allows a code collision to retry without committing
-                # a room or breaking the outer acceptance transaction.
-                with transaction.atomic():
-                    match = self.room_service._create_once(
-                        user=invitation.requester,
-                        room_code=code,
-                        rules=rules,
-                        integrity_policy=integrity_policy,
-                    )
-                    MatchPlayer.objects.create(
-                        match=match,
-                        user=invitation.recipient,
-                        is_host=False,
-                        slot=2,
-                        is_active=True,
-                    )
-                    return match
-            except IntegrityError:
-                if Match.objects.filter(room_code=code).exists():
-                    continue
-                raise
-        raise RoomCodeGenerationError("Không thể tạo mã phòng. Vui lòng thử lại.")

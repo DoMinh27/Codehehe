@@ -1,6 +1,12 @@
 from django.contrib import admin
 
-from social.models import FriendRequest, Friendship, UserBlock, UserPresence
+from social.models import (
+    DirectMatchInvitation,
+    FriendRequest,
+    Friendship,
+    UserBlock,
+    UserPresence,
+)
 
 
 class ReadOnlyAuditAdmin(admin.ModelAdmin):
@@ -44,3 +50,22 @@ class UserPresenceAdmin(ReadOnlyAuditAdmin):
     list_filter = ("show_presence_to_friends", "last_seen_at")
     search_fields = ("user__username",)
     list_select_related = ("user",)
+
+
+@admin.register(DirectMatchInvitation)
+class DirectMatchInvitationAdmin(ReadOnlyAuditAdmin):
+    list_display = (
+        "id",
+        "inviter",
+        "invitee",
+        "status",
+        "expires_at",
+        "new_match",
+    )
+    list_filter = ("status", "created_at", "expires_at")
+    search_fields = (
+        "inviter__username",
+        "invitee__username",
+        "new_match__room_code",
+    )
+    list_select_related = ("inviter", "invitee", "new_match")

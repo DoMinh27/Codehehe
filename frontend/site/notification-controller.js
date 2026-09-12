@@ -1,7 +1,7 @@
 import {createPolling} from "../battle/polling.js";
 
 
-const ITEM_KINDS = new Set(["REMATCH", "FRIEND_REQUEST"]);
+const ITEM_KINDS = new Set(["REMATCH", "FRIEND_REQUEST", "MATCH_INVITE"]);
 const DIRECTIONS = new Set(["INCOMING", "OUTGOING"]);
 const ACTION_LABELS = new Map([
     ["ACCEPT", "Đồng ý"],
@@ -42,6 +42,9 @@ function validateState(payload, windowObject) {
         if (item.kind === "REMATCH"
             && (typeof item.context.match_code !== "string"
                 || typeof item.context.score !== "string")) {
+            throw new Error("Máy chủ trả về thông báo không hợp lệ");
+        }
+        if (item.kind === "MATCH_INVITE" && typeof item.context.mode !== "string") {
             throw new Error("Máy chủ trả về thông báo không hợp lệ");
         }
         for (const action of item.actions) {
@@ -125,6 +128,10 @@ export function createNotificationController({
         if (!open && restoreFocus) trigger.focus({preventScroll: true});
     }
 
+    function dismissToasts() {
+        toastStack?.replaceChildren();
+    }
+
     function countdown(item, serverTime) {
         const seconds = Math.max(
             0,
@@ -149,13 +156,15 @@ export function createNotificationController({
         writeSeen(windowObject.sessionStorage, seen);
         const toastText = item.kind === "FRIEND_REQUEST"
             ? `${item.actor.username} vừa gửi lời mời kết bạn`
-            : `${item.actor.username} vừa gửi lời mời tái đấu`;
+            : (item.kind === "MATCH_INVITE"
+                ? `${item.actor.username} vừa mời bạn thi đấu`
+                : `${item.actor.username} vừa gửi lời mời tái đấu`);
         const toast = makeElement(
             "div",
             "notification-toast",
             toastText,
         );
-        toastStack.prepend(toast);
+        toastStack.append(toast);
         windowObject.setTimeout(() => toast.classList.add("notification-toast--leaving"), 4500);
         windowObject.setTimeout(() => toast.remove(), 4800);
     }
@@ -170,9 +179,13 @@ export function createNotificationController({
             ? (item.direction === "INCOMING"
                 ? `${item.actor.username} muốn kết bạn`
                 : `Đang chờ ${item.actor.username} đồng ý kết bạn`)
-            : (item.direction === "INCOMING"
-                ? `${item.actor.username} mời bạn tái đấu`
-                : `Đang chờ ${item.actor.username} phản hồi`);
+            : (item.kind === "MATCH_INVITE"
+                ? (item.direction === "INCOMING"
+                    ? `${item.actor.username} mời bạn thi đấu`
+                    : `Đang chờ ${item.actor.username} vào trận`)
+                : (item.direction === "INCOMING"
+                    ? `${item.actor.username} mời bạn tái đấu`
+                    : `Đang chờ ${item.actor.username} phản hồi`));
         const title = makeElement(
             "p",
             "notification-item__title",
@@ -185,6 +198,12 @@ export function createNotificationController({
                 "p",
                 "notification-item__detail",
                 `Trận ${item.context.match_code} · ${item.context.score}`,
+            ));
+        } else if (item.kind === "MATCH_INVITE") {
+            body.append(makeElement(
+                "p",
+                "notification-item__detail",
+                item.context.mode,
             ));
         }
         body.append(expiry);
@@ -204,7 +223,7 @@ export function createNotificationController({
         const contextLink = makeElement(
             "a",
             "notification-item__context-link",
-            item.kind === "FRIEND_REQUEST" ? "Xem bạn bè" : "Xem kết quả",
+            item.kind === "REMATCH" ? "Xem kết quả" : "Xem bạn bè",
         );
         contextLink.href = item.context_url;
         actions.append(contextLink);
@@ -330,7 +349,9 @@ export function createNotificationController({
     }
 
     function handleTrigger() {
-        setOpen(panel.hidden);
+        const opening = panel.hidden;
+        if (opening) dismissToasts();
+        setOpen(opening);
     }
 
     function handleDocumentClick(event) {

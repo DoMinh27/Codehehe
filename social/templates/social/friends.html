@@ -33,7 +33,9 @@
 {% if tab == "friends" %}
   <section class="panel social-panel" aria-labelledby="friends-list-title"
            data-friend-presence-list data-mode="existing"
-           data-state-url="{% url 'social:friends-state' %}">
+           data-state-url="{% url 'social:friends-state' %}"
+           data-match-invitation-url="{% url 'social:match-invitation-send' %}">
+    <form data-social-csrf hidden>{% csrf_token %}</form>
     <div class="section-heading social-panel__heading">
       <div><h2 id="friends-list-title">Danh sách bạn bè</h2></div>
       <form method="post" action="{% url 'social:presence-privacy' %}" class="presence-privacy-form">
@@ -53,6 +55,28 @@
             <div class="social-row__main">
               <strong>{{ row.user.username }}</strong>
               <span class="presence-label presence-label--{{ row.status|lower }}" data-presence-label><span aria-hidden="true"></span>{{ row.status_label }}</span>
+            </div>
+            <div class="social-inline-actions" data-match-invite-actions>
+              {% if row.match_invitation %}
+                {% if row.match_invitation.inviter_id == user.id %}
+                  <span class="muted">Đang chờ</span>
+                  <form method="post" action="{% url 'social:match-invitation-action' row.match_invitation.id %}">
+                    {% csrf_token %}<input type="hidden" name="action" value="cancel"><input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <button class="button button-secondary button-small" type="submit">Hủy</button>
+                  </form>
+                {% else %}
+                  <span class="muted">Đã nhận lời mời</span>
+                {% endif %}
+              {% elif viewer_ready and row.status == "READY" %}
+                <form method="post" action="{% url 'social:match-invitation-send' %}">
+                  {% csrf_token %}<input type="hidden" name="recipient_id" value="{{ row.user.id }}"><input type="hidden" name="next" value="{{ request.get_full_path }}">
+                  <button class="button button-primary button-small" type="submit">Mời đấu</button>
+                </form>
+              {% elif row.status != "READY" %}
+                <span class="muted">Chưa thể mời đấu</span>
+              {% else %}
+                <span class="muted">Bạn chưa sẵn sàng</span>
+              {% endif %}
             </div>
             <details class="social-row__actions">
               <summary class="button button-secondary button-small">Tùy chọn</summary>

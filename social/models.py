@@ -2,6 +2,7 @@ import uuid
 
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 
 class FriendRequest(models.Model):
@@ -169,3 +170,96 @@ class UserPresence(models.Model):
 
     def __str__(self):
         return f"Presence · {self.user}"
+
+
+class DirectMatchInvitation(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Đang chờ"
+        ACCEPTED = "ACCEPTED", "Đã đồng ý"
+        DECLINED = "DECLINED", "Đã từ chối"
+        CANCELLED = "CANCELLED", "Đã hủy"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    inviter = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="direct_match_invitations_sent",
+    )
+    invitee = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="direct_match_invitations_received",
+    )
+    # Internal canonical key makes reverse-direction requests share one pending slot.
+    pair_key = models.CharField(max_length=64, editable=False)
+    status = models.CharField(
+        max_length=12,
+        choices=Status.choices,
+        default=Status.PENDING,
+        db_index=True,
+    )
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
+    expires_at = models.DateTimeField(db_index=True)
+    responded_at = models.DateTimeField(null=True, blank=True)
+    new_match = models.OneToOneField(
+        "matches.Match",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="direct_invitation_origin",
+    )
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        constraints = [
+            models.CheckConstraint(
+                condition=~models.Q(inviter=models.F("invitee")),
+                name="directinvite_distinct_users",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(expires_at__gt=models.F("created_at")),
+                name="directinvite_valid_expiry",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(status="PENDING", responded_at__isnull=True)
+                    | (~models.Q(status="PENDING") & models.Q(responded_at__isnull=False))
+                ),
+                name="directinvite_response_state",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(status="ACCEPTED", new_match__isnull=False)
+                    | (~models.Q(status="ACCEPTED") & models.Q(new_match__isnull=True))
+                ),
+                name="directinvite_accepted_match",
+            ),
+            models.UniqueConstraint(
+                fields=["pair_key"],
+                condition=models.Q(status="PENDING"),
+                name="directinvite_one_pending_pair",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["invitee", "status", "expires_at"],
+                name="directinvite_recipient_idx",
+            ),
+            models.Index(
+                fields=["inviter", "created_at"],
+                name="directinvite_sender_idx",
+            ),
+        ]
+
+    @staticmethod
+    def make_pair_key(first_id, second_id):
+        low_id, high_id = sorted((first_id, second_id))
+        return f"{low_id}:{high_id}"
+
+    def save(self, *args, **kwargs):
+        if self.inviter_id and self.invitee_id:
+            self.pair_key = self.make_pair_key(self.inviter_id, self.invitee_id)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Match invite {self.inviter} → {self.invitee} · {self.status}"

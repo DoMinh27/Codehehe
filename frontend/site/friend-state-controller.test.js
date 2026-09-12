@@ -24,6 +24,51 @@ afterEach(() => {
 
 
 describe("friend state controller", () => {
+    it("renders invite and outgoing cancel actions from the latest state", async () => {
+        document.body.innerHTML = `
+            <section data-friend-presence-list data-mode="ready" data-state-url="/friends/state/">
+                <form data-social-csrf><input value="csrf"></form>
+                <ul data-friend-list></ul><p data-friend-empty></p>
+            </section>`;
+        const ready = {
+            id: 2,
+            username: "bob",
+            initial: "B",
+            status: "READY",
+            status_label: "Sẵn sàng",
+            can_invite: true,
+            match_invitation: null,
+        };
+        const outgoing = {
+            ...ready,
+            can_invite: false,
+            match_invitation: {
+                id: "invite-1",
+                direction: "OUTGOING",
+                action_url: "/match-invitations/invite-1/action/",
+                expires_at: "2026-09-09T10:02:00Z",
+            },
+        };
+        const api = {getJson: vi.fn()
+            .mockResolvedValueOnce({match_invitation_url: "/match-invitations/", friends: [ready]})
+            .mockResolvedValueOnce({match_invitation_url: "/match-invitations/", friends: [outgoing]})};
+        controller = createFriendStateController({
+            api,
+            documentRoot: document,
+            windowObject: window,
+            visibleDelay: 100,
+        });
+        controller.start();
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(document.querySelector("form[action='/match-invitations/']")).not.toBeNull();
+        expect(document.body.textContent).toContain("Mời đấu");
+        await vi.advanceTimersByTimeAsync(100);
+
+        expect(document.body.textContent).toContain("Đang chờ");
+        expect(document.querySelector("input[name='action']").value).toBe("cancel");
+    });
+
     it("updates existing rows without rebuilding their actions", async () => {
         document.body.innerHTML = `
             <section data-friend-presence-list data-mode="existing" data-state-url="/friends/state/">
@@ -35,7 +80,8 @@ describe("friend state controller", () => {
         const button = document.querySelector("#keep-focus");
         const api = {getJson: vi.fn().mockResolvedValue({
             server_time: "2026-09-09T10:00:00Z",
-            friends: [{id: 2, username: "bob", initial: "B", status: "READY", status_label: "Sẵn sàng"}],
+            match_invitation_url: "/match-invitations/",
+            friends: [{id: 2, username: "bob", initial: "B", status: "READY", status_label: "Sẵn sàng", can_invite: true, match_invitation: null}],
         })};
         controller = createFriendStateController({api, documentRoot: document, windowObject: window});
         controller.start();
@@ -57,7 +103,15 @@ describe("friend state controller", () => {
             status: index === 6 ? "INACTIVE" : "READY",
             status_label: index === 6 ? "Không hoạt động" : "Sẵn sàng",
         }));
-        const api = {getJson: vi.fn().mockResolvedValue({server_time: "now", friends})};
+        for (const friend of friends) {
+            friend.can_invite = friend.status === "READY";
+            friend.match_invitation = null;
+        }
+        const api = {getJson: vi.fn().mockResolvedValue({
+            server_time: "now",
+            match_invitation_url: "/match-invitations/",
+            friends,
+        })};
         controller = createFriendStateController({api, documentRoot: document, windowObject: window});
         controller.start();
         await vi.advanceTimersByTimeAsync(0);
@@ -73,8 +127,14 @@ describe("friend state controller", () => {
                 <ul data-friend-list></ul><p data-friend-empty></p>
             </section>`;
         const api = {getJson: vi.fn()
-            .mockResolvedValueOnce({friends: [{id: 2, username: "bob", initial: "B", status: "READY", status_label: "Sẵn sàng"}]})
-            .mockResolvedValueOnce({friends: [{id: 2, status: "UNKNOWN"}]})};
+            .mockResolvedValueOnce({
+                match_invitation_url: "/match-invitations/",
+                friends: [{id: 2, username: "bob", initial: "B", status: "READY", status_label: "Sẵn sàng", can_invite: true, match_invitation: null}],
+            })
+            .mockResolvedValueOnce({
+                match_invitation_url: "/match-invitations/",
+                friends: [{id: 2, status: "UNKNOWN"}],
+            })};
         controller = createFriendStateController({
             api,
             documentRoot: document,

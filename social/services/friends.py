@@ -10,7 +10,13 @@ from django.utils import timezone
 
 from matches.models import Match, MatchPlayer, RematchRequest
 from matches.services.db import retry_transient_db_lock
-from social.models import FriendRequest, Friendship, UserBlock, UserPresence
+from social.models import (
+    DirectMatchInvitation,
+    FriendRequest,
+    Friendship,
+    UserBlock,
+    UserPresence,
+)
 
 
 class SocialConflict(Exception):
@@ -192,6 +198,12 @@ def remove_friend(*, actor, other_user_id):
     deleted, _ = Friendship.objects.filter(**pair).delete()
     if not deleted:
         raise SocialConflict("FRIEND_NOT_FOUND", "Quan hệ bạn bè không còn tồn tại")
+    now = timezone.now()
+    DirectMatchInvitation.objects.filter(
+        Q(inviter_id=actor.pk, invitee_id=other_user_id)
+        | Q(inviter_id=other_user_id, invitee_id=actor.pk),
+        status=DirectMatchInvitation.Status.PENDING,
+    ).update(status=DirectMatchInvitation.Status.CANCELLED, responded_at=now)
 
 
 @retry_social_write
@@ -214,6 +226,11 @@ def block_user(*, actor, other_user_id, now=None):
         | Q(requester_id=other_user_id, recipient_id=actor.pk),
         status=RematchRequest.Status.PENDING,
     ).update(status=RematchRequest.Status.CANCELLED, responded_at=now)
+    DirectMatchInvitation.objects.filter(
+        Q(inviter_id=actor.pk, invitee_id=other_user_id)
+        | Q(inviter_id=other_user_id, invitee_id=actor.pk),
+        status=DirectMatchInvitation.Status.PENDING,
+    ).update(status=DirectMatchInvitation.Status.CANCELLED, responded_at=now)
 
 
 def unblock_user(*, actor, other_user_id):
@@ -225,6 +242,7 @@ class PresenceProjection:
     user: object
     status: str
     status_label: str
+    match_invitation: object | None = None
 
 
 PRESENCE_LABELS = {
@@ -267,6 +285,20 @@ def project_friend_presence(*, user, now=None):
         for other_id in pair
         if other_id != user.pk
     }
+    match_invitations = {}
+    pending_match_invitations = DirectMatchInvitation.objects.filter(
+        Q(inviter=user, invitee_id__in=friend_ids)
+        | Q(invitee=user, inviter_id__in=friend_ids),
+        status=DirectMatchInvitation.Status.PENDING,
+        expires_at__gt=now,
+    )
+    for invitation in pending_match_invitations:
+        other_id = (
+            invitation.invitee_id
+            if invitation.inviter_id == user.pk
+            else invitation.inviter_id
+        )
+        match_invitations[other_id] = invitation
     cutoff = now - timedelta(seconds=settings.SOCIAL_PRESENCE_TTL_SECONDS)
     rows = []
     for friend in friends:
@@ -284,7 +316,14 @@ def project_friend_presence(*, user, now=None):
                 status = "PLAYING"
             elif presence.last_seen_at and presence.last_seen_at > cutoff:
                 status = "READY"
-        rows.append(PresenceProjection(friend, status, PRESENCE_LABELS[status]))
+        rows.append(
+            PresenceProjection(
+                friend,
+                status,
+                PRESENCE_LABELS[status],
+                match_invitations.get(friend.pk),
+            )
+        )
     rows.sort(key=lambda row: (PRESENCE_ORDER[row.status], row.user.username, row.user.pk))
     return rows
 

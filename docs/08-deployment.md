@@ -96,13 +96,13 @@ ACCOUNT_EMAIL_RATE_LIMIT_WINDOW_SECONDS=3600
 ACCOUNT_EMAIL_RATE_LIMIT_PER_IP=10
 ACCOUNT_EMAIL_RATE_LIMIT_PER_ADDRESS=3
 AI_REVIEW_ENABLED=True
-AI_REVIEW_PROVIDER=groq
-GROQ_API_KEY=<GROQ_API_KEY>
+AI_REVIEW_PROVIDER=<SELECTED_PROVIDER>
+GROQ_API_KEY=
 GEMINI_API_KEY=
 OPENROUTER_API_KEY=
 OPENROUTER_HTTP_REFERER=https://<CODEHEHE_FQDN>
 OPENROUTER_APP_TITLE=CodeHehe
-AI_REVIEW_MODEL=openai/gpt-oss-120b
+AI_REVIEW_MODEL=<SELECTED_PROVIDER_MODEL>
 AI_REVIEW_REASONING_EFFORT=none
 AI_REVIEW_PROMPT_VERSION=v2
 AI_REVIEW_MAX_OUTPUT_TOKENS=2048
@@ -121,6 +121,12 @@ READINESS_CHECK_JUDGE0=True
 JUDGE0_BASE_URL=http://127.0.0.1:2358
 JUDGE0_API_KEY=
 ```
+
+Chỉ cấu hình credential của provider đang chọn và để credential provider khác
+trống. Nếu bỏ `AI_REVIEW_MODEL` khỏi file env, ứng dụng dùng default tương ứng:
+`openai/gpt-oss-120b` cho Groq, `gemini-2.5-flash-lite` cho Gemini hoặc
+`openrouter/free` cho OpenRouter. Luôn test provider từ chính VM vì availability
+có thể khác giữa local và IP production.
 
 `DJANGO_EMAIL_HOST_PASSWORD` is a provider SMTP credential or app password,
 not the mailbox login password. Verify the sender/domain with the SMTP provider
@@ -200,8 +206,8 @@ sudo systemctl status codehehe --no-pager
 sudo systemctl status codehehe-sweep.timer --no-pager
 sudo systemctl status codehehe-ai-review.timer --no-pager
 sudo systemctl status codehehe-account-cleanup.timer --no-pager
-curl --fail http://127.0.0.1:8000/health/
-curl --fail http://127.0.0.1:8000/health/ready/
+curl --fail -H 'Host: <CODEHEHE_FQDN>' http://127.0.0.1:8000/health/
+curl --fail -H 'Host: <CODEHEHE_FQDN>' http://127.0.0.1:8000/health/ready/
 ```
 
 Enable HTTPS:
@@ -244,14 +250,18 @@ Record the current commit and make a consistent database backup:
 ```bash
 cd /opt/codehehe/app
 git rev-parse HEAD
-sudo systemctl stop codehehe-ai-review.timer
+sudo systemctl stop codehehe-ai-review.timer codehehe-ai-review.service
+sudo systemctl stop codehehe-sweep.timer codehehe-sweep.service
+sudo systemctl stop codehehe-account-cleanup.timer codehehe-account-cleanup.service
 sudo systemctl stop codehehe
 sudo mkdir -p /var/backups/codehehe
 sudo cp --preserve=all \
   /var/lib/codehehe/db.sqlite3 \
   /var/backups/codehehe/db-$(date +%Y%m%d-%H%M%S).sqlite3
-sudo systemctl start codehehe
 ```
+
+Không khởi động lại web hoặc timer trước khi migrate xong. Dừng cả timer và
+oneshot service bảo đảm không còn lần chạy đang ghi SQLite trong lúc copy.
 
 Deploy the reviewed commit:
 
@@ -263,22 +273,40 @@ git checkout <RELEASE_COMMIT>
 npm ci
 npm run build
 sudo -u codehehe /opt/codehehe/venv/bin/python manage.py migrate
-sudo -u codehehe /opt/codehehe/venv/bin/python manage.py seed_problems
 sudo -u codehehe /opt/codehehe/venv/bin/python manage.py collectstatic --noinput
 sudo -u codehehe /opt/codehehe/venv/bin/python manage.py check
+```
+
+Trong khi các writer vẫn đang dừng, chỉ chạy command sau nếu release thay đổi
+`problems/data/problems.json` hoặc logic `seed_problems`:
+
+```bash
+sudo -u codehehe /opt/codehehe/venv/bin/python manage.py seed_problems
+```
+
+Sau đó cập nhật unit và khởi động lại toàn bộ thành phần:
+
+```bash
+sudo cp deploy/codehehe.service /etc/systemd/system/codehehe.service
+sudo cp deploy/codehehe-sweep.service /etc/systemd/system/codehehe-sweep.service
+sudo cp deploy/codehehe-sweep.timer /etc/systemd/system/codehehe-sweep.timer
 sudo cp deploy/codehehe-ai-review.service /etc/systemd/system/codehehe-ai-review.service
 sudo cp deploy/codehehe-ai-review.timer /etc/systemd/system/codehehe-ai-review.timer
+sudo cp deploy/codehehe-account-cleanup.service /etc/systemd/system/codehehe-account-cleanup.service
+sudo cp deploy/codehehe-account-cleanup.timer /etc/systemd/system/codehehe-account-cleanup.timer
 sudo systemctl daemon-reload
-sudo systemctl restart codehehe
+sudo systemctl start codehehe
+sudo systemctl start codehehe-sweep.timer
 sudo systemctl start codehehe-ai-review.timer
+sudo systemctl start codehehe-account-cleanup.timer
 sudo systemctl reload nginx
 curl --fail https://<CODEHEHE_FQDN>/health/ready/
 ```
 
-`seed_problems` replaces every TestCase belonging to a seeded Problem. Always
-complete the SQLite backup above before running it. The problem-bank expansion
-release should report `20 created, 10 updated, 270 test cases` when the existing
-ten-problem seed is present; a fresh database reports `30 created` instead.
+`seed_problems` thay toàn bộ TestCase của từng Problem có trong seed. Luôn hoàn
+thành backup SQLite trước khi chạy. Dataset version 3 hiện có 30 bài và 270 test
+case; trên database cũ mười bài, lần mở rộng đầu tiên báo `20 created, 10
+updated, 270 test cases`, còn database mới báo `30 created`.
 
 ## 5. Rollback
 
@@ -295,10 +323,16 @@ sudo systemctl restart codehehe
 If migrations are incompatible, restore the backup while Django is stopped:
 
 ```bash
+sudo systemctl stop codehehe-ai-review.timer codehehe-ai-review.service
+sudo systemctl stop codehehe-sweep.timer codehehe-sweep.service
+sudo systemctl stop codehehe-account-cleanup.timer codehehe-account-cleanup.service
 sudo systemctl stop codehehe
 sudo cp <BACKUP_FILE> /var/lib/codehehe/db.sqlite3
 sudo chown codehehe:www-data /var/lib/codehehe/db.sqlite3
 sudo systemctl start codehehe
+sudo systemctl start codehehe-sweep.timer
+sudo systemctl start codehehe-ai-review.timer
+sudo systemctl start codehehe-account-cleanup.timer
 ```
 
 ## 6. Release-candidate checks

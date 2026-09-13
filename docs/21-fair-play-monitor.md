@@ -45,3 +45,7 @@ The operations dashboard shows the number of distinct flagged matches in the
 configured alert window and links administrators to read-only Django Admin
 records. Configure thresholds with the `MATCH_INTEGRITY_*` variables and the
 dashboard window with `OPERATIONS_INTEGRITY_ALERT_WINDOW_SECONDS`.
+
+Dashboard V2 đặt dữ liệu này trong tab **Fair Play**, dùng nhãn **Cần xem xét**
+thay vì kết luận gian lận. Tổng quan về quyền truy cập và các tab vận hành nằm
+trong [Auth, Social và Operations](current/auth-social-operations.md).

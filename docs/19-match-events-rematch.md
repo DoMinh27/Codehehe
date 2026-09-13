@@ -22,8 +22,9 @@ nhiều người. Không ghi Run Code hoặc từng lần nộp sai vào timelin
 - Các loại event: `MATCH_STARTED`, `PROBLEM_SOLVED`, `FIRST_SOLVE_CONFIRMED`,
   `REWARD_GRANTED`, `SKILL_USED`, `TYPING_COMPLETED`, `PLAYER_SURRENDERED`,
   `MATCH_FINISHED`.
-- `SKILL_USED` bao gồm kết quả Thanh tẩy/Steal; không sinh một event khác cho
-  cùng thao tác. Reward ghi Energy thực tế sau giới hạn và skill được trao.
+- `SKILL_USED` bao gồm kết quả Thanh tẩy, Tước đoạt và đòn bị Khiên chặn; không
+  sinh một event khác cho cùng thao tác. Reward ghi Energy thực tế sau giới hạn
+  và Kỹ năng được trao.
 - First-solve chỉ ghi khi đã xác nhận theo logic submission đang có; kết quả
   Judge0 trả muộn không đảo thứ tự ghi nhận hoặc thay đổi trận đã FINISHED.
 - Result hiển thị thứ tự ID tăng dần, thời gian tương đối từ lúc bắt đầu và
@@ -33,6 +34,9 @@ nhiều người. Không ghi Run Code hoặc từng lần nộp sai vào timelin
 - Snapshot giữ tên, bài, điểm, phần thưởng và kết quả trận tại lúc xảy ra.
   Không chứa code, hidden tests, reference solution, judge token/message,
   typing prompt, AI prompt hoặc API key. Template autoescape mọi nội dung.
+- Presenter ánh xạ `skill_code` sang tên tiếng Việt hiện hành, vì vậy Timeline
+  cũ vẫn hiển thị Đảo chiều code, Thanh tẩy, Tước đoạt và Khiên nhất quán mà
+  không sửa payload audit đã lưu.
 - Participant và staff xem được Result như trước. Django Admin có danh sách
   event chỉ đọc và liên kết từ Match; không có API timeline mới.
 
@@ -41,9 +45,10 @@ nhiều người. Không ghi Run Code hoặc từng lần nộp sai vào timelin
 Mỗi trận nguồn FINISHED có đúng hai participant được tạo tối đa một
 `RematchRequest`. Staff không tham gia không được mời/đồng ý thay người chơi.
 
-1. Một người bấm **Tái đấu**; tạo lời mời PENDING, hiệu lực 120 giây.
-2. Đối thủ mở cùng Result để nhận lời mời và chọn **Đồng ý** hoặc **Từ chối**;
-   người gửi có thể **Hủy lời mời**.
+1. Một người bấm **Mời tái đấu** tại Result; tạo lời mời PENDING, hiệu lực 120
+   giây.
+2. Notification Shell của đối thủ nhận lời mời để **Đồng ý** hoặc **Từ chối**;
+   người gửi theo dõi và có thể **Hủy lời mời** trong cùng notification panel.
 3. Đồng ý tạo atomically một Match WAITING mới và hai MatchPlayer. Người gửi
    là host; host bấm **Bắt đầu trận** theo luồng phòng chờ hiện có.
 4. Phòng mới lấy cấu hình hiện tại; lúc Start chọn đề ngẫu nhiên như trận
@@ -65,17 +70,22 @@ invitation/phòng thứ hai.
 
 - `GET /matches/<id>/rematch/state/`: trạng thái, server_time, expires_at,
   is_requester, requester_name, actions, room_url, new_match_status, terminal
-  và unavailable_reason an toàn. `NONE` nghĩa là chưa có lời mời.
+  và unavailable_reason an toàn. `NONE` nghĩa là chưa có lời mời. Endpoint này
+  vẫn là contract domain nhưng Result không còn chạy polling riêng.
 - `POST /matches/<id>/rematch/`: JSON `{"action": "request"}`; các action khác
   là accept, decline, cancel. Dùng session auth, CSRF và error envelope hiện có.
+- `GET /notifications/state/` tổng hợp Rematch đang PENDING cùng lời mời kết bạn
+  và mời đấu. Badge chỉ tính incoming; outgoing vẫn hiển thị nhưng không tăng
+  badge. Payload tối đa 20 item và `private, no-store`.
 - Không lộ room khác đang khiến người chơi bận; không trả code hoặc dữ liệu AI.
   Result và các response rematch đều private/no-store.
-- Poll 5 giây khi tab hiển thị, 30 giây khi ẩn, kể cả NONE để nhận lời mời.
-  Dừng khi terminal; có nút **Cập nhật**. Request timeout 10 giây và không
-  chồng request. Lỗi HTTP/network/non-JSON giữ dữ liệu gần nhất và cho thử lại.
-- Tự vào phòng khi lời mời đang tương tác được đồng ý. Mở lại Result lịch sử
-  đã ACCEPTED chỉ có liên kết tới phòng/trận/kết quả tái đấu, không tự chuyển
-  trang. Script điều hướng active-match của base layout được tắt riêng Result.
+- Notification Shell poll 5 giây khi tab hiển thị và 30 giây khi ẩn, timeout 5
+  giây và không chồng request. Lỗi HTTP/network/non-JSON giữ dữ liệu gần nhất.
+- Người nhận đồng ý được chuyển ngay tới Waiting Room. Người gửi được
+  active-match polling chung của base layout đưa vào phòng mới trong khoảng một
+  chu kỳ poll; không còn panel Rematch lớn hoặc nút cập nhật riêng tại Result.
+- Mở lại Result lịch sử đã ACCEPTED không tự chuyển vào một trận không còn
+  active; dữ liệu domain vẫn giữ liên kết tới phòng tái đấu để audit.
 - AI Review và Rematch khởi tạo độc lập; AI tắt hoặc lỗi cấu hình không ngăn
   Rematch hoạt động. UI dùng DOM API/textContent và native buttons.
 
@@ -83,7 +93,8 @@ invitation/phòng thứ hai.
 
 - `matches.0021_match_event_timeline`: thêm version và bảng MatchEvent.
 - `matches.0022_rematch_request`: bảng invitation và các constraint.
-- Không thêm env, seed hoặc systemd unit. Timers hiện tại tiếp tục hoạt động.
+- Notification dùng các cấu hình poll `SOCIAL_NOTIFICATION_*`; Rematch không cần
+  timer hoặc systemd unit riêng.
 - Trước production: backup SQLite và kiểm soát dịch vụ theo runbook deployment.
   Sau merge/pull: migrate, frontend build, collectstatic, restart Gunicorn.
   Không cần chạy lại seed_problems cho riêng tính năng này.
@@ -94,11 +105,12 @@ invitation/phòng thứ hai.
 - Tests tập trung: `python manage.py test matches.test_timeline matches.test_rematch`.
 - Full: Django tests, Vitest, Ruff, system check, migration dry-run, build và
   `git diff --check`.
-- Manual hai tài khoản: tạo trận mới; giải bài, dùng skill, kết thúc; xem đúng
+- Manual hai tài khoản: tạo trận mới; giải bài, dùng Kỹ năng, kết thúc; xem đúng
   timeline; mời/đồng ý; xác nhận host và 2/2 người ở phòng mới; bắt đầu trận.
 - Thử từ chối, hủy, chờ hết 120 giây, người chơi đang ở phòng khác, bấm lặp,
   mất mạng và mở lại Result lịch sử. Kiểm tra layout 1440/1024/390px, CSRF,
   permission, dữ liệu nhạy cảm và không tràn ngang ở component mới.
 - Test tự động có migration từ schema cũ, rollback event/room, first-solve
-  Judge0 trả lệch thứ tự, sáu skill, late verdict, permission, escape, pagination
-  và race thực trên SQLite. Browser QA dùng database tạm, không sửa DB local.
+  Judge0 trả lệch thứ tự, bảy Kỹ năng, late verdict, permission, escape, pagination
+  và race thực trên SQLite với đủ bảy Kỹ năng. Browser QA dùng database tạm,
+  không sửa DB local.

@@ -637,7 +637,7 @@ Thành công được đo bằng:
 
 ## DEC-045 — Problem content snapshot V1
 
-**Trạng thái:** Approved
+**Trạng thái:** Superseded — MatchProblem hiện snapshot cả test và reference solution
 
 **Bối cảnh:** Nếu Battle page đọc trực tiếp `Problem.statement`, admin sửa Problem giữa Match `PLAYING` có thể làm nội dung đề đổi ngay trong trận.
 
@@ -706,7 +706,7 @@ V1 không snapshot `TestCase`.
 
 **Ngày:** 2026-07-24
 
-**Trạng thái:** Approved
+**Trạng thái:** Implemented
 
 **Bối cảnh:** CodeHehe cần hỗ trợ người chơi học từ lời giải của mình nhưng không được làm ảnh hưởng đến tính công bằng và tính xác định của Coding Battle Core.
 
@@ -738,7 +738,7 @@ Tính năng chỉ được sử dụng sau khi trận đấu kết thúc.
 
 **Ngày:** 2026-07-28
 
-**Trạng thái:** Approved
+**Trạng thái:** Implemented; phần Defense/Minigame đã được mở rộng bởi DEC-051 và DEC-056
 
 **Quyết định:**
 
@@ -778,7 +778,7 @@ nhưng các trận khác nhau không luôn lặp lại bốn bài có `order` th
 
 **Ngày:** 2026-07-29
 
-**Trạng thái:** Approved
+**Trạng thái:** Implemented
 
 **Quyết định:** `TYPING_CHALLENGE` là Skill/minigame tấn công giá 1 Energy,
 khóa Run, Submit và Skill của mục tiêu tối đa 20 giây. Mục tiêu được mở khóa
@@ -793,12 +793,13 @@ không khóa CodeMirror và không tạo thêm time penalty khi hết hạn.
 
 **Ngày:** 2026-07-29
 
-**Trạng thái:** Approved
+**Trạng thái:** Implemented; mở rộng lên v3.2 bởi DEC-056
 
 **Quyết định:**
 
 * Mỗi Match lưu `ruleset_version` và `rules_snapshot` từ lúc tạo phòng.
-* Ruleset hiện tại là `v3.1`.
+* Ruleset hiện tại là `v3.2`; `v3.1` tiếp tục được hỗ trợ để đọc snapshot của
+  trận cũ.
 * Thời lượng mặc định là 300 giây và có thể cấu hình bằng
   `MATCH_DURATION_SECONDS`.
 * Thay đổi cấu hình hoặc ruleset chỉ áp dụng cho phòng tạo mới.
@@ -811,3 +812,168 @@ một nguồn có thể kiểm thử, audit và nâng version.
 
 **Hệ quả:** Mỗi lần thay đổi semantics gameplay phải tạo ruleset version mới;
 không sửa snapshot của Match đang chờ, đang chơi hoặc đã kết thúc.
+
+---
+
+## DEC-053 — Ngân hàng đề version 3
+
+**Ngày:** 2026-09-13
+
+**Trạng thái:** Implemented
+
+**Quyết định:** Seed version 3 quản lý 30 bài gồm 10 Easy, 12 Medium và 8 Hard;
+mỗi bài có một sample và tám hidden test. Problem lưu topic, loại nguồn, URL và
+license; 14 bài chuyển thể từ Exercism theo MIT và 16 bài do CodeHehe tự xây.
+
+**Hệ quả:** Seed là atomic, idempotent theo slug và thay toàn bộ TestCase của bài
+được seed. Production phải backup trước khi chạy và chỉ seed khi dataset đổi.
+
+---
+
+## DEC-054 — Hồ sơ và lịch sử riêng tư
+
+**Ngày:** 2026-09-13
+
+**Trạng thái:** Implemented
+
+**Quyết định:** Người chơi có profile, W–L–D, win rate, activity streak, lịch sử
+trận và trang xem toàn bộ Submission của chính mình. Source code không công khai
+cho đối thủ hoặc staff không tham gia.
+
+**Hệ quả:** Activity chỉ ghi khi Submission hợp lệ được lưu. Match FINISHED là
+nguồn thống kê; Result và source response dùng quyền chặt và `private, no-store`.
+
+---
+
+## DEC-055 — Operations Dashboard là read-only
+
+**Ngày:** 2026-09-13
+
+**Trạng thái:** Implemented
+
+**Quyết định:** Dashboard V2 tại `/admin/dashboard/` tổng hợp health, cảnh báo,
+trận live, queue, Fair Play và KPI theo năm tab. Dashboard không sửa dữ liệu;
+Django Admin tiếp tục là nơi thao tác vận hành.
+
+**Hệ quả:** Worker ghi heartbeat; payload và shortcut được lọc theo permission,
+không tải source, hidden test, prompt/result AI hoặc secret.
+
+---
+
+## DEC-056 — Skill Engine policy snapshot và ruleset v3.2
+
+**Ngày:** 2026-09-13
+
+**Trạng thái:** Implemented; supersedes phần “Defense để sau” trong DEC-049
+
+**Quyết định:** Skill Engine dùng registry thống nhất handler, target, disposition,
+stacking, khả năng Thanh tẩy/Khiên và quyền dùng khi action lock. Trận mới v3.2
+snapshot bảy Kỹ năng: thêm Thanh tẩy, Tước đoạt và Khiên vào bốn Kỹ năng trước.
+
+**Hệ quả:** Khiên chặn đúng một đòn trong tối đa 45 giây; đòn bị chặn vẫn tiêu hao
+tài nguyên attacker. Thanh tẩy gỡ một harmful/dispellable effect mới nhất và
+không hoàn thời gian đã mất. Trận v3.1 giữ inventory sáu Kỹ năng của nó.
+
+---
+
+## DEC-057 — MatchEvent, Timeline và Notification Rematch
+
+**Ngày:** 2026-09-13
+
+**Trạng thái:** Implemented
+
+**Quyết định:** Gameplay quan trọng ghi `MatchEvent` idempotent trong cùng
+transaction. Timeline chỉ hiển thị sau trận. Result gửi lời mời tái đấu; phản hồi
+accept/decline/cancel nằm trong Notification Shell.
+
+**Hệ quả:** Rematch tạo phòng mới atomically, không sao chép điểm/code/inventory.
+Không có live event feed, event sourcing hoặc timer riêng cho Rematch.
+
+---
+
+## DEC-058 — Fair Play chỉ là tín hiệu audit
+
+**Ngày:** 2026-09-13
+
+**Trạng thái:** Implemented
+
+**Quyết định:** Ghi khoảng rời tab/page, connection gap và số ký tự paste theo
+policy snapshot. Cờ Fair Play không tự xử thua, đổi điểm hoặc tác động AI Review.
+
+**Hệ quả:** Không chặn DevTools, F12, clipboard hoặc fullscreen. Người chơi không
+thấy flag của mình/đối thủ; admin dùng nhãn “Cần xem xét”, không kết luận gian lận.
+
+---
+
+## DEC-059 — Tài khoản chỉ tồn tại sau xác minh email
+
+**Ngày:** 2026-09-13
+
+**Trạng thái:** Implemented
+
+**Quyết định:** Đăng ký chưa xác minh nằm trong `PendingRegistration` dưới dạng
+password hash. Link có hiệu lực 5 phút; POST xác nhận mới tạo atomically User
+active và AccountEmail verified. Bản ghi giữ tối đa 2 giờ để resend an toàn.
+
+**Hệ quả:** Username/email hết hạn được giải phóng; cleanup timer chạy mỗi 5 phút.
+Password reset chỉ gửi cho AccountEmail verified của User active và dùng response
+trung tính để chống dò tài khoản.
+
+---
+
+## DEC-060 — Social relationship và presence
+
+**Ngày:** 2026-09-13
+
+**Trạng thái:** Implemented
+
+**Quyết định:** Friendship/FriendRequest dùng canonical user pair; UserBlock có
+chiều; presence chỉ chia sẻ cho bạn bè và suy ra từ heartbeat cùng MatchPlayer
+active. Offline và chủ động ẩn được trình bày giống nhau với người khác.
+
+**Hệ quả:** Presence hiện dùng database heartbeat/polling, không WebSocket hay
+Redis. Khi tải tăng có thể đổi backend TTL mà giữ API/UI hiện tại.
+
+---
+
+## DEC-061 — Notification là projection theo domain
+
+**Ngày:** 2026-09-13
+
+**Trạng thái:** Implemented
+
+**Quyết định:** Không tạo bảng Notification tổng quát hoặc GenericForeignKey.
+Notification Shell tổng hợp item PENDING từ FriendRequest, RematchRequest và
+DirectMatchInvitation; badge chỉ đếm incoming cần xử lý.
+
+**Hệ quả:** Mỗi domain sở hữu lifecycle và endpoint action. Team/Tournament sau
+này thêm provider riêng thay vì nhét dữ liệu vào một bảng notification chung.
+
+---
+
+## DEC-062 — Mời bạn bè tạo phòng Classic atomically
+
+**Ngày:** 2026-09-13
+
+**Trạng thái:** Implemented
+
+**Quyết định:** Chỉ hai Friendship đang Sẵn sàng được mời đấu. Accept kiểm tra lại
+friendship, block, expiry và active match rồi tạo phòng hai người trong transaction.
+
+**Hệ quả:** Lời mời không tạo Match trước khi accept; race/replay chỉ giữ một
+phòng. Logic tạo phòng hai người được dùng chung với Rematch.
+
+---
+
+## DEC-063 — Phản hồi Kỹ năng theo người xem
+
+**Ngày:** 2026-09-13
+
+**Trạng thái:** Implemented
+
+**Quyết định:** Battle dùng presentation registry và `combat_notifications` dành
+riêng cho người gọi state. Khiên chưa chặn đòn và thao tác Thanh tẩy không được
+tiết lộ cho đối thủ; Timeline sau trận vẫn giữ audit đầy đủ.
+
+**Hệ quả:** Payload Battle không chứa source/target username hoặc player ID để
+suy luận trạng thái riêng tư. Tên/mô tả tiếng Việt được tách khỏi policy gameplay.

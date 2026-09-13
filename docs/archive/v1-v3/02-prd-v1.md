@@ -1,5 +1,7 @@
 # TÀI LIỆU 2 — PRODUCT REQUIREMENTS DOCUMENT
 
+> **Tài liệu lịch sử:** Nội dung này mô tả yêu cầu V1 và không còn là nguồn mô tả trạng thái hiện tại. Xem [mục lục tài liệu](../../README.md) để tìm tài liệu đang có hiệu lực.
+
 **Tên file:** `02-prd-v1.md`
 
 ## 1. Mục đích

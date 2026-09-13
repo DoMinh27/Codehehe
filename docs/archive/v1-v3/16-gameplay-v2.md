@@ -1,5 +1,7 @@
 # CodeHehe V2 — Energy and Skill Battle
 
+> **Tài liệu lịch sử:** Nội dung V2 được giữ để tra cứu quá trình phát triển. Xem [Gameplay v3.2](../../current/gameplay-v3.2.md) cho luật hiện hành.
+
 ## Product rule
 
 Coding score remains the match result authority. Energy and Skills add temporary

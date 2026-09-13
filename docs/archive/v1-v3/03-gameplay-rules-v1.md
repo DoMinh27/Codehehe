@@ -1,5 +1,7 @@
 # TÀI LIỆU 3 — GAMEPLAY RULES V1
 
+> **Tài liệu lịch sử:** Luật V1 đã được thay thế bởi ruleset hiện hành. Xem [Gameplay v3.2](../../current/gameplay-v3.2.md).
+
 **Tên file đề xuất:** `03-gameplay-rules-v1.md`
 
 ## 1. Mục tiêu gameplay V1

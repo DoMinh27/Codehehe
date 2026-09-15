@@ -1,5 +1,7 @@
 # TÀI LIỆU 6 — DATABASE DESIGN V1
 
+> **Tài liệu lịch sử:** Thiết kế dữ liệu V1 không còn bao quát các app và model hiện tại. Xem [kiến trúc hiện hành](../../current/architecture.md).
+
 **Tên file:** `06-database-design.md`
 
 ## 1. Mục đích

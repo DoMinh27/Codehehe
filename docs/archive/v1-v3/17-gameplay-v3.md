@@ -1,5 +1,7 @@
 # CodeHehe V3 — Typing Challenge
 
+> **Tài liệu lịch sử:** Nội dung này mô tả ruleset v3.1 và đã được thay thế bởi [Gameplay v3.2](../../current/gameplay-v3.2.md).
+
 ## Gameplay rule
 
 `TYPING_CHALLENGE` is a one-charge attack Skill that costs one Energy and lasts

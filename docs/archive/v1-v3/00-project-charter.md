@@ -1,5 +1,7 @@
 # TÀI LIỆU 1 — PROJECT CHARTER
 
+> **Tài liệu lịch sử:** Nội dung này mô tả giai đoạn V1 và không còn là nguồn mô tả trạng thái hiện tại. Xem [mục lục tài liệu](../../README.md) để tìm tài liệu đang có hiệu lực.
+
 **Tên file:** `00-project-charter.md`
 
 ## 1. Mục đích tài liệu

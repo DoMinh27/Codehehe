@@ -1,7 +1,9 @@
 # CODEHEHE — MASTER PROJECT BASELINE
 
+> **Tài liệu lịch sử:** Baseline ban đầu này không còn là nguồn sự thật của dự án. Xem [mục lục tài liệu](../../README.md) và mã nguồn/migration hiện tại.
+
 **Loại tài liệu:** Project Charter + Product Context + PRD Baseline + Technical Baseline + Delivery Roadmap
-**Trạng thái:** Tài liệu nguồn sự thật chính thức của dự án
+**Trạng thái:** Đã lưu trữ — chỉ dùng để tham khảo lịch sử
 **Dự án:** CodeHehe
 **Cuộc thi:** SOFTCON cấp trường
 **Đội ngũ:** 3 sinh viên năm hai chuyên ngành Trí tuệ nhân tạo

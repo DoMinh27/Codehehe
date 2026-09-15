@@ -1,5 +1,7 @@
 # TÀI LIỆU 4 — ROADMAP 4 TUẦN
 
+> **Tài liệu lịch sử:** Roadmap bốn tuần này đã hoàn thành và không còn dùng để theo dõi công việc hiện tại. Xem [roadmap hiện hành](../../current/roadmap.md).
+
 **Tên file đề xuất:** `04-roadmap-v1.md`
 
 ## 1. Nguyên tắc roadmap
